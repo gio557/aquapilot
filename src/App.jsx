@@ -181,7 +181,7 @@ export default function App() {
         <main style={{padding:"16px 20px", display:"flex", flexDirection:"column", gap:14}}>
 
           {/* ── STAGES ROW ── */}
-          <div style={{display:"flex", gap:10, overflowX:"auto", paddingBottom:2}}>
+          <div style={{display:"flex", gap:10}}>
             {stages.map((s, i) => (
               <StageCard
                 key={s.id}

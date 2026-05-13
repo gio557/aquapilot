@@ -43,7 +43,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
     <div onClick={onClick} style={{
       background:t.surface, border:`1px solid ${t.border}`,
       borderTop:`3px solid ${sc}`, borderRadius:12,
-      padding:14, flex:"1 1 155px", minWidth:150, maxWidth:220,
+      padding:14, flex:"1 1 0", minWidth:0,
       cursor:"pointer", transition:"transform 0.15s,box-shadow 0.15s",
       display:"flex", flexDirection:"column", gap:10,
     }}

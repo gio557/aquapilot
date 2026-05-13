@@ -25,7 +25,7 @@ const TREND_KEYS = [
 ];
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const t = darkMode ? DARK : LIGHT;
 
   const { sim, setSim } = useSimulation();

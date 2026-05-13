@@ -34,7 +34,23 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
   });
 
   const sc = stage.status === "ok" ? t.green : stage.status === "warn" ? t.orange : t.red;
-  const bColor = stable.sev === "ALTO" ? t.red : stable.sev === "MEDIO" ? t.orange : t.green;
+
+  // Gauge color: for proximity-to-limit params, warn when ≥80% of limit
+  let gaugeColor = t.green;
+  if (stageOutput) {
+    if (stageOutput.higherIsBetter) {
+      const pct = stageOutput.value / stageOutput.target * 100;
+      gaugeColor = pct >= 90 ? t.green : pct >= 65 ? t.orange : t.red;
+    } else {
+      const pct = stageOutput.value / stageOutput.target * 100;
+      gaugeColor = pct >= 100 ? t.red : pct >= 80 ? t.orange : t.green;
+    }
+  }
+
+  const sevRank = s => s === "ALTO" ? 2 : s === "MEDIO" ? 1 : 0;
+  const gaugeRank = gaugeColor === t.red ? 2 : gaugeColor === t.orange ? 1 : 0;
+  const rank = Math.max(sevRank(stable.sev), gaugeRank);
+  const bColor = rank === 2 ? t.red : rank === 1 ? t.orange : t.green;
   const bIcon  = stable.sev === "ALTO" ? "🔴" : stable.sev === "MEDIO" ? "🟡" : "🟢";
 
   const isEfficiency = stageOutput?.higherIsBetter;

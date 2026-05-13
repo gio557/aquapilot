@@ -39,16 +39,22 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
   const isEfficiency = stageOutput?.higherIsBetter;
 
+  const glowShadow = `0 6px 24px ${bColor}55, 0 2px 8px ${bColor}33`;
+
   return (
     <div onClick={onClick} style={{
-      background:t.surface, border:`1px solid ${t.border}`,
-      borderTop:`3px solid ${sc}`, borderRadius:12,
+      background:t.surface,
+      border:`2px solid ${bColor}`,
+      borderTop:`4px solid ${bColor}`,
+      borderRadius:12,
       padding:14, flex:"1 1 0", minWidth:0,
-      cursor:"pointer", transition:"transform 0.15s,box-shadow 0.15s",
+      cursor:"pointer",
+      transition:"transform 0.15s, box-shadow 0.4s, border-color 0.4s",
       display:"flex", flexDirection:"column", gap:10,
+      boxShadow:glowShadow,
     }}
-      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow=`0 6px 24px ${sc}22`; }}
-      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=""; }}
+      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow=`0 10px 32px ${bColor}77, 0 4px 12px ${bColor}44`; }}
+      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=glowShadow; }}
     >
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
         <div>

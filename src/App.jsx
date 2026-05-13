@@ -178,61 +178,107 @@ export default function App() {
       {page === "normativa" ? (
         <NormativaPage t={t} ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
       ) : (
-        <main style={{padding:"16px 20px", display:"flex", flexDirection:"column", gap:14}}>
+        <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12}}>
 
           {/* ── STAGES ROW ── */}
-          <div style={{display:"flex", gap:10}}>
+          <div style={{display:"flex", gap:8}}>
             {stages.map((s, i) => (
-              <StageCard
-                key={s.id}
-                stage={s}
-                index={i}
-                stageOutput={sim.stageOutputs?.[i]}
-                action={sim.stageActions?.[i]}
-                autoEnabled={autoOn}
-                t={t}
-                onClick={() => setSelectedStage(i)}
-              />
+              <StageCard key={s.id} stage={s} index={i}
+                stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
+                autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}/>
             ))}
             <button onClick={() => setShowConfigurator(true)}
-              style={{flexShrink:0, width:48, borderRadius:12, cursor:"pointer",
+              style={{flexShrink:0, width:44, borderRadius:10, cursor:"pointer",
                 border:`2px dashed ${t.border}`, background:"transparent",
                 color:t.textMuted, fontSize:20, display:"flex", alignItems:"center", justifyContent:"center"}}>
               +
             </button>
           </div>
 
-          {/* ── MIDDLE ROW ── */}
-          <div style={{display:"grid", gridTemplateColumns:"220px 1fr 320px", gap:14, minHeight:280}}>
+          {/* ── MAIN ROW: left sidebar | trend | right panel ── */}
+          <div style={{display:"grid", gridTemplateColumns:"170px 1fr 300px", gap:12, minHeight:300}}>
 
-            {/* KPI sidebar */}
-            <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", gap:10}}>
-              <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:11, letterSpacing:2, textTransform:"uppercase", color:t.textSec, marginBottom:2}}>
-                USCITA IMPIANTO
+            {/* ── LEFT SIDEBAR ── */}
+            <div style={{display:"flex", flexDirection:"column", gap:8}}>
+
+              {/* PORTATA */}
+              <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 12px"}}>
+                <div style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:6}}>
+                  ▸ PORTATA <span style={{width:6,height:6,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
+                </div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:26, fontWeight:700, color:t.accent, lineHeight:1}}>
+                  {Math.round(sim.output?.Q ?? sim.inlet?.Q ?? 0)}
+                </div>
+                <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:8}}>m³/h · Portata attuale</div>
+                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:6}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.textSec}}>
+                    {sim.qHistory?.length > 0
+                      ? (sim.qHistory.reduce((a,b)=>a+b,0)/sim.qHistory.length).toFixed(3)
+                      : "—"}
+                  </div>
+                  <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>m³/g · Medio mobile ({sim.qHistory?.length ?? 0} camp.)</div>
+                </div>
               </div>
-              {[
-                {label:"COD",  val:sim.output?.COD?.toFixed(1),  unit:"mg/L", color: sim.output?.COD > 125 ? t.red : sim.output?.COD > 100 ? t.orange : t.green},
-                {label:"BOD5", val:sim.output?.BOD5?.toFixed(1), unit:"mg/L", color: sim.output?.BOD5 > 25  ? t.red : sim.output?.BOD5 > 20  ? t.orange : t.green},
-                {label:"TSS",  val:sim.output?.TSS?.toFixed(1),  unit:"mg/L", color: sim.output?.TSS > 35   ? t.red : sim.output?.TSS > 28   ? t.orange : t.green},
-                {label:"NH4",  val:sim.output?.NH4?.toFixed(2),  unit:"mg/L", color: sim.output?.NH4 > 8    ? t.red : sim.output?.NH4 > 6    ? t.orange : t.green},
-                {label:"pH",   val:sim.output?.pH?.toFixed(2),   unit:"",     color: sim.output?.pH < 6.5 || sim.output?.pH > 8.5 ? t.red : t.green},
-                {label:"O2",   val:sim.O2?.toFixed(2),           unit:"mg/L", color: sim.O2 < 1.5 ? t.red : sim.O2 < 2 ? t.orange : t.green},
-              ].map(k => (
-                <KpiNum key={k.label} label={k.label} val={k.val} unit={k.unit} color={k.color} t={t} live/>
-              ))}
+
+              {/* FANGHI */}
+              <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 12px"}}>
+                <div style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:6}}>
+                  ▸ FANGHI <span style={{width:6,height:6,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
+                </div>
+                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:26, fontWeight:700, color:t.purple, lineHeight:1}}>
+                  {Math.round(sim.MLSS ?? 0)}
+                </div>
+                <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:8}}>mg/L · MLSS biologico</div>
+                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:6}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14,
+                    color: sim.blower > 80 ? t.red : sim.blower > 60 ? t.orange : t.green}}>
+                    {sim.blower ?? 0}%
+                  </div>
+                  <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>potenza · Soffianti</div>
+                  <div style={{height:4, background:t.surface3, borderRadius:2, marginTop:5, overflow:"hidden"}}>
+                    <div style={{height:"100%", width:`${sim.blower??0}%`,
+                      background: sim.blower > 80 ? t.red : sim.blower > 60 ? t.orange : t.green,
+                      borderRadius:2, transition:"width 0.5s"}}/>
+                  </div>
+                </div>
+              </div>
+
+              {/* CONN. */}
+              <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 12px", flex:1}}>
+                <div style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:8}}>▸ CONN.</div>
+                {[
+                  {label:"Internet",   on:true},
+                  {label:"PLC/SCADA",  on:true},
+                  {label:"AI Engine",  on:true},
+                  {label:"Simulatore", on:sim.running},
+                ].map(c => (
+                  <div key={c.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+                    <span style={{fontSize:12, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{c.label}</span>
+                    <span style={{fontSize:10, padding:"1px 7px", borderRadius:3,
+                      background:c.on?`${t.green}18`:`${t.red}18`,
+                      color:c.on?t.green:t.red,
+                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
+                      <span style={{marginRight:4, fontSize:8}}>●</span>{c.on?"ON":"OFF"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Trend chart */}
-            <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:12, padding:14, display:"flex", flexDirection:"column"}}>
-              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, flexWrap:"wrap", gap:8}}>
-                <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:11, letterSpacing:2, textTransform:"uppercase", color:t.textSec}}>
-                  TREND PARAMETRI
+            {/* ── TREND LIVE ── */}
+            <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:14, display:"flex", flexDirection:"column"}}>
+              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, flexWrap:"wrap", gap:6}}>
+                <div style={{display:"flex", alignItems:"center", gap:8}}>
+                  <span style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ TREND LIVE</span>
+                  <span style={{fontSize:9, padding:"2px 7px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, border:`1px solid ${t.green}44`}}>
+                    <span style={{animation:"blink 1.2s infinite", marginRight:3}}>●</span>LIVE
+                  </span>
                 </div>
-                <div style={{display:"flex", gap:6, flexWrap:"wrap"}}>
+                <div style={{display:"flex", gap:4}}>
                   {TIME_RANGES.map(r => (
                     <button key={r} onClick={() => setTimeRange(r)}
-                      style={{padding:"2px 8px", borderRadius:4, cursor:"pointer",
-                        fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:1,
+                      style={{padding:"2px 7px", borderRadius:4, cursor:"pointer",
+                        fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:1,
                         border:`1px solid ${timeRange===r?t.accent:t.border}`,
                         background:timeRange===r?`${t.accent}18`:t.surface2,
                         color:timeRange===r?t.accent:t.textSec}}>
@@ -241,13 +287,13 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              <div style={{display:"flex", gap:6, flexWrap:"wrap", marginBottom:8}}>
+              <div style={{display:"flex", gap:4, flexWrap:"wrap", marginBottom:8}}>
                 {TREND_KEYS.map(tk => (
                   <button key={tk.key} onClick={() => setActiveTrends(prev =>
                     prev.includes(tk.key) ? prev.filter(k=>k!==tk.key) : [...prev, tk.key]
                   )}
-                    style={{padding:"2px 8px", borderRadius:4, cursor:"pointer",
-                      fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:1,
+                    style={{padding:"2px 7px", borderRadius:4, cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace", fontSize:9, letterSpacing:1,
                       border:`1px solid ${activeTrends.includes(tk.key)?tk.color:t.border}`,
                       background:activeTrends.includes(tk.key)?`${tk.color}18`:t.surface2,
                       color:activeTrends.includes(tk.key)?tk.color:t.textSec}}>
@@ -255,7 +301,7 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <div style={{flex:1, minHeight:180}}>
+              <div style={{flex:1, minHeight:200}}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendData} margin={{top:4, right:4, bottom:0, left:-20}}>
                     <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid}/>
@@ -271,38 +317,150 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quality + AI panel */}
-            <div style={{display:"flex", flexDirection:"column", gap:10}}>
-              <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:12, padding:14}}>
-                <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:11, letterSpacing:2, textTransform:"uppercase", color:t.textSec, marginBottom:8}}>
-                  QUALITÀ USCITA
+            {/* ── RIGHT COLUMN: QUALITÀ + AI ── */}
+            <div style={{display:"flex", flexDirection:"column", gap:8}}>
+
+              {/* QUALITÀ USCITA */}
+              <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 14px"}}>
+                <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:8}}>
+                  <span style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ QUALITÀ USCITA</span>
+                  <span style={{fontSize:9, padding:"2px 7px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, border:`1px solid ${t.green}44`}}>LIVE</span>
                 </div>
                 {[
-                  {label:"COD",  value:sim.output?.COD,  unit:"mg/L", lim:125, hi:false},
-                  {label:"BOD5", value:sim.output?.BOD5, unit:"mg/L", lim:25,  hi:false},
-                  {label:"TSS",  value:sim.output?.TSS,  unit:"mg/L", lim:35,  hi:false},
-                  {label:"NH4",  value:sim.output?.NH4,  unit:"mg/L", lim:8,   hi:false},
-                ].map(q => <QualRow key={q.label} {...q} t={t}/>)}
+                  {param:"COD",  v:sim.output?.COD,  unit:" mg/L", lim:125, warn:100},
+                  {param:"BOD₅", v:sim.output?.BOD5, unit:" mg/L", lim:25,  warn:20},
+                  {param:"TSS",  v:sim.output?.TSS,  unit:" mg/L", lim:35,  warn:28},
+                  {param:"NH₄",  v:sim.output?.NH4,  unit:" mg/L", lim:8,   warn:6},
+                  {param:"pH",   v:sim.output?.pH,   unit:"",      lim:null, warn:null, phCheck:true},
+                  {param:"T°",   v:sim.output?.T,    unit:"°C",    lim:30,  warn:28},
+                  {param:"O₂",   v:sim.O2,           unit:" mg/L", lim:null, warn:null, o2Check:true},
+                ].map(q => {
+                  let ok, fuori;
+                  if (q.phCheck) { ok = q.v >= 6.5 && q.v <= 8.5; fuori = q.v < 5.5 || q.v > 9.5; }
+                  else if (q.o2Check) { ok = q.v >= 2; fuori = q.v < 1.5; }
+                  else { ok = q.v < (q.warn ?? q.lim); fuori = q.lim != null && q.v >= q.lim; }
+                  const c = fuori ? t.red : ok ? t.green : t.orange;
+                  const badge = fuori ? "✗ FUORI" : ok ? "✓ OK" : "⚠ PRE";
+                  return (
+                    <div key={q.param} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:`1px solid ${t.border}`}}>
+                      <span style={{fontSize:12, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, color:t.text}}>{q.param}</span>
+                      <div style={{display:"flex", alignItems:"center", gap:6}}>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:c}}>
+                          {q.v != null ? (Number.isInteger(q.v) ? q.v : q.v.toFixed(q.param==="pH"||q.param==="NH₄"||q.param==="O₂"?2:1)) : "—"}{q.unit}
+                        </span>
+                        <span style={{fontSize:9, padding:"2px 5px", borderRadius:3, background:`${c}18`, color:c, fontFamily:"'Share Tech Mono',monospace", border:`1px solid ${c}33`}}>
+                          {badge}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+
+              {/* AI ADVISOR */}
               <AIPanel sim={sim} autoOn={autoOn} t={t}/>
             </div>
           </div>
 
-          {/* ── ENERGY ROW ── */}
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))", gap:10}}>
-            {[
-              {label:"Consumo Attuale", value:`${sim.energy?.kw ?? 0} kW`,  color:t.accent},
-              {label:"Energia Totale",  value:`${sim.energy?.kwh ?? 0} kWh`, color:t.green},
-              {label:"Soffianti",       value:`${sim.blower ?? 0}%`,          color:t.orange},
-              {label:"Coagulante",      value:`${sim.coagulant ?? 0}%`,       color:t.purple},
-              {label:"Ricircolo Fanghi",value:`${sim.sludgeRecycle ?? 0}%`,   color:t.yellow},
-              {label:"MLSS",            value:`${Math.round(sim.MLSS ?? 0)} mg/L`, color:t.accent},
-            ].map(e => (
-              <div key={e.label} style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"10px 14px"}}>
-                <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:3}}>{e.label}</div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color:e.color}}>{e.value}</div>
+          {/* ── BOTTOM ROW ── */}
+          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12}}>
+
+            {/* CONSUMI ENERGETICI */}
+            <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"12px 14px"}}>
+              <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:10}}>
+                <span style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ CONSUMI ENERGETICI</span>
+                <span style={{fontSize:9, padding:"2px 7px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", border:`1px solid ${t.green}44`}}>LIVE</span>
               </div>
-            ))}
+              {(sim.stageEnergy || []).map((kw, i) => {
+                const total = (sim.stageEnergy||[]).reduce((a,b)=>a+b,0)||1;
+                const pct = Math.round(kw/total*100);
+                const stageNames = ["Grigliatura","Dissabbiatura","Biologico","Sediment.","Disinfezione"];
+                const barC = i===2 ? t.accent : i===3 ? t.orange : t.green;
+                return (
+                  <div key={i} style={{marginBottom:7}}>
+                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:2}}>
+                      <span style={{fontSize:11, color: i===2?t.accent:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:i===2?700:400}}>
+                        ST-0{i+1} {stageNames[i]}
+                      </span>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:barC}}>{kw} kW ({pct}%)</span>
+                    </div>
+                    <div style={{height:4, background:t.surface3, borderRadius:2, overflow:"hidden"}}>
+                      <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:2, transition:"width 0.5s"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8, marginTop:4, display:"flex", gap:16}}>
+                {[
+                  {label:"kW", val:`${sim.energy?.kw??0}`, sub:"Totale Impianto"},
+                  {label:"kWh", val:`${sim.energy?.kwh??0}`, sub:"Sessione"},
+                  {label:"Wh/m³", val: sim.output?.Q>0 ? (sim.energy?.kw*1000/(sim.output?.Q||1)).toFixed(2) : "—", sub:"Spec."},
+                ].map(x => (
+                  <div key={x.label} style={{textAlign:"center"}}>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, fontWeight:700, color:t.accent}}>{x.val}</div>
+                    <div style={{fontSize:9, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.label}</div>
+                    <div style={{fontSize:9, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* STORICO ALLARMI */}
+            <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"12px 14px", display:"flex", flexDirection:"column"}}>
+              <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:10}}>
+                <span style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ STORICO ALLARMI</span>
+                <span style={{fontSize:9, padding:"2px 7px", borderRadius:3,
+                  background: activeAlarms.length===0 ? `${t.green}18` : `${t.red}18`,
+                  color: activeAlarms.length===0 ? t.green : t.red,
+                  fontFamily:"'Share Tech Mono',monospace", border:`1px solid ${activeAlarms.length===0?t.green:t.red}44`}}>
+                  {activeAlarms.length===0 ? "NESSUN ATTIVO" : `${activeAlarms.length} ATTIVI`}
+                </span>
+              </div>
+              <div style={{flex:1, overflowY:"auto", maxHeight:160}}>
+                {(sim.alarms||[]).length === 0 ? (
+                  <div style={{textAlign:"center", padding:"20px 0", color:t.green, fontFamily:"'Rajdhani',sans-serif", fontSize:12}}>
+                    ✓ Nessun allarme registrato
+                  </div>
+                ) : (
+                  (sim.alarms||[]).slice(0,8).map(a => (
+                    <div key={a.id} style={{display:"flex", gap:8, alignItems:"flex-start", padding:"5px 0", borderBottom:`1px solid ${t.border}`}}>
+                      <span style={{fontSize:10, color: a.sev==="ALTO"?t.red:t.orange, flexShrink:0, marginTop:1}}>
+                        {a.sev==="ALTO"?"🔴":"🟡"}
+                      </span>
+                      <div style={{flex:1, minWidth:0}}>
+                        <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:10, color: a.sev==="ALTO"?t.red:t.orange, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+                          {a.msg}
+                        </div>
+                        <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{a.time} · {a.causa}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* IMPIANTO */}
+            <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, padding:"12px 14px"}}>
+              <div style={{fontSize:10, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:10}}>▸ IMPIANTO</div>
+              {[
+                {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`, color:t.accent},
+                {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, color:t.textSec},
+                {label:"Soffianti",        val:`${sim.blower??0}%`,  color: sim.blower>80?t.red:sim.blower>60?t.orange:t.green},
+                {label:"Coagulante",       val:`${sim.coagulant??0}%`, color:t.orange},
+                {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`, color:t.purple},
+              ].map(x => (
+                <div key={x.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:`1px solid ${t.border}`}}>
+                  <span style={{fontSize:12, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{x.label}</span>
+                  <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, fontWeight:700, color:x.color}}>{x.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── FOOTER ── */}
+          <div style={{borderTop:`1px solid ${t.border}`, paddingTop:10, textAlign:"center",
+            fontSize:10, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:2}}>
+            AQUAPILOT v1.0.0 — PHASE 1 SIMULATION MODULE — © 2025 PURELOGIC / GREENECO WASTEWATER
           </div>
 
         </main>

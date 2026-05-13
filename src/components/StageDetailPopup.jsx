@@ -2,9 +2,57 @@ import { useState, useRef, useEffect } from "react";
 import Tag from "./ui/Tag";
 
 const HOLD_MS = 2200;
+const ALPHA = 0.10;
+
+function useSmoothedParams(params) {
+  const [smooth, setSmooth] = useState(params);
+  useEffect(() => {
+    if (!params) return;
+    setSmooth(prev => {
+      if (!prev || prev.length !== params.length) return params;
+      return params.map((p, i) => {
+        const pv = prev[i];
+        if (typeof p.value !== "number" || typeof pv?.value !== "number") return p;
+        return { ...p, value: pv.value + ALPHA * (p.value - pv.value) };
+      });
+    });
+  }, [params]);
+  return smooth;
+}
+
+function useSmoothedOutput(stageOutput) {
+  const [smooth, setSmooth] = useState(stageOutput);
+  useEffect(() => {
+    if (!stageOutput) return;
+    setSmooth(prev => {
+      if (!prev || typeof prev.value !== "number") return stageOutput;
+      return { ...stageOutput, value: prev.value + ALPHA * (stageOutput.value - prev.value) };
+    });
+  }, [stageOutput]);
+  return smooth;
+}
+
+function useSmoothedControls(controls) {
+  const [smooth, setSmooth] = useState(controls);
+  useEffect(() => {
+    if (!controls) return;
+    setSmooth(prev => {
+      if (!prev || prev.length !== controls.length) return controls;
+      return controls.map((c, i) => {
+        const pc = prev[i];
+        if (typeof c.value !== "number" || typeof pc?.value !== "number") return c;
+        return { ...c, value: pc.value + ALPHA * (c.value - pc.value) };
+      });
+    });
+  }, [controls]);
+  return smooth;
+}
 
 function ParamRow({ label, value, unit, note, t }) {
   const isNum = typeof value === "number";
+  const display = isNum
+    ? (Number.isInteger(value) ? value : value % 1 === 0 ? value : value.toFixed(Math.abs(value) < 10 ? 2 : 1))
+    : value;
   return (
     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
       <div>
@@ -12,7 +60,7 @@ function ParamRow({ label, value, unit, note, t }) {
         {note && <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{note}</div>}
       </div>
       <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
-        {isNum ? value : value}
+        {display}
         {unit && <span style={{fontSize:14, color:t.textMuted, marginLeft:3}}>{unit}</span>}
       </span>
     </div>
@@ -24,6 +72,10 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
 
   const [stableAction, setStableAction] = useState(action);
   const pendingPopup = useRef(null);
+
+  const smoothOutput   = useSmoothedOutput(stageOutput);
+  const smoothParams   = useSmoothedParams(stageDetail?.params);
+  const smoothControls = useSmoothedControls(stageDetail?.controls);
 
   useEffect(() => {
     const nextText = action ? action.text : null;
@@ -39,10 +91,10 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
   });
 
   const sc = stage.status==="ok" ? t.green : stage.status==="warn" ? t.orange : t.red;
-  const hib = stageOutput?.higherIsBetter;
-  const rawPct = stageOutput && !hib ? Math.round(stageOutput.value / stageOutput.target * 100) : 0;
-  const score = stageOutput
-    ? hib ? Math.max(0, Math.min(100, Math.round(stageOutput.value / stageOutput.target * 100))) : Math.min(100, rawPct)
+  const hib = smoothOutput?.higherIsBetter;
+  const rawPct = smoothOutput && !hib ? Math.round(smoothOutput.value / smoothOutput.target * 100) : 0;
+  const score = smoothOutput
+    ? hib ? Math.max(0, Math.min(100, Math.round(smoothOutput.value / smoothOutput.target * 100))) : Math.min(100, rawPct)
     : 0;
   const scoreColor = hib
     ? score >= 90 ? t.green : score >= 65 ? t.orange : t.red
@@ -71,25 +123,25 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
             <button onClick={onClose} style={{background:t.surface2, border:`1px solid ${t.border}`, color:t.text, width:28, height:28, borderRadius:6, cursor:"pointer", fontSize:12, lineHeight:1, flexShrink:0}}>✕</button>
           </div>
 
-          {stageOutput && (
+          {smoothOutput && (
             <div style={{marginTop:12, padding:"10px 14px", background:t.surface2, borderRadius:8, display:"flex", alignItems:"center", gap:16}}>
               <div style={{textAlign:"center", minWidth:64}}>
                 <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:22, fontWeight:700, color:scoreColor}}>
-                  {hib ? Math.round(stageOutput.value)+"%" : rawPct+"%"}
+                  {hib ? Math.round(smoothOutput.value)+"%" : rawPct+"%"}
                 </div>
                 <div style={{fontSize:14, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{hib?"RENDIMENTO":"% DEL LIMITE"}</div>
               </div>
               <div style={{flex:1}}>
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                  <span style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{stageOutput.label}</span>
+                  <span style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{smoothOutput.label}</span>
                   <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:scoreColor}}>
                     {hib
-                      ? `${Math.round(stageOutput.value)}% su ${stageOutput.target}% target`
-                      : `${stageOutput.value} / ${stageOutput.target} ${stageOutput.unit} (${rawPct}% del limite)`}
+                      ? `${Math.round(smoothOutput.value)}% su ${smoothOutput.target}% target`
+                      : `${smoothOutput.value?.toFixed(1)} / ${smoothOutput.target} ${smoothOutput.unit} (${rawPct}% del limite)`}
                   </span>
                 </div>
                 <div style={{height:6, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
-                  <div style={{height:"100%", width:`${Math.min(100,score)}%`, background:scoreColor, borderRadius:3, transition:"width 0.5s ease"}}/>
+                  <div style={{height:"100%", width:`${Math.min(100,score)}%`, background:scoreColor, borderRadius:3, transition:"width 0.8s ease"}}/>
                 </div>
               </div>
             </div>
@@ -125,14 +177,14 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
 
           <div>
             <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>PARAMETRI DI PROCESSO</div>
-            {stageDetail.params.map((p, i) => <ParamRow key={i} {...p} t={t}/>)}
+            {(smoothParams || stageDetail.params).map((p, i) => <ParamRow key={i} {...p} t={t}/>)}
           </div>
 
           {stageDetail.controls.length > 0 && (
             <div>
               <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>CONTROLLI ATTIVI</div>
               <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-                {stageDetail.controls.map((c, i) => {
+                {(smoothControls || stageDetail.controls).map((c, i) => {
                   const pct = c.value;
                   const barColor = pct > 80 ? t.red : pct > 60 ? t.orange : t.green;
                   return (

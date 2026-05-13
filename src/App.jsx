@@ -211,14 +211,14 @@ export default function App() {
                 USCITA IMPIANTO
               </div>
               {[
-                {label:"COD",  value:sim.output?.COD,  unit:"mg/L", target:125, higher:false},
-                {label:"BOD5", value:sim.output?.BOD5, unit:"mg/L", target:25,  higher:false},
-                {label:"TSS",  value:sim.output?.TSS,  unit:"mg/L", target:35,  higher:false},
-                {label:"NH4",  value:sim.output?.NH4,  unit:"mg/L", target:8,   higher:false},
-                {label:"pH",   value:sim.output?.pH,   unit:"",     target:null, higher:null},
-                {label:"O2",   value:sim.O2,           unit:"mg/L", target:2,   higher:true},
+                {label:"COD",  val:sim.output?.COD?.toFixed(1),  unit:"mg/L", color: sim.output?.COD > 125 ? t.red : sim.output?.COD > 100 ? t.orange : t.green},
+                {label:"BOD5", val:sim.output?.BOD5?.toFixed(1), unit:"mg/L", color: sim.output?.BOD5 > 25  ? t.red : sim.output?.BOD5 > 20  ? t.orange : t.green},
+                {label:"TSS",  val:sim.output?.TSS?.toFixed(1),  unit:"mg/L", color: sim.output?.TSS > 35   ? t.red : sim.output?.TSS > 28   ? t.orange : t.green},
+                {label:"NH4",  val:sim.output?.NH4?.toFixed(2),  unit:"mg/L", color: sim.output?.NH4 > 8    ? t.red : sim.output?.NH4 > 6    ? t.orange : t.green},
+                {label:"pH",   val:sim.output?.pH?.toFixed(2),   unit:"",     color: sim.output?.pH < 6.5 || sim.output?.pH > 8.5 ? t.red : t.green},
+                {label:"O2",   val:sim.O2?.toFixed(2),           unit:"mg/L", color: sim.O2 < 1.5 ? t.red : sim.O2 < 2 ? t.orange : t.green},
               ].map(k => (
-                <KpiNum key={k.label} label={k.label} value={k.value} unit={k.unit} target={k.target} higherIsBetter={k.higher} t={t}/>
+                <KpiNum key={k.label} label={k.label} val={k.val} unit={k.unit} color={k.color} t={t} live/>
               ))}
             </div>
 
@@ -259,7 +259,7 @@ export default function App() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendData} margin={{top:4, right:4, bottom:0, left:-20}}>
                     <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid}/>
-                    <XAxis dataKey="ts" tick={{fill:t.textMuted, fontSize:9, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false}/>
+                    <XAxis dataKey="t" tick={{fill:t.textMuted, fontSize:9, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false}/>
                     <YAxis tick={{fill:t.textMuted, fontSize:9, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false}/>
                     <Tooltip content={<CustomTooltip t={t}/>}/>
                     {TREND_KEYS.filter(tk => activeTrends.includes(tk.key)).map(tk => (

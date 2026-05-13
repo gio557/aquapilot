@@ -30,6 +30,34 @@ export default function App() {
 
   const { sim, setSim } = useSimulation();
 
+  // Smoothed display values — EMA with alpha=0.10 so numbers drift gradually
+  const ALPHA = 0.10;
+  const smoothRef = useRef(null);
+  const [display, setDisplay] = useState(null);
+
+  useEffect(() => {
+    if (!sim.output) return;
+    setDisplay(prev => {
+      const base = prev || { ...sim.output, O2: sim.O2, MLSS: sim.MLSS, blower: sim.blower, kw: sim.energy?.kw ?? 0 };
+      const lerp = (a, b) => a + ALPHA * (b - a);
+      return {
+        COD:    lerp(base.COD,    sim.output.COD),
+        BOD5:   lerp(base.BOD5,   sim.output.BOD5),
+        TSS:    lerp(base.TSS,    sim.output.TSS),
+        NH4:    lerp(base.NH4,    sim.output.NH4),
+        pH:     lerp(base.pH,     sim.output.pH),
+        T:      lerp(base.T,      sim.output.T),
+        Q:      lerp(base.Q,      sim.output.Q),
+        O2:     lerp(base.O2,     sim.O2),
+        MLSS:   lerp(base.MLSS,   sim.MLSS),
+        blower: lerp(base.blower, sim.blower),
+        kw:     lerp(base.kw,     sim.energy?.kw ?? 0),
+      };
+    });
+  }, [sim.output, sim.O2, sim.MLSS, sim.blower, sim.energy?.kw]);
+
+  const d = display || { ...sim.output, O2: sim.O2, MLSS: sim.MLSS, blower: sim.blower, kw: sim.energy?.kw ?? 0 };
+
   const [page, setPage] = useState("dashboard");
   const [showControlRoom, setShowControlRoom] = useState(false);
   const [showConfigurator, setShowConfigurator] = useState(false);
@@ -207,7 +235,7 @@ export default function App() {
                   ▸ PORTATA <span style={{width:6,height:6,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
                 </div>
                 <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:26, fontWeight:700, color:t.accent, lineHeight:1}}>
-                  {Math.round(sim.output?.Q ?? sim.inlet?.Q ?? 0)}
+                  {Math.round(d.Q ?? sim.inlet?.Q ?? 0)}
                 </div>
                 <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:8}}>m³/h · Portata attuale</div>
                 <div style={{borderTop:`1px solid ${t.border}`, paddingTop:6}}>
@@ -226,18 +254,18 @@ export default function App() {
                   ▸ FANGHI <span style={{width:6,height:6,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
                 </div>
                 <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:26, fontWeight:700, color:t.purple, lineHeight:1}}>
-                  {Math.round(sim.MLSS ?? 0)}
+                  {Math.round(d.MLSS ?? 0)}
                 </div>
                 <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:8}}>mg/L · MLSS biologico</div>
                 <div style={{borderTop:`1px solid ${t.border}`, paddingTop:6}}>
                   <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14,
-                    color: sim.blower > 80 ? t.red : sim.blower > 60 ? t.orange : t.green}}>
-                    {sim.blower ?? 0}%
+                    color: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green}}>
+                    {d.blower?.toFixed(0) ?? 0}%
                   </div>
                   <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>potenza · Soffianti</div>
                   <div style={{height:4, background:t.surface3, borderRadius:2, marginTop:5, overflow:"hidden"}}>
-                    <div style={{height:"100%", width:`${sim.blower??0}%`,
-                      background: sim.blower > 80 ? t.red : sim.blower > 60 ? t.orange : t.green,
+                    <div style={{height:"100%", width:`${d.blower??0}%`,
+                      background: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green,
                       borderRadius:2, transition:"width 0.5s"}}/>
                   </div>
                 </div>
@@ -327,13 +355,13 @@ export default function App() {
                   <span style={{fontSize:9, padding:"2px 7px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, border:`1px solid ${t.green}44`}}>LIVE</span>
                 </div>
                 {[
-                  {param:"COD",  v:sim.output?.COD,  unit:" mg/L", lim:125, warn:100},
-                  {param:"BOD₅", v:sim.output?.BOD5, unit:" mg/L", lim:25,  warn:20},
-                  {param:"TSS",  v:sim.output?.TSS,  unit:" mg/L", lim:35,  warn:28},
-                  {param:"NH₄",  v:sim.output?.NH4,  unit:" mg/L", lim:8,   warn:6},
-                  {param:"pH",   v:sim.output?.pH,   unit:"",      lim:null, warn:null, phCheck:true},
-                  {param:"T°",   v:sim.output?.T,    unit:"°C",    lim:30,  warn:28},
-                  {param:"O₂",   v:sim.O2,           unit:" mg/L", lim:null, warn:null, o2Check:true},
+                  {param:"COD",  v:d.COD,  unit:" mg/L", lim:125, warn:100},
+                  {param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:25,  warn:20},
+                  {param:"TSS",  v:d.TSS,  unit:" mg/L", lim:35,  warn:28},
+                  {param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:8,   warn:6},
+                  {param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true},
+                  {param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28},
+                  {param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true},
                 ].map(q => {
                   let ok, fuori;
                   if (q.phCheck) { ok = q.v >= 6.5 && q.v <= 8.5; fuori = q.v < 5.5 || q.v > 9.5; }
@@ -392,9 +420,9 @@ export default function App() {
               })}
               <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8, marginTop:4, display:"flex", gap:16}}>
                 {[
-                  {label:"kW", val:`${sim.energy?.kw??0}`, sub:"Totale Impianto"},
+                  {label:"kW", val:d.kw?.toFixed(1)??0, sub:"Totale Impianto"},
                   {label:"kWh", val:`${sim.energy?.kwh??0}`, sub:"Sessione"},
-                  {label:"Wh/m³", val: sim.output?.Q>0 ? (sim.energy?.kw*1000/(sim.output?.Q||1)).toFixed(2) : "—", sub:"Spec."},
+                  {label:"Wh/m³", val: d.Q>0 ? (d.kw*1000/(d.Q||1)).toFixed(2) : "—", sub:"Spec."},
                 ].map(x => (
                   <div key={x.label} style={{textAlign:"center"}}>
                     <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, fontWeight:700, color:t.accent}}>{x.val}</div>
@@ -445,7 +473,7 @@ export default function App() {
               {[
                 {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`, color:t.accent},
                 {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, color:t.textSec},
-                {label:"Soffianti",        val:`${sim.blower??0}%`,  color: sim.blower>80?t.red:sim.blower>60?t.orange:t.green},
+                {label:"Soffianti",        val:`${d.blower?.toFixed(0)??0}%`,  color: d.blower>80?t.red:d.blower>60?t.orange:t.green},
                 {label:"Coagulante",       val:`${sim.coagulant??0}%`, color:t.orange},
                 {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`, color:t.purple},
               ].map(x => (

@@ -74,10 +74,10 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
   if (ac.pH && ac.pH.on) {
     const pHsp = 7.2;
     const errpH = pHsp - out.pH;
-    const Kp = 12;
-    const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 25);
+    const Kp = 3;                                          // era 12 — gain ridotto per evitare oscillazioni
+    const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 5); // max +5% per tick (era 25)
 
-    if (Math.abs(errpH) > 0.15 && delta >= 1) {
+    if (Math.abs(errpH) > 0.20 && delta >= 2) {           // banda morta 0.20 (era 0.15), soglia min 2%
       if (errpH > 0) {
         ch.naoh   = clamp(s.naoh + delta, 0, 100);
         ch.h2so4  = 0;
@@ -89,9 +89,9 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
         const sev = out.pH > 9.5 ? "ALTO" : "MEDIO";
         actions[4] = { text: `H2SO4: ${s.h2so4}→${ch.h2so4}% (+${delta}%) — pH ${out.pH.toFixed(2)} > ${pHsp} (err ${(-errpH).toFixed(2)})`, sev };
       }
-    } else if (Math.abs(errpH) <= 0.15) {
-      if (s.naoh > 0)  { ch.naoh  = Math.max(0, s.naoh  - 3); }
-      if (s.h2so4 > 0) { ch.h2so4 = Math.max(0, s.h2so4 - 3); }
+    } else if (Math.abs(errpH) <= 0.20) {
+      if (s.naoh > 0)  { ch.naoh  = Math.max(0, s.naoh  - 2); } // ramp-down 2%/tick (era 3)
+      if (s.h2so4 > 0) { ch.h2so4 = Math.max(0, s.h2so4 - 2); }
       if (s.naoh > 0 || s.h2so4 > 0)
         actions[4] = { text: `pH normalizzato (${out.pH.toFixed(2)}) — riduzione dosaggi in corso`, sev: "OK" };
     }

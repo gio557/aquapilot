@@ -13,6 +13,7 @@ export function initTrend() {
       BOD5: +(8  + s1*2  + Math.random()*0.8).toFixed(1),
       TSS:  +(7  + s2*2  + Math.random()*1).toFixed(1),
       NH4:  +(0.8+ s2*0.3+ Math.random()*0.1).toFixed(2),
+      pH:   +(7.2+ s1*0.15+ Math.random()*0.05).toFixed(2),
       O2:   +(4.5+ s1*0.6+ Math.random()*0.3).toFixed(2),
     });
   }
@@ -149,6 +150,7 @@ export function simTick(s) {
       BOD5: +s5.BOD5.toFixed(1),
       TSS:  +s5.TSS.toFixed(1),
       NH4:  +s5.NH4.toFixed(2),
+      pH:   +s5.pH.toFixed(2),
       O2:   +s5.O2.toFixed(2),
     }];
   }

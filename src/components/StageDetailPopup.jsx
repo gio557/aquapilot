@@ -51,7 +51,7 @@ function useSmoothedControls(controls) {
 function ParamRow({ label, value, unit, note, t }) {
   const isNum = typeof value === "number";
   const display = isNum
-    ? (Number.isInteger(value) ? value : value % 1 === 0 ? value : value.toFixed(Math.abs(value) < 10 ? 2 : 1))
+    ? (Math.abs(value) < 10 ? (Math.round(value * 100) / 100).toFixed(2) : Math.round(value * 10) / 10)
     : value;
   return (
     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
@@ -185,13 +185,13 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
               <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>CONTROLLI ATTIVI</div>
               <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
                 {(smoothControls || stageDetail.controls).map((c, i) => {
-                  const pct = c.value;
+                  const pct = typeof c.value === "number" ? Math.round(c.value * 10) / 10 : c.value;
                   const barColor = pct > 80 ? t.red : pct > 60 ? t.orange : t.green;
                   return (
                     <div key={i} style={{flex:"1 1 140px", padding:"10px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`}}>
                       <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
                         <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14, color:t.text}}>{c.label}</span>
-                        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barColor, fontWeight:700}}>{pct}{c.unit}</span>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barColor, fontWeight:700}}>{Number.isInteger(pct) ? pct : pct.toFixed(1)}{c.unit}</span>
                       </div>
                       <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
                         <div style={{height:"100%", width:`${pct}%`, background:barColor, borderRadius:3, transition:"width 0.4s ease"}}/>

@@ -94,15 +94,15 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                 borderLeft:`4px solid ${color}`,
                 borderRadius: isOpen ? "10px 10px 0 0" : "10px",
                 transition:"border-color 0.2s"}}>
-              <div style={{display:"flex", alignItems:"center", gap:12}}>
-                <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted, letterSpacing:1}}>
+              <div style={{display:"flex", alignItems:"center", gap:12, minWidth:0, flex:1, overflow:"hidden"}}>
+                <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted, letterSpacing:1, flexShrink:0}}>
                   ST-0{si+1}
                 </span>
-                <div style={{textAlign:"left"}}>
-                  <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, color:t.text}}>{stage.name}</div>
-                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{stage.sub}</div>
+                <div style={{textAlign:"left", minWidth:0, flexShrink:1}}>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, color:t.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.name}</div>
+                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.sub}</div>
                 </div>
-                <div style={{display:"flex", gap:6}}>
+                <div style={{display:"flex", gap:6, flexShrink:0}}>
                   <span style={{fontSize:10, padding:"2px 8px", borderRadius:4, background:`${color}18`,
                     color, border:`1px solid ${color}44`, fontFamily:"'Share Tech Mono',monospace"}}>
                     {sensorsEnabled}/{totalSensors} sensori
@@ -194,8 +194,8 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                       <div key={pump.id} style={{marginBottom:10, padding:"14px 16px", borderRadius:9,
                         background: pump.enabled ? `${t.accent}08` : t.surface2,
                         border:`1px solid ${pump.enabled ? t.accent+"44" : t.border}`}}>
-                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12}}>
-                          <div style={{display:"flex", alignItems:"center", gap:10}}>
+                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, gap:8, minWidth:0}}>
+                          <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0, overflow:"hidden"}}>
                             {/* Enable toggle */}
                             <div onClick={() => updatePump(si, pi, "enabled", !pump.enabled)}
                               style={{flexShrink:0, width:36, height:20, borderRadius:10, cursor:"pointer",
@@ -209,9 +209,9 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                               onChange={e => updatePump(si, pi, "name", e.target.value)}
                               style={{background:"transparent", border:"none", borderBottom:`1px solid ${t.border}`,
                                 color:t.text, fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
-                                fontSize:14, outline:"none", padding:"2px 4px", minWidth:160}}/>
+                                fontSize:14, outline:"none", padding:"2px 4px", flex:1, minWidth:0}}/>
                           </div>
-                          <div style={{display:"flex", alignItems:"center", gap:8}}>
+                          <div style={{display:"flex", alignItems:"center", gap:8, flexShrink:0}}>
                             {/* VFD toggle */}
                             <div onClick={() => updatePump(si, pi, "vfd", !pump.vfd)}
                               style={{padding:"3px 9px", borderRadius:5, cursor:"pointer", fontSize:10,

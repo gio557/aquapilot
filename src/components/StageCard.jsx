@@ -4,7 +4,7 @@ import MechanicalWidget from "./MechanicalWidget";
 
 const HOLD_MS = 2200;
 
-export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, onClick }) {
+export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, onClick }) {
   const IDLE = [
     "Nessuna correzione attiva — stadio stabile",
     "Nessuna correzione attiva — stadio stabile",
@@ -31,7 +31,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
     if (pendingRef.current) clearTimeout(pendingRef.current.timer);
     const timer = setTimeout(() => { setStable(buildMsg(action)); pendingRef.current = null; }, HOLD_MS);
     pendingRef.current = { text: nextText, timer };
-  });
+  }, [action, autoEnabled]);
 
   const sc = stage.status === "ok" ? t.green : stage.status === "warn" ? t.orange : t.red;
 
@@ -79,7 +79,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
           <div style={{fontSize:11, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{stage.sub}</div>
         </div>
         <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:sc, fontWeight:700, textAlign:"right"}}>
-          {stage.eff}%<div style={{fontSize:9, color:t.textMuted}}>EFF</div>
+          {eff != null ? `${eff}%` : "—"}<div style={{fontSize:9, color:t.textMuted}}>EFF</div>
         </div>
       </div>
 

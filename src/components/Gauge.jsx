@@ -14,7 +14,7 @@ export default function Gauge({ stageOutput, t }) {
     const raw = Math.round(value / target * 100);
     score = Math.min(100, raw);
     displayVal = raw + "%";
-    color = raw >= 100 ? t.red : raw >= 80 ? t.red : raw >= 60 ? t.orange : t.green;
+    color = raw >= 100 ? t.red : raw >= 80 ? t.orange : raw >= 60 ? t.orange : t.green;
     label = raw >= 100 ? "FUORI LIMITE" : raw >= 80 ? "ATTENZIONE" : raw >= 60 ? "OK" : "OTTIMALE";
     modeLabel = "DEL LIMITE";
   }

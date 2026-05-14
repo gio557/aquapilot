@@ -220,6 +220,7 @@ export default function App() {
             {stages.map((s, i) => (
               <StageCard key={s.id} stage={s} index={i}
                 stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
+                eff={sim.stageEff?.[i]}
                 autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}/>
             ))}
             <button onClick={() => setShowConfigurator(true)}
@@ -410,13 +411,13 @@ export default function App() {
               {(sim.stageEnergy || []).map((kw, i) => {
                 const total = (sim.stageEnergy||[]).reduce((a,b)=>a+b,0)||1;
                 const pct = Math.round(kw/total*100);
-                const stageNames = ["Grigliatura","Dissabbiatura","Biologico","Sediment.","Disinfezione"];
+                const stageName = stages[i]?.name ?? `ST-0${i+1}`;
                 const barC = i===2 ? t.accent : i===3 ? t.orange : t.green;
                 return (
                   <div key={i} style={{marginBottom:9}}>
                     <div style={{display:"flex", justifyContent:"space-between", marginBottom:3}}>
                       <span style={{fontSize:12, color: i===2?t.accent:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:i===2?700:500}}>
-                        ST-0{i+1} {stageNames[i]}
+                        ST-0{i+1} {stageName}
                       </span>
                       <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:barC}}>{kw} kW ({pct}%)</span>
                     </div>
@@ -547,9 +548,11 @@ export default function App() {
                 ✓ Nessun allarme attivo
               </div>
             ) : (
-              activeAlarms.map(([param, sev]) => (
-                <AlarmRow key={param} param={param} sev={sev} t={t}/>
-              ))
+              activeAlarms.map(([param, sev]) => {
+                const detail = (sim.alarms||[]).find(a => a.msg?.includes(param));
+                const alarm = detail || { sev, auto: false, time: "—", msg: `${param} — soglia superata`, causa: "—" };
+                return <AlarmRow key={param} alarm={alarm} t={t}/>;
+              })
             )}
           </div>
         </div>

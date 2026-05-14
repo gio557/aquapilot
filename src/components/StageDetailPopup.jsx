@@ -95,7 +95,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
     if (pendingPopup.current) clearTimeout(pendingPopup.current.timer);
     const timer = setTimeout(() => { setStableAction(action); pendingPopup.current = null; }, HOLD_MS);
     pendingPopup.current = { text: nextText, timer };
-  });
+  }, [action]);
 
   const sc = stage.status==="ok" ? t.green : stage.status==="warn" ? t.orange : t.red;
   const hib = smoothOutput?.higherIsBetter;

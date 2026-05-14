@@ -176,7 +176,7 @@ export function simTick(s) {
       if (c.v < c.low_c || c.v > c.high_c) sev = "ALTO";
       else if (c.v < c.low_w || c.v > c.high_w) sev = "MEDIO";
     } else {
-      sev = c.v > c.crit ? "ALTO" : c.v > c.warn ? "BASSO" : "OK";
+      sev = c.v > c.crit ? "ALTO" : c.v > c.warn ? "MEDIO" : "OK";
     }
     newAS[c.p] = sev;
     if (sev !== "OK" && sev !== prevAS[c.p]) {

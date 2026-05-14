@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, TIME_RANGES } from "./constants/stages";
+import { DEFAULT_STAGE_CONFIG } from "./constants/stageConfig";
 import { useSimulation } from "./hooks/useSimulation";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
 import ControlRoom from "./components/ControlRoom";
 import Configurator from "./components/Configurator";
 import NormativaPage from "./components/NormativaPage";
+import ConfigurazionePage from "./components/ConfigurazionePage";
 import AIPanel from "./components/AIPanel";
 import KpiNum from "./components/ui/KpiNum";
 import AlarmRow from "./components/ui/AlarmRow";
@@ -57,6 +59,8 @@ export default function App() {
   }, [sim.output, sim.O2, sim.MLSS, sim.blower, sim.energy?.kw]);
 
   const d = display || { ...sim.output, O2: sim.O2, MLSS: sim.MLSS, blower: sim.blower, kw: sim.energy?.kw ?? 0 };
+
+  const [stageConfig, setStageConfig] = useState(() => JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)));
 
   const [page, setPage] = useState("dashboard");
   const [showControlRoom, setShowControlRoom] = useState(false);
@@ -136,8 +140,9 @@ export default function App() {
           <div style={{width:1, height:28, background:t.border}}/>
           <div style={{display:"flex", gap:4}}>
             {[
-              {id:"dashboard", label:"DASHBOARD"},
-              {id:"normativa", label:"NORMATIVA"},
+              {id:"dashboard",      label:"DASHBOARD"},
+              {id:"configurazione", label:"CONFIGURAZIONE"},
+              {id:"normativa",      label:"NORMATIVA"},
             ].map(p => (
               <button key={p.id} onClick={() => setPage(p.id)}
                 style={{padding:"4px 12px", borderRadius:6, cursor:"pointer",
@@ -205,6 +210,8 @@ export default function App() {
       {/* ── PAGES ── */}
       {page === "normativa" ? (
         <NormativaPage t={t} ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
+      ) : page === "configurazione" ? (
+        <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}/>
       ) : (
         <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12}}>
 
@@ -514,6 +521,7 @@ export default function App() {
         <StageDetailPopup
           {...selectedStageData}
           autoEnabled={autoOn}
+          stageConfig={stageConfig[selectedStage] ?? null}
           t={t}
           onClose={() => setSelectedStage(null)}
         />

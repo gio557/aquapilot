@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import Tag from "./ui/Tag";
+import { PARAM_SENSOR_MAP, SENSOR_TYPES } from "../constants/stageConfig";
 
 const HOLD_MS = 2200;
 const ALPHA = 0.10;
@@ -48,26 +49,32 @@ function useSmoothedControls(controls) {
   return smooth;
 }
 
-function ParamRow({ label, value, unit, note, t }) {
+function ParamRow({ label, value, unit, note, unavailable, t }) {
   const isNum = typeof value === "number";
   const display = isNum
     ? (Math.abs(value) < 10 ? (Math.round(value * 100) / 100).toFixed(2) : Math.round(value * 10) / 10)
     : value;
   return (
-    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
+    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`, opacity: unavailable ? 0.45 : 1}}>
       <div>
         <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
         {note && <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{note}</div>}
+        {unavailable && <div style={{fontSize:10, color:t.orange, fontFamily:"'Share Tech Mono',monospace", marginTop:1}}>sensore non installato</div>}
       </div>
-      <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
-        {display}
-        {unit && <span style={{fontSize:14, color:t.textMuted, marginLeft:3}}>{unit}</span>}
-      </span>
+      {unavailable ? (
+        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted, padding:"2px 8px",
+          borderRadius:4, background:t.surface2, border:`1px solid ${t.border}`}}>N/D</span>
+      ) : (
+        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
+          {display}
+          {unit && <span style={{fontSize:14, color:t.textMuted, marginLeft:3}}>{unit}</span>}
+        </span>
+      )}
     </div>
   );
 }
 
-export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, t, onClose }) {
+export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, stageConfig, t, onClose }) {
   if (!stageDetail) return null;
 
   const [stableAction, setStableAction] = useState(action);
@@ -177,8 +184,56 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
 
           <div>
             <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>PARAMETRI DI PROCESSO</div>
-            {(smoothParams || stageDetail.params).map((p, i) => <ParamRow key={i} {...p} t={t}/>)}
+            {(smoothParams || stageDetail.params).map((p, i) => {
+              const sensorId = PARAM_SENSOR_MAP[index]?.[p.label];
+              const unavailable = sensorId != null && stageConfig?.sensors?.[sensorId]?.enabled === false;
+              return <ParamRow key={i} {...p} unavailable={unavailable} t={t}/>;
+            })}
           </div>
+
+          {/* ── POMPE INSTALLATE ── */}
+          {stageConfig?.pumps?.length > 0 && (
+            <div>
+              <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>POMPE INSTALLATE</div>
+              <div style={{display:"flex", flexDirection:"column", gap:6}}>
+                {stageConfig.pumps.map((pump, i) => (
+                  <div key={pump.id} style={{padding:"8px 12px", borderRadius:7,
+                    background: pump.enabled ? t.surface2 : `${t.surface2}66`,
+                    border:`1px solid ${pump.enabled ? t.accent+"44" : t.border}`,
+                    opacity: pump.enabled ? 1 : 0.5}}>
+                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, color: pump.enabled ? t.text : t.textMuted}}>
+                        {pump.name}
+                      </span>
+                      <div style={{display:"flex", gap:6}}>
+                        {pump.vfd && <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.accent}18`, color:t.accent, fontFamily:"'Share Tech Mono',monospace", border:`1px solid ${t.accent}44`}}>INVERTER</span>}
+                        <span style={{fontSize:9, padding:"1px 6px", borderRadius:3,
+                          background: pump.enabled ? `${t.green}18` : `${t.red}18`,
+                          color: pump.enabled ? t.green : t.red,
+                          fontFamily:"'Share Tech Mono',monospace",
+                          border:`1px solid ${pump.enabled ? t.green : t.red}44`}}>
+                          {pump.enabled ? "ATTIVA" : "DISATTIVATA"}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+                      {[
+                        {l:"Potenza", v:`${pump.power_kw} kW`},
+                        pump.flow_m3h > 0 && {l:"Portata", v:`${pump.flow_m3h} m³/h`},
+                        pump.head_m > 0   && {l:"Prevalenza", v:`${pump.head_m} m`},
+                        {l:"Velocità", v:`${pump.rpm} RPM`},
+                      ].filter(Boolean).map(x => (
+                        <div key={x.l}>
+                          <span style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.l}: </span>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.accent}}>{x.v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {stageDetail.controls.length > 0 && (
             <div>

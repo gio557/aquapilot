@@ -156,7 +156,7 @@ export default function App() {
       <header style={{
         position:"sticky", top:0, zIndex:100,
         background:t.surface, borderBottom:`1px solid ${t.border}`,
-        padding:"0 24px", height:68,
+        padding:"0 24px", height:76,
         display:"flex", alignItems:"center", justifyContent:"space-between",
         gap:16,
       }}>
@@ -164,7 +164,7 @@ export default function App() {
         <div style={{display:"flex", alignItems:"center", gap:20}}>
           {/* AQUAPILOT wordmark + GreenEco logo */}
           <div style={{display:"flex", alignItems:"center", gap:14}}>
-            <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:26, color:t.accent, letterSpacing:4, whiteSpace:"nowrap", lineHeight:1}}>
+            <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:34, color:t.accent, letterSpacing:4, whiteSpace:"nowrap", lineHeight:1}}>
               AQUA<span style={{color:t.textSec}}>PILOT</span>
             </div>
             <div style={{display:"flex", alignItems:"center", gap:6}}>

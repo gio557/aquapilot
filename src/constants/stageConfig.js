@@ -53,7 +53,8 @@ export const DEFAULT_STAGE_CONFIG = [
       timeOn: 10,       // minutes
       timeOff: 20,      // minutes
       speed: 60,        // % for continuous mode
-      currentThreshold: 4.0,  // A
+      thresholdWarn: 3.0,     // A — green → yellow
+      thresholdAlarm: 4.2,    // A — yellow → red
     },
   },
   {

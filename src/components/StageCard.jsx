@@ -4,6 +4,32 @@ import MechanicalWidget from "./MechanicalWidget";
 
 const HOLD_MS = 2200;
 
+function ClassifierBanner({ state, t }) {
+  const color  = state.trafficLight === "red" ? t.red : state.trafficLight === "yellow" ? t.orange : t.green;
+  const bgDim  = state.trafficLight === "red" ? t.redDim : state.trafficLight === "yellow" ? t.orangeDim : t.greenDim;
+  const icon   = state.trafficLight === "red" ? "✗" : state.trafficLight === "yellow" ? "⚠" : "✓";
+  const status = state.trafficLight === "red" ? "CRITICO" : state.trafficLight === "yellow" ? "ATTENZIONE" : "NORMALE";
+  const sub    = state.trafficLight === "red"
+    ? "Hopper saturo — svuotare"
+    : state.trafficLight === "yellow"
+      ? "Hopper in carico — monitorare"
+      : "Hopper in condizioni regolari";
+  return (
+    <div style={{width:"100%", display:"flex", flexDirection:"column", gap:8, padding:"4px 0"}}>
+      <div style={{display:"flex", alignItems:"center", gap:8, padding:"10px 18px", borderRadius:10,
+        background:bgDim, border:`2px solid ${color}55`, width:"100%", justifyContent:"center",
+        transition:"background 0.6s, border-color 0.6s"}}>
+        <span style={{fontSize:20, lineHeight:1}}>{icon}</span>
+        <span style={{fontFamily:"'Orbitron',sans-serif", fontSize:16, fontWeight:900, color, letterSpacing:2, transition:"color 0.6s"}}>{status}</span>
+      </div>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+        <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{sub}</span>
+        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color, fontWeight:700, transition:"color 0.6s"}}>{state.currentDraw.toFixed(1)} A</span>
+      </div>
+    </div>
+  );
+}
+
 function ClassifierMini({ state, t }) {
   if (!state) return null;
   if (state.mode === "timed") {
@@ -86,7 +112,10 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
   const sevRank = s => s === "ALTO" ? 2 : s === "MEDIO" ? 1 : 0;
   const gaugeRank = gaugeColor === t.red ? 2 : gaugeColor === t.orange ? 1 : 0;
-  const rank = Math.max(sevRank(stable.sev), gaugeRank);
+  const clsRank = classifierState?.mode === "continuous"
+    ? (classifierState.trafficLight === "red" ? 2 : classifierState.trafficLight === "yellow" ? 1 : 0)
+    : 0;
+  const rank = Math.max(sevRank(stable.sev), gaugeRank, clsRank);
   const bColor = rank === 2 ? t.red : rank === 1 ? t.orange : t.green;
   const bIcon  = stable.sev === "ALTO" ? "🔴" : stable.sev === "MEDIO" ? "🟡" : "🟢";
 
@@ -122,14 +151,16 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
       {stageOutput && (
         <div style={{display:"flex", justifyContent:"center"}}>
-          {isEfficiency
-            ? <MechanicalWidget stageOutput={stageOutput} t={t}/>
-            : <Gauge stageOutput={stageOutput} t={t}/>
+          {classifierState?.mode === "continuous"
+            ? <ClassifierBanner state={classifierState} t={t}/>
+            : isEfficiency
+              ? <MechanicalWidget stageOutput={stageOutput} t={t}/>
+              : <Gauge stageOutput={stageOutput} t={t}/>
           }
         </div>
       )}
 
-      {classifierState && <ClassifierMini state={classifierState} t={t}/>}
+      {classifierState?.mode === "timed" && <ClassifierMini state={classifierState} t={t}/>}
 
       <div style={{
         padding:"7px 10px", borderRadius:7,

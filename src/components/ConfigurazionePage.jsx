@@ -276,25 +276,23 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                             onChange={v => updateClassifier(si, "timeOn", Math.max(1, Math.round(v)))} t={t}/>
                           <NumField label="Tempo OFF" value={sc.classifier.timeOff} unit="min"
                             onChange={v => updateClassifier(si, "timeOff", Math.max(1, Math.round(v)))} t={t}/>
-                          <NumField label="Soglia corrente" value={sc.classifier.currentThreshold} unit="A"
-                            onChange={v => updateClassifier(si, "currentThreshold", Math.max(0.5, v))} t={t}/>
                         </>
                       ) : (
-                        <>
-                          <NumField label="Velocità rotazione" value={sc.classifier.speed} unit="%"
-                            onChange={v => updateClassifier(si, "speed", Math.max(10, Math.min(100, Math.round(v))))} t={t}/>
-                          <NumField label="Soglia corrente" value={sc.classifier.currentThreshold} unit="A"
-                            onChange={v => updateClassifier(si, "currentThreshold", Math.max(0.5, v))} t={t}/>
-                        </>
+                        <NumField label="Velocità rotazione" value={sc.classifier.speed} unit="%"
+                          onChange={v => updateClassifier(si, "speed", Math.max(10, Math.min(100, Math.round(v))))} t={t}/>
                       )}
+                      <NumField label="🟡 Soglia gialla" value={sc.classifier.thresholdWarn ?? 3.0} unit="A"
+                        onChange={v => updateClassifier(si, "thresholdWarn", Math.max(0.5, v))} t={t}/>
+                      <NumField label="🔴 Soglia rossa" value={sc.classifier.thresholdAlarm ?? 4.2} unit="A"
+                        onChange={v => updateClassifier(si, "thresholdAlarm", Math.max(0.5, v))} t={t}/>
                     </div>
 
                     <div style={{padding:"8px 12px", background:t.surface2, borderRadius:6,
                       border:`1px solid ${t.border}`, fontSize:12, color:t.textMuted,
                       fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5}}>
                       {sc.classifier.mode === "timed"
-                        ? `Tramoggia attiva per ${sc.classifier.timeOn} min, poi ferma per ${sc.classifier.timeOff} min. La corrente assorbita durante il ciclo ON è un indicatore indiretto della concentrazione dello slurry estratto.`
-                        : `Tramoggia in funzione continua al ${sc.classifier.speed}% della velocità nominale. La corrente dell'inverter indica la concentrazione del sedimento: superata la soglia di ${sc.classifier.currentThreshold} A il semaforo passa in rosso.`}
+                        ? `Tramoggia attiva per ${sc.classifier.timeOn} min, poi ferma per ${sc.classifier.timeOff} min. La corrente nel ciclo ON indica la concentrazione dello slurry estratto — soglia 🟡 ${sc.classifier.thresholdWarn ?? 3.0} A / 🔴 ${sc.classifier.thresholdAlarm ?? 4.2} A.`
+                        : `Tramoggia in continuo al ${sc.classifier.speed}% della velocità nominale. Semaforo: 🟢 < ${sc.classifier.thresholdWarn ?? 3.0} A — 🟡 ${sc.classifier.thresholdWarn ?? 3.0}÷${sc.classifier.thresholdAlarm ?? 4.2} A — 🔴 > ${sc.classifier.thresholdAlarm ?? 4.2} A.`}
                     </div>
                   </div>
                 )}

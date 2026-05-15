@@ -44,7 +44,7 @@ export const INIT_SIM = {
   imhoff: "",
   stageActions: {},
   classifierConfig: {
-    mode: "timed", timeOn: 10, timeOff: 20, speed: 60, currentThreshold: 4.0,
+    mode: "timed", timeOn: 10, timeOff: 20, speed: 60, thresholdWarn: 3.0, thresholdAlarm: 4.2,
   },
   sandClassifier: {
     isOn: true, secondsRemaining: 600, currentDraw: 3.7, sedimentLevel: 0.25, trafficLight: "green", mode: "timed",
@@ -136,7 +136,7 @@ export function simTick(s) {
   ];
 
   // ── CLASSIFICATORE SABBIE ────────────────────────────────────
-  const clsCfg = s.classifierConfig || { mode:"timed", timeOn:10, timeOff:20, speed:60, currentThreshold:4.0 };
+  const clsCfg = s.classifierConfig || { mode:"timed", timeOn:10, timeOff:20, speed:60, thresholdWarn:3.0, thresholdAlarm:4.2 };
   const prevCls = s.sandClassifier || { isOn:true, secondsRemaining:600, currentDraw:3.7, sedimentLevel:0.25, trafficLight:"green", mode:"timed" };
 
   const kAccum = 0.00018 * (iTSS / 200);
@@ -167,10 +167,11 @@ export function simTick(s) {
     ? Math.max(0, +(nominalA * clsEffSpeed * overloadFactor + (Math.random()-0.5)*0.08).toFixed(1))
     : 0;
 
-  const clsThr = clsCfg.currentThreshold;
+  const clsWarn  = clsCfg.thresholdWarn  ?? clsCfg.currentThreshold * 0.7 ?? 3.0;
+  const clsAlarm = clsCfg.thresholdAlarm ?? clsCfg.currentThreshold      ?? 4.2;
   const clsTraffic = clsEffSpeed === 0 ? "off"
-    : clsCurrent >= clsThr ? "red"
-    : clsCurrent >= clsThr * 0.7 ? "yellow"
+    : clsCurrent >= clsAlarm ? "red"
+    : clsCurrent >= clsWarn  ? "yellow"
     : "green";
 
   const sandClassifier = {
@@ -308,8 +309,8 @@ export function simTick(s) {
           ? `Classificatore temporizzato: ON ${clsCfg.timeOn} min / OFF ${clsCfg.timeOff} min. Stato attuale: ${clsIsOn?"IN FUNZIONE":"FERMO"} — prossimo cambio in ${Math.floor(clsSecRemaining/60)}:${String(clsSecRemaining%60).padStart(2,"0")}.`
           : `Classificatore temporizzato: ON ${clsCfg.timeOn} min / OFF ${clsCfg.timeOff} min. Verificare accumulo manualmente.`)
         : (s.autoCorrect.enabled
-          ? `Classificatore in continuo al ${clsCfg.speed}% — corrente attuale ${clsCurrent.toFixed(1)} A (soglia allarme ${clsThr} A). Sedimento hopper: ${Math.round(clsSediment*100)}%.`
-          : `Classificatore in continuo al ${clsCfg.speed}%. Verificare corrente inverter. Soglia allarme impostata a ${clsThr} A.`),
+          ? `Classificatore in continuo al ${clsCfg.speed}% — corrente attuale ${clsCurrent.toFixed(1)} A (⚡${clsWarn.toFixed(1)} warn / 🔴${clsAlarm.toFixed(1)} alarm). Sedimento hopper: ${Math.round(clsSediment*100)}%.`
+          : `Classificatore in continuo al ${clsCfg.speed}%. Verificare corrente inverter. Soglie: giallo ${clsWarn.toFixed(1)} A, rosso ${clsAlarm.toFixed(1)} A.`),
     },
     {
       icon:"🦠", function:"Degradazione biologica aerobica del carico organico tramite fanghi attivi",

@@ -510,14 +510,17 @@ export default function App() {
             <div style={{...card, padding:"16px 18px"}}>
               <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:14}}>▸ IMPIANTO</div>
               {[
-                {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`, color:t.accent},
-                {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, color:t.textSec},
-                {label:"Soffianti",        val:`${d.blower?.toFixed(0)??0}%`,  color: d.blower>80?t.red:d.blower>60?t.orange:t.green},
-                {label:"Coagulante",       val:`${sim.coagulant??0}%`, color:t.orange},
-                {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`, color:t.purple},
+                {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`,  ref:"portata istantanea in ingresso",        color:t.accent},
+                {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, ref:"carico organico grezzo",                color:t.textSec},
+                {label:"Soffianti",        val:`${d.blower?.toFixed(0)??0}%`,           ref:"% della potenza massima installata",     color: d.blower>80?t.red:d.blower>60?t.orange:t.green},
+                {label:"Coagulante",       val:`${sim.coagulant??0}%`,                  ref:"% del dosaggio massimo di coagulante",   color:t.orange},
+                {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`,              ref:`% della portata max RAS · target MLSS ${sim.MLSSsp??3200} mg/L`, color:t.purple},
               ].map(x => (
                 <div key={x.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${t.border}`}}>
-                  <span style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>{x.label}</span>
+                  <div>
+                    <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>{x.label}</div>
+                    <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{x.ref}</div>
+                  </div>
                   <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color:x.color}}>{x.val}</span>
                 </div>
               ))}

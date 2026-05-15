@@ -3,6 +3,7 @@ import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG } from "./constants/stageConfig";
 import { useSimulation } from "./hooks/useSimulation";
+import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
 import ControlRoom from "./components/ControlRoom";
@@ -161,18 +162,15 @@ export default function App() {
       }}>
         {/* LEFT: logo + nav */}
         <div style={{display:"flex", alignItems:"center", gap:20}}>
-          {/* AQUAPILOT wordmark */}
+          {/* AQUAPILOT wordmark + GreenEco logo */}
           <div style={{display:"flex", alignItems:"center", gap:14}}>
             <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:26, color:t.accent, letterSpacing:4, whiteSpace:"nowrap", lineHeight:1}}>
               AQUA<span style={{color:t.textSec}}>PILOT</span>
             </div>
-            {/* GreenEco Wastewater logo — place greeneco-logo.png in /public */}
-            <img
-              src={`${import.meta.env.BASE_URL}greeneco-logo.png`}
-              alt="GreenEco Wastewater"
-              style={{height:44, width:"auto", objectFit:"contain", opacity:0.92}}
-              onError={e => { e.currentTarget.style.display="none"; }}
-            />
+            <div style={{display:"flex", alignItems:"center", gap:6}}>
+              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, letterSpacing:1}}>by</span>
+              <GreenEcoLogo height={40} textColor={darkMode ? "#e0e0e0" : "#2D2D2D"} />
+            </div>
           </div>
 
           <div style={{width:1, height:36, background:t.border}}/>

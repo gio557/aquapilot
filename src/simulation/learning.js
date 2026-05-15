@@ -97,9 +97,13 @@ export function recordTick(sim, prevSim) {
       COD: sim.output.COD, BOD5: sim.output.BOD5,
       TSS: sim.output.TSS, NH4: sim.output.NH4,
       pH:  sim.output.pH,  O2:  sim.O2,
+      T:   sim.output.T,   Q:   sim.output.Q,
       MLSS: sim.MLSS,
       blower: sim.blower, coagulant: sim.coagulant,
       ras: sim.sludgeRecycle, naoh: sim.naoh, h2so4: sim.h2so4,
+      kw:  sim.energy?.kw  ?? null,
+      kwh: sim.energy?.kwh ?? null,
+      stageEnergy: Array.isArray(sim.stageEnergy) ? sim.stageEnergy.slice() : null,
       auto: !!sim.autoCorrect?.enabled,
     });
     if (h.length > HISTORY_MAX) h.splice(0, h.length - HISTORY_MAX);

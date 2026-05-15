@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { loadHistory, loadInterventions } from "../simulation/learning";
+import { STAGE_META } from "../constants/stages";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -507,12 +508,13 @@ export default function StoricaPage({ t }) {
         </div>
       )}
 
-      {/* ── INTERVENTI VICINI ── */}
+      {/* ── INTERVENTI VICINI + CONSUMI ── */}
       {snap && (
+      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:14}}>
         <div style={{...card, padding:"20px 22px"}}>
           <div style={{...secHd}}>
             <span style={{color:t.yellow}}>▸</span>
-            INTERVENTI AUTO-CORREZIONE — ±30 min dal punto selezionato
+            INTERVENTI AUTO-CORREZIONE — ±30 min
             <span style={{fontSize:13, fontWeight:400, color:t.textMuted, marginLeft:8}}>
               ({nearby.length} trovati)
             </span>
@@ -557,6 +559,80 @@ export default function StoricaPage({ t }) {
             </div>
           )}
         </div>
+
+        {/* CONSUMI ENERGETICI */}
+        <div style={{...card, padding:"20px 22px"}}>
+          <div style={{...secHd}}>
+            <span style={{color:t.accent}}>▸</span>
+            CONSUMI ENERGETICI — {snap ? fmtTime(new Date(snap.t)) : "—"}
+          </div>
+          {snap.kw == null && !snap.stageEnergy ? (
+            <div style={{padding:"30px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+              fontSize:15, textAlign:"center", lineHeight:1.6}}>
+              Dati energetici non disponibili per questo snapshot.<br/>
+              <span style={{fontSize:13, color:t.textMuted}}>(salvati a partire da questa versione)</span>
+            </div>
+          ) : (
+            <>
+              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, marginBottom:18}}>
+                {[
+                  { label:"Potenza",   val:snap.kw != null ? snap.kw.toFixed(1) : "—", unit:"kW",   sub:"Totale impianto", color:t.accent },
+                  { label:"Energia",   val:snap.kwh != null ? snap.kwh : "—",          unit:"kWh",  sub:"Sessione",         color:t.accent },
+                  { label:"Specifico", val:snap.kw != null && snap.Q > 0 ? (snap.kw*1000/snap.Q).toFixed(2) : "—",
+                    unit:"Wh/m³", sub:"Per m³ trattato", color:t.green },
+                ].map(x => (
+                  <div key={x.label} style={{padding:"12px 14px", background:t.surface2,
+                    border:`1px solid ${t.border}`, borderRadius:9}}>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:24, fontWeight:700,
+                      color:x.color, lineHeight:1.1}}>
+                      {x.val}
+                    </div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13,
+                      color:x.color, marginTop:4, letterSpacing:1}}>{x.unit}</div>
+                    <div style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13,
+                      color:t.textMuted, marginTop:2}}>{x.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                letterSpacing:2, color:t.textSec, marginBottom:10, textTransform:"uppercase"}}>
+                Ripartizione per stadio
+              </div>
+              {Array.isArray(snap.stageEnergy) && snap.stageEnergy.length > 0 ? (
+                <div style={{display:"flex", flexDirection:"column", gap:10}}>
+                  {snap.stageEnergy.map((kw, i) => {
+                    const total = snap.stageEnergy.reduce((a,b)=>a+b,0) || 1;
+                    const pct = Math.round(kw / total * 100);
+                    const name = STAGE_META[i]?.name ?? `ST-0${i+1}`;
+                    const barC = i===2 ? t.accent : i===3 ? t.orange : t.green;
+                    return (
+                      <div key={i}>
+                        <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                          <span style={{fontSize:14, color:i===2?t.accent:t.textSec,
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:i===2?700:500}}>
+                            ST-0{i+1} {name}
+                          </span>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barC}}>
+                            {kw} kW ({pct}%)
+                          </span>
+                        </div>
+                        <div style={{height:6, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                          <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3}}/>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{padding:"12px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:14, textAlign:"center"}}>
+                  Ripartizione per stadio non disponibile
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
       )}
 
     </div>

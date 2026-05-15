@@ -2,10 +2,10 @@ export default function Gauge({ stageOutput, t }) {
   const { value, target, unit, label } = stageOutput;
   const pct    = Math.max(0, Math.min(150, Math.round(value / target * 100)));
   const barPct = Math.min(100, pct);
-  const color  = pct >= 90 ? t.red   : pct >= 70 ? t.orange : t.green;
-  const bgDim  = pct >= 90 ? t.redDim : pct >= 70 ? t.orangeDim : t.greenDim;
-  const status = pct >= 90 ? "FUORI LIMITE" : pct >= 70 ? "ATTENZIONE" : "NELLA NORMA";
-  const icon   = pct >= 90 ? "✗" : pct >= 70 ? "⚠" : "✓";
+  const color  = pct >= 100 ? t.red   : pct >= 80 ? t.orange : t.green;
+  const bgDim  = pct >= 100 ? t.redDim : pct >= 80 ? t.orangeDim : t.greenDim;
+  const status = pct >= 100 ? "FUORI LIMITE" : pct >= 80 ? "ATTENZIONE" : "NELLA NORMA";
+  const icon   = pct >= 100 ? "✗" : pct >= 80 ? "⚠" : "✓";
 
   return (
     <div style={{width:"100%", display:"flex", flexDirection:"column", gap:8, padding:"4px 0"}}>

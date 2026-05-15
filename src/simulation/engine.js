@@ -24,7 +24,7 @@ export const INIT_SIM = {
   running: true, speed: 5, mode: "fast", tick: 0,
   blower: 75, coagulant: 60, sludgeRecycle: 70, naoh: 0, h2so4: 0,
   inlet: { Q: 1245, COD: 380, BOD5: 160, TSS: 240, NH4: 32, pH: 7.0, T: 20 },
-  O2: 4.5, MLSS: 3500,
+  O2: 4.5, MLSS: 3500, MLSSsp: 3200,
   stageEff: [100, 98, 96, 95, 93],
   stageOutputs: [
     { param:"EFF", value:24,  target:24,  unit:"%",    label:"Rendimento rimozione solidi", higherIsBetter:true },
@@ -442,7 +442,7 @@ export function simTick(s) {
         { label:"BOD5 uscita",   value:round1(s3.BOD5),      unit:"mg/L", note:"" },
         { label:"NH4 uscita",    value:round2(s3.NH4),       unit:"mg/L", note:"dopo nitrificazione" },
         { label:"O2 disciolto",  value:round2(O2),           unit:"mg/L", note:`setpoint calcolato: ${round2(s.blower/100*8)} mg/L` },
-        { label:"MLSS",          value:Math.round(MLSS),     unit:"mg/L", note:"setpoint 3200 mg/L" },
+        { label:"MLSS",          value:Math.round(MLSS),     unit:"mg/L", note:`setpoint ${s.MLSSsp ?? 3200} mg/L` },
         { label:"Rimozione COD", value:Math.round(bioC*100), unit:"%",    note:"efficienza biologica" },
         { label:"Nitrificaz.",   value:Math.round(bioN*100), unit:"%",    note:"NH4→NO3" },
       ],

@@ -57,7 +57,7 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
 
   // ── RICIRCOLO FANGHI — controllo MLSS biologico ───────────────
   if (ac.sludgeRecycle && ac.sludgeRecycle.on) {
-    const MLSSsp = 3200;
+    const MLSSsp = s.MLSSsp ?? 3200;
     const errMLSS = MLSS - MLSSsp;
     const Kp = 0.008 * gRas;
     const delta = clamp(Math.round(errMLSS * Kp), -6, 6);

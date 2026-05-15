@@ -70,6 +70,7 @@ export default function ControlRoom({ sim, onSim, t, onClose }) {
             <SimSlider label="Soffianti" sublabel="stadio biologico" value={sim.blower} min={0} max={100} unit="%" color={t.accent} t={t} onChange={v => onSim(p => ({...p, blower:v}))}/>
             <SimSlider label="Dosaggio Coagulante" sublabel="sedimentazione" value={sim.coagulant} min={0} max={100} unit="%" color={t.green} t={t} onChange={v => onSim(p => ({...p, coagulant:v}))}/>
             <SimSlider label="Ricircolo Fanghi" sublabel="RAS rapporto" value={sim.sludgeRecycle} min={0} max={100} unit="%" color={t.orange} t={t} onChange={v => onSim(p => ({...p, sludgeRecycle:v}))}/>
+            <SimSlider label="Setpoint MLSS" sublabel="target biomassa biologico" value={sim.MLSSsp ?? 3200} min={1000} max={6000} step={50} unit=" mg/L" color={t.purple} t={t} onChange={v => onSim(p => ({...p, MLSSsp:v}))}/>
 
             <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14, marginTop:4}}>
               <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:14}}>CORREZIONE pH</div>

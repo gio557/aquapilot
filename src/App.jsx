@@ -11,6 +11,7 @@ import ControlRoom from "./components/ControlRoom";
 import NormativaPage from "./components/NormativaPage";
 import ConfigurazionePage from "./components/ConfigurazionePage";
 import AIPanel from "./components/AIPanel";
+import StoricaPage from "./components/StoricaPage";
 import KpiNum from "./components/ui/KpiNum";
 import AlarmRow from "./components/ui/AlarmRow";
 import QualRow from "./components/ui/QualRow";
@@ -160,6 +161,7 @@ export default function App() {
             {id:"dashboard",      label:"DASHBOARD"},
             {id:"configurazione", label:"CONFIGURAZIONE"},
             {id:"normativa",      label:"NORMATIVA"},
+            {id:"storica",        label:"STORICO"},
           ].map(p => (
             <button key={p.id} onClick={() => setPage(p.id)}
               style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
@@ -241,6 +243,8 @@ export default function App() {
         <NormativaPage t={t} ac={sim.autoCorrect || {enabled:false}} onAC={setSim} norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}/>
       ) : page === "configurazione" ? (
         <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}/>
+      ) : page === "storica" ? (
+        <StoricaPage t={t} />
       ) : (
         <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12}}>
 

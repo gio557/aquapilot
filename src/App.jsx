@@ -146,6 +146,8 @@ export default function App() {
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
         @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,0.4)} 50%{box-shadow:0 0 0 8px rgba(255,59,92,0)} }
         select { appearance:none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; cursor:pointer; border:2px solid #fff; box-shadow:0 1px 6px rgba(0,0,0,0.4); }
+        input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; cursor:pointer; border:2px solid #fff; box-shadow:0 1px 6px rgba(0,0,0,0.4); }
       `}</style>
 
       {/* ── HEADER ── */}

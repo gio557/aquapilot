@@ -19,7 +19,7 @@ function NumField({ label, value, unit, onChange, t }) {
 }
 
 export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax }) {
-  const [expanded, setExpanded] = useState(0);
+  const [expanded, setExpanded] = useState(null);
   const stages = STAGE_META;
 
   const toggleSensor = (si, sensorId) => {

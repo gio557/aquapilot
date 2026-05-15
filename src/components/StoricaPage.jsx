@@ -573,6 +573,7 @@ export default function StoricaPage({ t }) {
               <LineChart data={chartData} margin={{top:6, right:8, bottom:0, left:-14}}>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
                 <XAxis dataKey="t"
+                  interval={Math.max(0, Math.ceil(chartData.length / 10) - 1)}
                   tick={{fill:t.textMuted, fontSize:12, fontFamily:"'Share Tech Mono',monospace"}}
                   tickLine={false} axisLine={false} />
                 <YAxis

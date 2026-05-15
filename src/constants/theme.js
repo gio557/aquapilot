@@ -11,7 +11,7 @@ export const DARK = {
 
 export const LIGHT = {
   bg:"#C8D8EA", surface:"#FFFFFF", surface2:"#E0EAF5", surface3:"#C8D8E8",
-  border:"#4A7A9B", text:"#08192E", textSec:"#1E3D5C", textMuted:"#5070888",
+  border:"#4A7A9B", text:"#08192E", textSec:"#1E3D5C", textMuted:"#507088",
   accent:"#0044AA", accentDim:"rgba(0,68,170,0.08)",
   green:"#005A2E", greenDim:"rgba(0,90,46,0.08)",
   orange:"#9A4200", orangeDim:"rgba(154,66,0,0.08)",

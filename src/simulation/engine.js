@@ -65,6 +65,7 @@ export const INIT_SIM = {
     corrente_motore:0, sovraccarico:false, ostacolo_presente:false,
     pressa_attiva:false, bypass_aperto:false, allarmi:[],
   },
+  stageTargets: { COD: 125, SST: 35, NH4: 8 },
   autoCorrect: {
     enabled: true,
     blower:        { on: true, label: "Regolazione Soffianti",   desc: "Controlla O2 disciolto, rimozione COD/BOD5 e nitrificazione NH4" },

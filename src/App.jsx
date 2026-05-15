@@ -8,7 +8,6 @@ import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
 import ControlRoom from "./components/ControlRoom";
-import Configurator from "./components/Configurator";
 import NormativaPage from "./components/NormativaPage";
 import ConfigurazionePage from "./components/ConfigurazionePage";
 import AIPanel from "./components/AIPanel";
@@ -76,7 +75,6 @@ export default function App() {
 
   const [page, setPage] = useState("dashboard");
   const [showControlRoom, setShowControlRoom] = useState(false);
-  const [showConfigurator, setShowConfigurator] = useState(false);
   const [showAlarms, setShowAlarms] = useState(false);
   const [selectedStage, setSelectedStage] = useState(null);
   const [timeRange, setTimeRange] = useState("1h");
@@ -96,21 +94,7 @@ export default function App() {
     return (sim.trend || []).slice(-pts);
   })();
 
-  const stages = sim.stages || STAGE_META;
-
-  const handleAddStage = (type) => {
-    setSim(prev => ({
-      ...prev,
-      stages: [...(prev.stages || STAGE_META), { id: Date.now(), name: type, sub: "Stadio personalizzato", status:"ok" }]
-    }));
-  };
-
-  const handleRemoveStage = (id) => {
-    setSim(prev => ({
-      ...prev,
-      stages: (prev.stages || STAGE_META).filter(s => s.id !== id)
-    }));
-  };
+  const stages = STAGE_META;
 
   const autoOn = sim.autoCorrect?.enabled ?? false;
   const card = { background:t.surface, border:`2px solid ${t.border}`, borderRadius:12, boxShadow:t.cardShadow };
@@ -118,7 +102,7 @@ export default function App() {
   const classifierCfgJson = JSON.stringify(stageConfig[1]?.classifier);
   useEffect(() => {
     const cfg = stageConfig[1]?.classifier;
-    if (cfg) setSim(prev => ({ ...prev, classifierConfig: cfg }));
+    if (cfg) setSim(prev => ({ ...prev, classifierConfig: { ...prev.classifierConfig, ...cfg } }));
   }, [classifierCfgJson]);
 
   const grCfgJson = JSON.stringify(stageConfig[0]?.grigliatura);
@@ -549,16 +533,6 @@ export default function App() {
 
       {showControlRoom && (
         <ControlRoom sim={sim} onSim={setSim} t={t} onClose={() => setShowControlRoom(false)}/>
-      )}
-
-      {showConfigurator && (
-        <Configurator
-          stages={stages}
-          onAdd={handleAddStage}
-          onRemove={handleRemoveStage}
-          onClose={() => setShowConfigurator(false)}
-          t={t}
-        />
       )}
 
       {selectedStageData && (

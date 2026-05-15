@@ -157,46 +157,40 @@ export default function App() {
         position:"sticky", top:0, zIndex:100,
         background:t.surface, borderBottom:`1px solid ${t.border}`,
         padding:"0 24px", height:76,
-        display:"flex", alignItems:"center", justifyContent:"space-between",
-        gap:16,
+        display:"grid", gridTemplateColumns:"1fr auto 1fr", alignItems:"center", gap:16,
       }}>
-        {/* LEFT: logo + nav */}
-        <div style={{display:"flex", alignItems:"center", gap:20}}>
-          {/* AQUAPILOT wordmark + GreenEco logo */}
-          <div style={{display:"flex", alignItems:"center", gap:14}}>
-            <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:34, color:t.accent, letterSpacing:4, whiteSpace:"nowrap", lineHeight:1}}>
-              AQUA<span style={{color:t.textSec}}>PILOT</span>
-            </div>
-            <div style={{display:"flex", alignItems:"center", gap:6}}>
-              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, letterSpacing:1}}>by</span>
-              <GreenEcoLogo height={42} />
-            </div>
+        {/* LEFT: nav buttons */}
+        <div style={{display:"flex", gap:6}}>
+          {[
+            {id:"dashboard",      label:"DASHBOARD"},
+            {id:"configurazione", label:"CONFIGURAZIONE"},
+            {id:"normativa",      label:"NORMATIVA"},
+          ].map(p => (
+            <button key={p.id} onClick={() => setPage(p.id)}
+              style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
+                border:`1px solid ${page===p.id?t.accent:t.border}`,
+                background:page===p.id?`${t.accent}18`:t.surface2,
+                color:page===p.id?t.accent:t.textSec,
+                transition:"all 0.15s"}}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* CENTER: AQUAPILOT + GreenEco logo */}
+        <div style={{display:"flex", alignItems:"center", gap:14, justifyContent:"center"}}>
+          <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:34, color:t.accent, letterSpacing:4, whiteSpace:"nowrap", lineHeight:1}}>
+            AQUA<span style={{color:t.textSec}}>PILOT</span>
           </div>
-
-          <div style={{width:1, height:36, background:t.border}}/>
-
-          {/* Nav buttons */}
-          <div style={{display:"flex", gap:6}}>
-            {[
-              {id:"dashboard",      label:"DASHBOARD"},
-              {id:"configurazione", label:"CONFIGURAZIONE"},
-              {id:"normativa",      label:"NORMATIVA"},
-            ].map(p => (
-              <button key={p.id} onClick={() => setPage(p.id)}
-                style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
-                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
-                  border:`1px solid ${page===p.id?t.accent:t.border}`,
-                  background:page===p.id?`${t.accent}18`:t.surface2,
-                  color:page===p.id?t.accent:t.textSec,
-                  transition:"all 0.15s"}}>
-                {p.label}
-              </button>
-            ))}
+          <div style={{display:"flex", alignItems:"center", gap:6}}>
+            <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, letterSpacing:1}}>by</span>
+            <GreenEcoLogo height={42} />
           </div>
         </div>
 
         {/* RIGHT: clock, status, controls */}
-        <div style={{display:"flex", alignItems:"center", gap:12}}>
+        <div style={{display:"flex", alignItems:"center", gap:12, justifyContent:"flex-end"}}>
           <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color:t.textSec, letterSpacing:2}}>
             {clock.toLocaleTimeString("it-IT")}
           </div>

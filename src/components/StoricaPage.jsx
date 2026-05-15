@@ -208,7 +208,7 @@ export default function StoricaPage({ t }) {
   const nearby = useMemo(() => {
     if (!snap) return [];
     const W = 30 * 60_000;
-    return interventions.filter(i => Math.abs(i.t - snap.t) <= W).sort((a, b) => a.t - b.t);
+    return interventions.filter(i => Math.abs(i.t - snap.t) <= W).sort((a, b) => b.t - a.t);
   }, [snap, interventions]);
 
   const navMonth = useCallback(dir => {

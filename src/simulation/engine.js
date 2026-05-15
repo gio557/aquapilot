@@ -371,12 +371,13 @@ export function simTick(s) {
   const inletTSS = Math.max(1, s.inlet.TSS);
   const eff01 = Math.max(0, Math.min(100, round1((inletTSS - s1.TSS) / inletTSS * 100)));
   const eff02 = Math.max(0, Math.min(100, round1((s1.TSS   - s2.TSS) / Math.max(1,s1.TSS) * 100)));
+  const tgt = s.stageTargets || {};
   const stageOutputs = [
-    { param:"EFF",  value:eff01,           target:24,  unit:"%",    label:"Rendimento rimozione solidi", higherIsBetter:true },
-    { param:"EFF",  value:eff02,           target:37,  unit:"%",    label:"Rendimento rimozione sabbie",  higherIsBetter:true },
-    { param:"COD",  value:round1(s3.COD),  target:125, unit:"mg/L", label:"COD biologico" },
-    { param:"TSS",  value:round1(s4.TSS),  target:35,  unit:"mg/L", label:"SST sediment." },
-    { param:"NH4",  value:round2(s5.NH4),  target:8,   unit:"mg/L", label:"NH4 uscita" },
+    { param:"EFF",  value:eff01,           target:24,           unit:"%",    label:"Rendimento rimozione solidi", higherIsBetter:true },
+    { param:"EFF",  value:eff02,           target:37,           unit:"%",    label:"Rendimento rimozione sabbie",  higherIsBetter:true },
+    { param:"COD",  value:round1(s3.COD),  target:tgt.COD??125, unit:"mg/L", label:"COD biologico" },
+    { param:"TSS",  value:round1(s4.TSS),  target:tgt.SST??35,  unit:"mg/L", label:"SST sediment." },
+    { param:"NH4",  value:round2(s5.NH4),  target:tgt.NH4??8,   unit:"mg/L", label:"NH4 uscita" },
   ];
 
   const { changes: acChanges, actions: stageActions } = applyAutoCorrect(s, output, O2, MLSS);

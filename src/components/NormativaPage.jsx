@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { NORMATIVA_DEFAULT, NORMATIVA_SETS } from "../constants/normativa";
 import EditableCell from "./ui/EditableCell";
 import Tag from "./ui/Tag";
 
-export default function NormativaPage({ t, ac, onAC }) {
-  const [norms, setNorms] = useState(NORMATIVA_DEFAULT);
+export default function NormativaPage({ t, ac, onAC, norms, setNorms, normativaSets }) {
   const [tipoScarico, setTipoScarico] = useState("Tab. 3 – Acque superficiali");
   const [saved, setSaved] = useState(false);
   const [expandedCat, setExpandedCat] = useState(0);
@@ -18,7 +16,7 @@ export default function NormativaPage({ t, ac, onAC }) {
 
   const handleTipoChange = (tipo) => {
     setTipoScarico(tipo);
-    setNorms(JSON.parse(JSON.stringify(NORMATIVA_SETS[tipo] || NORMATIVA_DEFAULT)));
+    setNorms(JSON.parse(JSON.stringify(normativaSets[tipo] || norms)));
     setExpandedCat(0);
   };
 

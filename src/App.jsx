@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG } from "./constants/stageConfig";
+import { NORMATIVA_DEFAULT, NORMATIVA_SETS } from "./constants/normativa";
 import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
@@ -62,6 +63,16 @@ export default function App() {
   const d = display || { ...sim.output, O2: sim.O2, MLSS: sim.MLSS, blower: sim.blower, kw: sim.energy?.kw ?? 0 };
 
   const [stageConfig, setStageConfig] = useState(() => JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)));
+  const [norms, setNorms] = useState(() => JSON.parse(JSON.stringify(NORMATIVA_DEFAULT)));
+
+  // Sync normativa targets → sim.stageTargets whenever norms changes
+  useEffect(() => {
+    const find = (id) => norms.flatMap(c => c.params).find(p => p.id === id);
+    const COD = find("COD")?.target_max ?? 125;
+    const SST = find("SST")?.target_max ?? 35;
+    const NH4 = find("NH4")?.target_max ?? 8;
+    setSim(prev => ({ ...prev, stageTargets: { COD, SST, NH4 } }));
+  }, [norms]);
 
   const [page, setPage] = useState("dashboard");
   const [showControlRoom, setShowControlRoom] = useState(false);
@@ -243,7 +254,7 @@ export default function App() {
 
       {/* ── PAGES ── */}
       {page === "normativa" ? (
-        <NormativaPage t={t} ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
+        <NormativaPage t={t} ac={sim.autoCorrect || {enabled:false}} onAC={setSim} norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}/>
       ) : page === "configurazione" ? (
         <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}/>
       ) : (

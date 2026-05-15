@@ -173,7 +173,6 @@ export default function StoricaPage({ t }) {
   const [interventions, setInterventions] = useState([]);
   const [calMonth,      setCalMonth]      = useState(new Date());
   const [selectedKey,   setSelectedKey]   = useState(null);
-  const [windowStart,   setWindowStart]   = useState(0);
   const [selectedIdx,   setSelectedIdx]   = useState(0);
   const [activeParams,  setActiveParams]  = useState(["COD", "TSS", "O2"]);
 
@@ -201,9 +200,8 @@ export default function StoricaPage({ t }) {
     }
   }, [history]);
 
-  // reset sliders when day changes
+  // reset slider when day changes
   useEffect(() => {
-    setWindowStart(0);
     setSelectedIdx(daySnaps.length > 0 ? daySnaps.length - 1 : 0);
   }, [selectedKey]);
 
@@ -222,17 +220,17 @@ export default function StoricaPage({ t }) {
     setCalMonth(new Date(k));
   }, []);
 
-  // keyboard navigation (right handle)
+  // keyboard navigation
   useEffect(() => {
     const handler = e => {
-      if (e.key === "ArrowLeft")
-        setSelectedIdx(i => Math.max(windowStart, i - 1));
-      else if (e.key === "ArrowRight")
-        setSelectedIdx(i => Math.min(daySnaps.length - 1, i + 1));
+      if (e.key === "ArrowLeft" && selectedIdx > 0)
+        setSelectedIdx(i => i - 1);
+      else if (e.key === "ArrowRight" && selectedIdx < daySnaps.length - 1)
+        setSelectedIdx(i => i + 1);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [windowStart, daySnaps.length]);
+  }, [selectedIdx, daySnaps.length]);
 
   const hasData = history.length > 0;
   const firstTs = hasData ? new Date(history[0].t) : null;
@@ -244,7 +242,7 @@ export default function StoricaPage({ t }) {
     color:t.textSec, textTransform:"uppercase", marginBottom:14, display:"flex", alignItems:"center", gap:6 };
 
   // chart data: full day snapshots mapped to recharts-friendly format
-  const chartData = useMemo(() => daySnaps.slice(windowStart, selectedIdx + 1).map(s => ({
+  const chartData = useMemo(() => daySnaps.map(s => ({
     t: fmtTime(new Date(s.t)),
     COD: s.COD, BOD5: s.BOD5, TSS: s.TSS, NH4: s.NH4, pH: s.pH, O2: s.O2,
     _ts: s.t,
@@ -351,74 +349,19 @@ export default function StoricaPage({ t }) {
                 </div>
               </div>
 
-              {/* dual-handle slider */}
-              {(() => {
-                const n   = daySnaps.length - 1;
-                const lo  = n > 0 ? windowStart / n * 100 : 0;
-                const hi  = n > 0 ? selectedIdx / n * 100 : 100;
-                const tStart = fmtTime(new Date(daySnaps[0].t));
-                const tEnd   = fmtTime(new Date(daySnaps[n].t));
-                const tLo    = fmtTime(new Date(daySnaps[windowStart].t));
-                const tHi    = fmtTime(new Date(daySnaps[selectedIdx].t));
-                return (
-                  <div style={{padding:"0 8px"}}>
-                    {/* axis labels */}
-                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:10,
-                      fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted}}>
-                      <span>{tStart}</span>
-                      <span style={{color:t.textSec, fontSize:12}}>◂ trascina le maniglie ▸</span>
-                      <span>{tEnd}</span>
-                    </div>
-
-                    {/* track + two range inputs stacked */}
-                    <div style={{position:"relative", height:28, userSelect:"none"}}>
-                      {/* background track */}
-                      <div style={{position:"absolute", top:"50%", left:0, right:0,
-                        height:6, background:t.surface3, borderRadius:3, transform:"translateY(-50%)"}}>
-                        {/* filled window */}
-                        <div style={{position:"absolute", top:0, bottom:0, borderRadius:3,
-                          left:`${lo}%`, width:`${hi - lo}%`, background:t.accent}} />
-                      </div>
-
-                      {/* LEFT handle — windowStart */}
-                      <input type="range" min={0} max={n} value={windowStart}
-                        onChange={e => {
-                          const v = Number(e.target.value);
-                          setWindowStart(v);
-                          if (v > selectedIdx) setSelectedIdx(v);
-                        }}
-                        style={{
-                          position:"absolute", inset:0, width:"100%", margin:0,
-                          appearance:"none", WebkitAppearance:"none",
-                          background:"transparent", cursor:"pointer", pointerEvents:"auto",
-                        }} />
-
-                      {/* RIGHT handle — selectedIdx */}
-                      <input type="range" min={0} max={n} value={selectedIdx}
-                        onChange={e => {
-                          const v = Number(e.target.value);
-                          setSelectedIdx(v);
-                          if (v < windowStart) setWindowStart(v);
-                        }}
-                        style={{
-                          position:"absolute", inset:0, width:"100%", margin:0,
-                          appearance:"none", WebkitAppearance:"none",
-                          background:"transparent", cursor:"pointer", pointerEvents:"auto",
-                        }} />
-                    </div>
-
-                    {/* handle labels */}
-                    <div style={{display:"flex", justifyContent:"space-between", marginTop:8,
-                      fontFamily:"'Share Tech Mono',monospace", fontSize:13}}>
-                      <span style={{color:t.green}}>▸ Da: {tLo}</span>
-                      <span style={{color:t.textMuted, fontSize:12}}>
-                        {selectedIdx - windowStart + 1} snapshot nel range
-                      </span>
-                      <span style={{color:t.accent}}>A: {tHi} ◂</span>
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* slider */}
+              <div style={{padding:"0 8px"}}>
+                <div style={{display:"flex", justifyContent:"space-between", marginBottom:8,
+                  fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted}}>
+                  <span>{fmtTime(new Date(daySnaps[0].t))}</span>
+                  <span style={{color:t.accent, fontSize:14}}>◂ trascina ▸</span>
+                  <span>{fmtTime(new Date(daySnaps[daySnaps.length-1].t))}</span>
+                </div>
+                <input type="range"
+                  min={0} max={daySnaps.length - 1} value={selectedIdx}
+                  onChange={e => setSelectedIdx(Number(e.target.value))}
+                  style={{width:"100%", accentColor:t.accent, height:8, cursor:"pointer"}} />
+              </div>
 
               {/* mini sparklines for quick orientation */}
               <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:4}}>

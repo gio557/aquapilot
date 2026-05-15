@@ -249,6 +249,7 @@ export default function StoricaPage({ t }) {
   const [windowStart,   setWindowStart]   = useState(0);
   const [selectedIdx,   setSelectedIdx]   = useState(0);
   const [activeParams,  setActiveParams]  = useState(["COD", "TSS", "O2"]);
+  const [highlightTs,   setHighlightTs]   = useState(null);
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -278,6 +279,7 @@ export default function StoricaPage({ t }) {
   useEffect(() => {
     setWindowStart(0);
     setSelectedIdx(daySnaps.length > 0 ? daySnaps.length - 1 : 0);
+    setHighlightTs(null);
   }, [selectedKey]);
 
   const nearby = useMemo(() => {
@@ -324,6 +326,17 @@ export default function StoricaPage({ t }) {
   })), [daySnaps, windowStart, selectedIdx]);
 
   const snapTimeStr = snap ? fmtTime(new Date(snap.t)) : null;
+
+  // find closest chartData label for a given timestamp
+  const highlightTimeStr = useMemo(() => {
+    if (!highlightTs || chartData.length === 0) return null;
+    let best = null, bestDist = Infinity;
+    chartData.forEach(d => {
+      const dist = Math.abs(d._ts - highlightTs);
+      if (dist < bestDist) { bestDist = dist; best = d.t; }
+    });
+    return best;
+  }, [highlightTs, chartData]);
 
   // ── no data state ────────────────────────────────────────────
   if (!hasData) {
@@ -586,6 +599,11 @@ export default function StoricaPage({ t }) {
                     label={{ value:"◂ ora", fill:t.accent, fontSize:12,
                       fontFamily:"'Share Tech Mono',monospace", position:"insideTopRight" }} />
                 )}
+                {highlightTimeStr && highlightTimeStr !== snapTimeStr && (
+                  <ReferenceLine x={highlightTimeStr}
+                    stroke={t.yellow} strokeDasharray="3 2" strokeWidth={2.5}
+                    label={{ value:"★", fill:t.yellow, fontSize:14, position:"insideTopLeft" }} />
+                )}
                 {ALL_PARAMS.filter(p => activeParams.includes(p)).map(p => (
                   <Line key={p} type="monotone" dataKey={p}
                     stroke={PARAM_COLORS[p]} strokeWidth={2}
@@ -617,10 +635,15 @@ export default function StoricaPage({ t }) {
               {nearby.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";
+                const isHl = highlightTs === it.t;
                 return (
-                  <div key={idx} style={{display:"grid", gridTemplateColumns:"auto 1fr auto auto", gap:16,
-                    alignItems:"center", padding:"12px 16px", borderRadius:9,
-                    background:t.surface2, border:`1px solid ${t.border}`}}>
+                  <div key={idx} onClick={() => setHighlightTs(isHl ? null : it.t)}
+                    title="Clicca per evidenziare sul grafico"
+                    style={{display:"grid", gridTemplateColumns:"auto 1fr auto auto", gap:16,
+                      alignItems:"center", padding:"12px 16px", borderRadius:9, cursor:"pointer",
+                      background: isHl ? `${t.yellow}18` : t.surface2,
+                      border:`1px solid ${isHl ? t.yellow : t.border}`,
+                      transition:"background 0.15s, border-color 0.15s"}}>
                     <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted, whiteSpace:"nowrap"}}>
                       {fmtTime(new Date(it.t))}
                     </span>
@@ -695,10 +718,17 @@ export default function StoricaPage({ t }) {
                       const c = sev === "ALTO" ? t.red : t.orange;
                       const icon = sev === "ALTO" ? "🔴" : "🟡";
                       const detail = (snap.activeAlarms || []).find(a => a.msg?.includes(param));
+                      const alarmTs = detail?.t ?? snap?.t;
+                      const isHlAlarm = highlightTs === alarmTs;
                       return (
-                        <div key={param} style={{padding:"10px 14px", borderRadius:8,
-                          background:`${c}10`, border:`1px solid ${c}33`,
-                          display:"flex", alignItems:"flex-start", gap:10}}>
+                        <div key={param}
+                          onClick={() => setHighlightTs(isHlAlarm ? null : alarmTs)}
+                          title="Clicca per evidenziare sul grafico"
+                          style={{padding:"10px 14px", borderRadius:8, cursor:"pointer",
+                            background: isHlAlarm ? `${t.yellow}18` : `${c}10`,
+                            border:`1px solid ${isHlAlarm ? t.yellow : c}33`,
+                            display:"flex", alignItems:"flex-start", gap:10,
+                            transition:"background 0.15s, border-color 0.15s"}}>
                           <span style={{fontSize:16, flexShrink:0, marginTop:1}}>{icon}</span>
                           <div style={{flex:1, minWidth:0}}>
                             <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700,

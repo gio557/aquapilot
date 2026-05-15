@@ -242,7 +242,9 @@ export default function App() {
       {page === "normativa" ? (
         <NormativaPage t={t} ac={sim.autoCorrect || {enabled:false}} onAC={setSim} norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}/>
       ) : page === "configurazione" ? (
-        <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}/>
+        <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}
+          dosageMax={sim.dosageMax}
+          onDosageMax={upd => setSim(prev => ({ ...prev, dosageMax: { ...prev.dosageMax, ...(typeof upd === "function" ? upd(prev.dosageMax) : upd) } }))}/>
       ) : page === "storica" ? (
         <StoricaPage t={t} />
       ) : (
@@ -509,21 +511,26 @@ export default function App() {
             {/* IMPIANTO */}
             <div style={{...card, padding:"16px 18px"}}>
               <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:14}}>▸ IMPIANTO</div>
-              {[
-                {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`,  ref:"portata istantanea in ingresso",        color:t.accent},
-                {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, ref:"carico organico grezzo",                color:t.textSec},
-                {label:"Soffianti",        val:`${d.blower?.toFixed(0)??0}%`,           ref:"% della potenza massima installata",     color: d.blower>80?t.red:d.blower>60?t.orange:t.green},
-                {label:"Coagulante",       val:`${sim.coagulant??0}%`,                  ref:"% del dosaggio massimo di coagulante",   color:t.orange},
-                {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`,              ref:`% della portata max RAS · target MLSS ${sim.MLSSsp??3200} mg/L`, color:t.purple},
-              ].map(x => (
-                <div key={x.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${t.border}`}}>
-                  <div>
-                    <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>{x.label}</div>
-                    <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{x.ref}</div>
+              {(() => {
+                const dm = sim.dosageMax || {};
+                const abs = (pct, max, unit, dec=0) =>
+                  max ? ` · ${((pct/100)*max).toFixed(dec)} ${unit}` : "";
+                return [
+                  {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`,  ref:"portata istantanea in ingresso",        color:t.accent},
+                  {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, ref:"carico organico grezzo",                color:t.textSec},
+                  {label:"Soffianti",        val:`${d.blower?.toFixed(0)??0}%`,           ref:`% pot. max installata${abs(d.blower??0, dm.blower,"kW",1)}`,       color: d.blower>80?t.red:d.blower>60?t.orange:t.green},
+                  {label:"Coagulante",       val:`${sim.coagulant??0}%`,                  ref:`% dosaggio max${abs(sim.coagulant??0, dm.coagulant,"L/h",1)}`,      color:t.orange},
+                  {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`,              ref:`% portata max RAS${abs(sim.sludgeRecycle??0, dm.sludgeRecycle,"m³/h",0)} · target MLSS ${sim.MLSSsp??3200} mg/L`, color:t.purple},
+                ].map(x => (
+                  <div key={x.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${t.border}`}}>
+                    <div>
+                      <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>{x.label}</div>
+                      <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{x.ref}</div>
+                    </div>
+                    <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color:x.color}}>{x.val}</span>
                   </div>
-                  <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color:x.color}}>{x.val}</span>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
 

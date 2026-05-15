@@ -25,6 +25,13 @@ export const INIT_SIM = {
   blower: 75, coagulant: 60, sludgeRecycle: 70, naoh: 0, h2so4: 0,
   inlet: { Q: 1245, COD: 380, BOD5: 160, TSS: 240, NH4: 32, pH: 7.0, T: 20 },
   O2: 4.5, MLSS: 3500, MLSSsp: 3200,
+  dosageMax: {
+    blower:        75,   // kW potenza installata soffianti
+    coagulant:     120,  // L/h portata massima pompa coagulante
+    naoh:          80,   // L/h portata massima pompa NaOH
+    h2so4:         60,   // L/h portata massima pompa H₂SO₄
+    sludgeRecycle: 800,  // m³/h portata massima RAS
+  },
   stageEff: [100, 98, 96, 95, 93],
   stageOutputs: [
     { param:"EFF", value:24,  target:24,  unit:"%",    label:"Rendimento rimozione solidi", higherIsBetter:true },

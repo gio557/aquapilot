@@ -18,7 +18,7 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax }) {
   const [expanded, setExpanded] = useState(0);
   const stages = STAGE_META;
 
@@ -357,6 +357,53 @@ export default function ConfigurazionePage({ t, config, onChange }) {
           </div>
         );
       })}
+
+      {/* ── DOSAGGI MASSIMI ── */}
+      {dosageMax && onDosageMax && (
+        <div style={{marginTop:28, background:t.surface, border:`1px solid ${t.border}`,
+          borderRadius:10, overflow:"hidden"}}>
+          <div style={{padding:"14px 18px", background:t.surface2, borderBottom:`1px solid ${t.border}`,
+            display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+            <div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:16,
+                color:t.text, letterSpacing:1}}>⚗️ PORTATE MASSIME INSTALLATE</div>
+              <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>
+                Capacità nominale dei sistemi di dosaggio — definisce il riferimento per le percentuali
+              </div>
+            </div>
+          </div>
+          <div style={{padding:"20px 24px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:20}}>
+            {[
+              { key:"blower",        label:"Soffianti",            unit:"kW",  desc:"Potenza elettrica massima installata" },
+              { key:"coagulant",     label:"Coagulante",           unit:"L/h", desc:"Portata massima pompa dosatrice" },
+              { key:"naoh",          label:"NaOH (alcalinizzante)", unit:"L/h", desc:"Portata massima pompa dosatrice" },
+              { key:"h2so4",         label:"H₂SO₄ (acidificante)", unit:"L/h", desc:"Portata massima pompa dosatrice" },
+              { key:"sludgeRecycle", label:"Ricircolo fanghi (RAS)",unit:"m³/h",desc:"Portata volumetrica massima RAS" },
+            ].map(({ key, label, unit, desc }) => (
+              <div key={key}>
+                <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:600,
+                  color:t.text, marginBottom:2}}>{label}</div>
+                <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                  marginBottom:8}}>{desc}</div>
+                <div style={{display:"flex", alignItems:"center", gap:10}}>
+                  <input type="number" min={1} step={1}
+                    value={dosageMax[key] ?? 100}
+                    onChange={e => {
+                      const v = Math.max(1, Number(e.target.value));
+                      onDosageMax(prev => ({ ...prev, [key]: v }));
+                    }}
+                    style={{width:100, padding:"7px 10px", borderRadius:6, fontSize:15,
+                      fontFamily:"'Share Tech Mono',monospace", textAlign:"right",
+                      border:`1px solid ${t.border}`, background:t.surface2, color:t.text}} />
+                  <span style={{fontSize:14, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                    fontWeight:600}}>{unit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

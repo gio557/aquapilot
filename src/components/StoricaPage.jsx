@@ -22,6 +22,16 @@ const PARAM_COLORS = {
 };
 const ALL_PARAMS = ["COD","BOD5","TSS","NH4","pH","O2"];
 
+const CONTROL_LABELS = {
+  blower:        "Soffianti",
+  coagulant:     "Coagulante",
+  sludgeRecycle: "Ricircolo fanghi",
+  pH:            "Correzione pH",
+  naoh:          "Dosaggio NaOH",
+  h2so4:         "Dosaggio H₂SO₄",
+};
+const OUTCOME_LABELS = { good:"BUONO", bad:"INEFFICACE", neutral:"NEUTRO" };
+
 function groupByDate(history) {
   const m = {};
   history.forEach(s => {
@@ -512,7 +522,7 @@ export default function StoricaPage({ t }) {
               Nessun intervento registrato in questa finestra temporale
             </div>
           ) : (
-            <div style={{display:"flex", flexDirection:"column", gap:8, maxHeight:180, overflowY:"auto", paddingRight:6}}>
+            <div style={{display:"flex", flexDirection:"column", gap:8, maxHeight:520, overflowY:"auto", paddingRight:6}}>
               {nearby.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";
@@ -525,21 +535,21 @@ export default function StoricaPage({ t }) {
                     </span>
                     <div>
                       <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:16, color:t.text}}>
-                        {it.control}
+                        {CONTROL_LABELS[it.control] ?? it.control}
                       </span>
                       <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted, marginLeft:10}}>
                         {it.metricKey}: {it.before?.toFixed(2)} → {it.after?.toFixed(2)}
-                        {" "}(target {it.target})
+                        {" "}(obiettivo {it.target})
                       </span>
                     </div>
                     <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted}}>
-                      Δctrl {it.deltaCtrl >= 0 ? "+" : ""}{it.deltaCtrl?.toFixed?.(1) ?? it.deltaCtrl}
+                      Δcomando {it.deltaCtrl >= 0 ? "+" : ""}{it.deltaCtrl?.toFixed?.(1) ?? it.deltaCtrl}
                     </span>
                     <span style={{fontSize:13, padding:"3px 10px", borderRadius:5,
                       background:`${c}18`, color:c, border:`1px solid ${c}44`,
                       fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
-                      {icon} {it.outcome?.toUpperCase()}
-                      {it.gainAfter != null ? ` · gain ${it.gainAfter.toFixed(2)}×` : ""}
+                      {icon} {OUTCOME_LABELS[it.outcome] ?? it.outcome?.toUpperCase()}
+                      {it.gainAfter != null ? ` · guadagno ${it.gainAfter.toFixed(2)}×` : ""}
                     </span>
                   </div>
                 );

@@ -155,51 +155,67 @@ export default function App() {
       <header style={{
         position:"sticky", top:0, zIndex:100,
         background:t.surface, borderBottom:`1px solid ${t.border}`,
-        padding:"0 20px", height:54,
+        padding:"0 24px", height:68,
         display:"flex", alignItems:"center", justifyContent:"space-between",
-        gap:12,
+        gap:16,
       }}>
-        <div style={{display:"flex", alignItems:"center", gap:16}}>
-          <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:18, color:t.accent, letterSpacing:3, whiteSpace:"nowrap"}}>
-            AQUA<span style={{color:t.textSec}}>PILOT</span>
+        {/* LEFT: logo + nav */}
+        <div style={{display:"flex", alignItems:"center", gap:20}}>
+          {/* AQUAPILOT wordmark */}
+          <div style={{display:"flex", alignItems:"center", gap:14}}>
+            <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:26, color:t.accent, letterSpacing:4, whiteSpace:"nowrap", lineHeight:1}}>
+              AQUA<span style={{color:t.textSec}}>PILOT</span>
+            </div>
+            {/* GreenEco Wastewater logo — place greeneco-logo.png in /public */}
+            <img
+              src={`${import.meta.env.BASE_URL}greeneco-logo.png`}
+              alt="GreenEco Wastewater"
+              style={{height:44, width:"auto", objectFit:"contain", opacity:0.92}}
+              onError={e => { e.currentTarget.style.display="none"; }}
+            />
           </div>
-          <div style={{width:1, height:28, background:t.border}}/>
-          <div style={{display:"flex", gap:4}}>
+
+          <div style={{width:1, height:36, background:t.border}}/>
+
+          {/* Nav buttons */}
+          <div style={{display:"flex", gap:6}}>
             {[
               {id:"dashboard",      label:"DASHBOARD"},
               {id:"configurazione", label:"CONFIGURAZIONE"},
               {id:"normativa",      label:"NORMATIVA"},
             ].map(p => (
               <button key={p.id} onClick={() => setPage(p.id)}
-                style={{padding:"4px 12px", borderRadius:6, cursor:"pointer",
-                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12, letterSpacing:1,
+                style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
+                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
                   border:`1px solid ${page===p.id?t.accent:t.border}`,
                   background:page===p.id?`${t.accent}18`:t.surface2,
-                  color:page===p.id?t.accent:t.textSec}}>
+                  color:page===p.id?t.accent:t.textSec,
+                  transition:"all 0.15s"}}>
                 {p.label}
               </button>
             ))}
           </div>
         </div>
 
-        <div style={{display:"flex", alignItems:"center", gap:10}}>
-          <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textSec, letterSpacing:1}}>
+        {/* RIGHT: clock, status, controls */}
+        <div style={{display:"flex", alignItems:"center", gap:12}}>
+          <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color:t.textSec, letterSpacing:2}}>
             {clock.toLocaleTimeString("it-IT")}
           </div>
 
-          <div style={{display:"flex", alignItems:"center", gap:6, padding:"3px 10px", borderRadius:6,
+          <div style={{display:"flex", alignItems:"center", gap:7, padding:"5px 13px", borderRadius:7,
             background:sim.running?`${t.green}15`:`${t.orange}15`,
             border:`1px solid ${sim.running?t.green:t.orange}44`}}>
-            <span style={{width:7, height:7, borderRadius:"50%", background:sim.running?t.green:t.orange,
-              animation:sim.running?"blink 1.4s infinite":"none"}}/>
-            <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:sim.running?t.green:t.orange, letterSpacing:1}}>
+            <span style={{width:8, height:8, borderRadius:"50%", background:sim.running?t.green:t.orange,
+              animation:sim.running?"blink 1.4s infinite":"none", flexShrink:0}}/>
+            <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:sim.running?t.green:t.orange, letterSpacing:1}}>
               {sim.running?"SIM ATTIVA":"SIM PAUSA"}
             </span>
           </div>
 
           <button onClick={() => setShowAlarms(p => !p)}
-            style={{position:"relative", padding:"4px 10px", borderRadius:6, cursor:"pointer",
-              fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
+            style={{position:"relative", padding:"6px 13px", borderRadius:7, cursor:"pointer",
+              fontFamily:"'Share Tech Mono',monospace", fontSize:13, letterSpacing:1,
               border:`1px solid ${activeAlarms.length>0?t.red:t.border}`,
               background:activeAlarms.length>0?`${t.red}15`:t.surface2,
               color:activeAlarms.length>0?t.red:t.textSec,
@@ -208,15 +224,15 @@ export default function App() {
           </button>
 
           <button onClick={() => setShowControlRoom(p => !p)}
-            style={{padding:"4px 12px", borderRadius:6, cursor:"pointer",
-              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12, letterSpacing:1,
+            style={{padding:"6px 16px", borderRadius:7, cursor:"pointer",
+              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
               border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
             🎛️ CONTROL ROOM
           </button>
 
           <button onClick={() => setDarkMode(p => !p)}
-            style={{padding:"4px 10px", borderRadius:6, cursor:"pointer",
-              fontFamily:"'Share Tech Mono',monospace", fontSize:13,
+            style={{padding:"6px 12px", borderRadius:7, cursor:"pointer",
+              fontFamily:"'Share Tech Mono',monospace", fontSize:16,
               border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
             {darkMode ? "☀" : "🌙"}
           </button>

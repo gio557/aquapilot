@@ -512,7 +512,7 @@ export default function StoricaPage({ t }) {
               Nessun intervento registrato in questa finestra temporale
             </div>
           ) : (
-            <div style={{display:"flex", flexDirection:"column", gap:8}}>
+            <div style={{display:"flex", flexDirection:"column", gap:8, maxHeight:180, overflowY:"auto", paddingRight:6}}>
               {nearby.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";

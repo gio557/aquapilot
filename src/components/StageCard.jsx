@@ -181,7 +181,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
       gaugeColor = pct >= 90 ? t.green : pct >= 65 ? t.orange : t.red;
     } else {
       const pct = stageOutput.value / stageOutput.target * 100;
-      gaugeColor = pct >= 100 ? t.red : pct >= 80 ? t.orange : t.green;
+      gaugeColor = pct >= 90 ? t.red : pct >= 70 ? t.orange : t.green;
     }
   }
 

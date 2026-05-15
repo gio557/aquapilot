@@ -5,6 +5,11 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
   if (!ac || !ac.enabled) return { changes: {}, actions: {} };
   const ch = {};
   const actions = {};
+  const g = s.adaptiveGains || {};
+  const gBlower    = g.blower        ?? 1;
+  const gCoagulant = g.coagulant     ?? 1;
+  const gRas       = g.sludgeRecycle ?? 1;
+  const gPH        = g.pH            ?? 1;
 
   // ── SOFFIANTI — controllo O2 e qualità biologica ─────────────
   if (ac.blower && ac.blower.on) {
@@ -13,7 +18,7 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
     const O2sp_bod = Math.max(0, Math.min(1, (out.BOD5 - 20)  / 20))  * 1.0;
     const O2sp = Math.min(7.0, 3.5 + O2sp_nh4 + O2sp_cod + O2sp_bod);
     const errO2 = O2sp - O2;
-    const Kp = 6;
+    const Kp = 6 * gBlower;
     const delta = clamp(Math.round(errO2 * Kp), -8, 15);
     const newBlower = clamp(s.blower + delta, 20, 100);
 
@@ -34,7 +39,7 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
   if (ac.coagulant && ac.coagulant.on) {
     const TSSsp = 20;
     const errTSS = out.TSS - TSSsp;
-    const Kp = 1.8;
+    const Kp = 1.8 * gCoagulant;
     const delta = clamp(Math.round(errTSS * Kp), -5, 20);
     const newCoag = clamp(s.coagulant + delta, 15, 100);
 
@@ -54,7 +59,7 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
   if (ac.sludgeRecycle && ac.sludgeRecycle.on) {
     const MLSSsp = 3200;
     const errMLSS = MLSS - MLSSsp;
-    const Kp = 0.008;
+    const Kp = 0.008 * gRas;
     const delta = clamp(Math.round(errMLSS * Kp), -6, 6);
     const newRAS = clamp(s.sludgeRecycle - delta, 20, 100);
     const prev = actions[2];
@@ -74,7 +79,7 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
   if (ac.pH && ac.pH.on) {
     const pHsp = 7.2;
     const errpH = pHsp - out.pH;
-    const Kp = 3;                                          // era 12 — gain ridotto per evitare oscillazioni
+    const Kp = 3 * gPH;
     const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 5); // max +5% per tick (era 25)
 
     if (Math.abs(errpH) > 0.20 && delta >= 2) {           // banda morta 0.20 (era 0.15), soglia min 2%

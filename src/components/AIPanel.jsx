@@ -1,4 +1,43 @@
 import { useState, useEffect, useRef } from "react";
+import { getTrendStats, getInterventionSummary, loadGains, resetLearning } from "../simulation/learning";
+
+function trendLine(stats) {
+  if (!stats) return null;
+  const arrow = (d) => d > 0.5 ? "↑" : d < -0.5 ? "↓" : "→";
+  const fmt = (s, key, decimals=1) => {
+    const v = s?.[key];
+    if (!v || !Number.isFinite(v.delta)) return null;
+    return `${key} ${arrow(v.delta)} ${v.delta>=0?"+":""}${v.delta.toFixed(decimals)}`;
+  };
+  const parts = ["COD","TSS","NH4","O2","pH"]
+    .map(k => fmt(stats.h1, k, k==="pH"||k==="NH4"?2:1))
+    .filter(Boolean);
+  if (parts.length === 0) return null;
+  return `Trend ultima ora (${stats.h1.COD?.n ?? 0} camp.): ${parts.join(" · ")}`;
+}
+
+function gainsLine(gains) {
+  if (!gains) return null;
+  const fmt = (k, label) => {
+    const v = gains[k] ?? 1;
+    if (Math.abs(v - 1) < 0.05) return null;
+    return `${label}=${v.toFixed(2)}×`;
+  };
+  const parts = [fmt("blower","soffianti"), fmt("coagulant","coagulante"), fmt("sludgeRecycle","RAS"), fmt("pH","pH")].filter(Boolean);
+  if (parts.length === 0) return null;
+  return `Gain adattivi: ${parts.join(" · ")}`;
+}
+
+function interventionLine(summary) {
+  const keys = Object.keys(summary);
+  if (keys.length === 0) return null;
+  const parts = keys.map(k => {
+    const s = summary[k];
+    const pct = s.n > 0 ? Math.round(s.good / s.n * 100) : 0;
+    return `${k} ${s.good}/${s.n} ok (${pct}%)`;
+  });
+  return `Efficacia interventi: ${parts.join(" · ")}`;
+}
 
 function generateAIOffline(sim, autoOn) {
   const out = sim.output;
@@ -6,6 +45,13 @@ function generateAIOffline(sim, autoOn) {
   const alarms  = Object.entries(sim.alarmState  || {}).filter(([,v]) => v !== "OK");
   const crits   = alarms.filter(([,v]) => v === "ALTO");
   const ts = new Date().toLocaleTimeString("it-IT", { hour:"2-digit", minute:"2-digit" });
+  const trend = getTrendStats();
+  const gains = loadGains();
+  const intsumm = getInterventionSummary();
+  const trendMsg = trendLine(trend);
+  const gainsMsg = gainsLine(gains);
+  const intMsg   = interventionLine(intsumm);
+  const learnFooter = [trendMsg, gainsMsg, intMsg].filter(Boolean).join("\n");
 
   if (autoOn) {
     if (crits.length > 0) {
@@ -16,6 +62,7 @@ function generateAIOffline(sim, autoOn) {
         msg += "\nPREVISIONE: Con soffianti al " + sim.blower + "%, l'O2 dovrebbe superare la soglia critica entro " + (sim.mode==="fast"?"2-4":"8-12") + " min.";
       else if (out.TSS > 80)
         msg += "\nPREVISIONE: Dosaggio coagulante al " + sim.coagulant + "% — normalizzazione TSS attesa entro " + (sim.mode==="fast"?"5-8":"18-25") + " min.";
+      if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return msg;
     }
     if (actions.length > 0) {
@@ -26,13 +73,16 @@ function generateAIOffline(sim, autoOn) {
         msg += "\n\nSoffianti ad alta intensità (" + sim.blower + "%). Se la situazione non migliora entro 10 min, verificare il carico organico in ingresso.";
       else
         msg += "\n\nParametri in recupero. Monitoraggio continuo attivo.";
+      if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return msg;
     }
     const optActions = Object.values(sim.stageActions || {}).filter(a => a && a.sev === "OK");
     if (optActions.length > 0) {
       let msg = "Ottimizzazione energetica in corso (" + ts + "):\n\n";
       optActions.forEach(a => { msg += "• " + a.text + "\n"; });
-      return msg + "\nTutti i parametri nei target. Il sistema riduce i consumi mantenendo i margini di sicurezza.";
+      let m = msg + "\nTutti i parametri nei target. Il sistema riduce i consumi mantenendo i margini di sicurezza.";
+      if (learnFooter) m += "\n\n— APPRENDIMENTO —\n" + learnFooter;
+      return m;
     }
     return "Impianto in condizioni ottimali (" + ts + ")\n\n"
       + "• COD: " + out.COD.toFixed(1) + " mg/L (target 125)\n"
@@ -41,7 +91,8 @@ function generateAIOffline(sim, autoOn) {
       + "• NH4: " + out.NH4.toFixed(2) + " mg/L (target 8)\n"
       + "• pH: " + out.pH.toFixed(2) + " (range 6.5-8.5)\n"
       + "• O2: " + out.O2.toFixed(1) + " mg/L\n\n"
-      + "Nessun intervento automatico necessario. Soffianti: " + sim.blower + "%, coagulante: " + sim.coagulant + "%.";
+      + "Nessun intervento automatico necessario. Soffianti: " + sim.blower + "%, coagulante: " + sim.coagulant + "%."
+      + (learnFooter ? "\n\n— APPRENDIMENTO —\n" + learnFooter : "");
   } else {
     const sugg = [];
     if (out.O2 < 1.5)       sugg.push("URGENTE — O2 critico (" + out.O2.toFixed(1) + " mg/L). Portare le soffianti all'85-95% immediatamente.");
@@ -63,11 +114,13 @@ function generateAIOffline(sim, autoOn) {
       return "Parametri nella norma — monitoraggio manuale attivo (" + ts + ")\n\n"
         + "• COD: " + out.COD.toFixed(1) + " mg/L\n• BOD5: " + out.BOD5.toFixed(1) + " mg/L\n"
         + "• TSS: " + out.TSS.toFixed(1) + " mg/L\n• NH4: " + out.NH4.toFixed(2) + " mg/L\n"
-        + "• pH: " + out.pH.toFixed(2) + "\n• O2: " + out.O2.toFixed(1) + " mg/L\n\nNessuna azione manuale necessaria.";
+        + "• pH: " + out.pH.toFixed(2) + "\n• O2: " + out.O2.toFixed(1) + " mg/L\n\nNessuna azione manuale necessaria."
+        + (learnFooter ? "\n\n— APPRENDIMENTO —\n" + learnFooter : "");
 
     const urgent = crits.length > 0;
     return (urgent ? "INTERVENTO MANUALE URGENTE (" + ts + ")\n\n" : "Suggerimenti per intervento manuale (" + ts + ")\n\n")
-      + sugg.map((s, i) => (i+1) + ". " + s).join("\n\n");
+      + sugg.map((s, i) => (i+1) + ". " + s).join("\n\n")
+      + (learnFooter ? "\n\n— APPRENDIMENTO —\n" + learnFooter : "");
   }
 }
 
@@ -157,10 +210,17 @@ export default function AIPanel({ sim, autoOn, t }) {
               </button>
             ))}
           </div>
-          <button onClick={() => doRefresh(sim, autoOn, engine)} disabled={msg.loading}
-            style={{padding:"3px 10px", borderRadius:4, cursor:msg.loading?"wait":"pointer", fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13, border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
-            {msg.loading ? "..." : "Aggiorna"}
-          </button>
+          <div style={{display:"flex", gap:3}}>
+            <button onClick={() => { if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn, engine); } }}
+              title="Reset apprendimento"
+              style={{padding:"3px 8px", borderRadius:4, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${t.border}`, background:t.surface2, color:t.textMuted}}>
+              ⟲
+            </button>
+            <button onClick={() => doRefresh(sim, autoOn, engine)} disabled={msg.loading}
+              style={{padding:"3px 10px", borderRadius:4, cursor:msg.loading?"wait":"pointer", fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13, border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
+              {msg.loading ? "..." : "Aggiorna"}
+            </button>
+          </div>
         </div>
       </div>
       <div style={{flex:1, overflowY:"auto", maxHeight:220, paddingRight:2}}>

@@ -321,7 +321,7 @@ export default function StoricaPage({ t }) {
     t: fmtTime(new Date(s.t)),
     COD: s.COD, BOD5: s.BOD5, TSS: s.TSS, NH4: s.NH4, pH: s.pH, O2: s.O2,
     _ts: s.t,
-  })), [daySnaps]);
+  })), [daySnaps, windowStart, selectedIdx]);
 
   const snapTimeStr = snap ? fmtTime(new Date(snap.t)) : null;
 

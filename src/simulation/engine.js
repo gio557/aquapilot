@@ -43,6 +43,12 @@ export const INIT_SIM = {
   alarmState: {},
   imhoff: "",
   stageActions: {},
+  classifierConfig: {
+    mode: "timed", timeOn: 10, timeOff: 20, speed: 60, currentThreshold: 4.0,
+  },
+  sandClassifier: {
+    isOn: true, secondsRemaining: 600, currentDraw: 3.7, sedimentLevel: 0.25, trafficLight: "green", mode: "timed",
+  },
   autoCorrect: {
     enabled: true,
     blower:        { on: true, label: "Regolazione Soffianti",   desc: "Controlla O2 disciolto, rimozione COD/BOD5 e nitrificazione NH4" },
@@ -129,8 +135,57 @@ export function simTick(s) {
     Math.round(Math.min(99, Math.max(85, 91 + noise(2) * 100))),
   ];
 
+  // ── CLASSIFICATORE SABBIE ────────────────────────────────────
+  const clsCfg = s.classifierConfig || { mode:"timed", timeOn:10, timeOff:20, speed:60, currentThreshold:4.0 };
+  const prevCls = s.sandClassifier || { isOn:true, secondsRemaining:600, currentDraw:3.7, sedimentLevel:0.25, trafficLight:"green", mode:"timed" };
+
+  const kAccum = 0.00018 * (iTSS / 200);
+  let clsSediment = Math.max(0, Math.min(1, prevCls.sedimentLevel + kAccum * dt));
+
+  let clsIsOn = prevCls.isOn;
+  let clsSecRemaining = Math.max(0, prevCls.secondsRemaining - dt);
+  let clsEffSpeed;
+
+  if (clsCfg.mode === "timed") {
+    if (clsSecRemaining <= 0) {
+      clsIsOn = !clsIsOn;
+      clsSecRemaining = (clsIsOn ? clsCfg.timeOn : clsCfg.timeOff) * 60;
+    }
+    clsEffSpeed = clsIsOn ? 1.0 : 0.0;
+  } else {
+    clsIsOn = true;
+    clsEffSpeed = clsCfg.speed / 100;
+    clsSecRemaining = 0;
+  }
+
+  const kExtr = 0.0009 * clsEffSpeed;
+  clsSediment = Math.max(0, clsSediment - kExtr * dt);
+
+  const nominalA = 3.7;
+  const overloadFactor = 1 + 1.2 * clsSediment;
+  const clsCurrent = clsEffSpeed > 0
+    ? Math.max(0, +(nominalA * clsEffSpeed * overloadFactor + (Math.random()-0.5)*0.08).toFixed(1))
+    : 0;
+
+  const clsThr = clsCfg.currentThreshold;
+  const clsTraffic = clsEffSpeed === 0 ? "off"
+    : clsCurrent >= clsThr ? "red"
+    : clsCurrent >= clsThr * 0.7 ? "yellow"
+    : "green";
+
+  const sandClassifier = {
+    isOn: clsIsOn,
+    secondsRemaining: Math.round(clsSecRemaining),
+    currentDraw: clsCurrent,
+    sedimentLevel: +clsSediment.toFixed(3),
+    trafficLight: clsTraffic,
+    mode: clsCfg.mode,
+  };
+
   const e1 = +(0.35 + Math.random()*0.05).toFixed(2);
-  const e2 = +(0.55 + Math.random()*0.08).toFixed(2);
+  const e2 = clsEffSpeed > 0
+    ? +(0.15 + 1.8 * clsEffSpeed * (1 + 0.8 * clsSediment) + Math.random()*0.05).toFixed(2)
+    : +(0.05 + Math.random()*0.02).toFixed(2);
   const e3 = +(s.blower/100*18 + s.sludgeRecycle/100*1.2).toFixed(2);
   const e4 = +(0.38 + s.coagulant/100*0.55 + Math.random()*0.05).toFixed(2);
   const e5 = +(0.28 + (s.naoh+s.h2so4)/100*0.35 + Math.random()*0.04).toFixed(2);
@@ -240,11 +295,21 @@ export function simTick(s) {
         { label:"BOD5 ingresso", value:round1(s1.BOD5), unit:"mg/L", note:"" },
         { label:"NH4 ingresso",  value:round2(iNH4),    unit:"mg/L", note:"" },
         { label:"pH ingresso",   value:round2(ipH),     unit:"",     note:"" },
+        { label:"Corrente inverter", value:clsCurrent,  unit:"A",    note: clsIsOn ? (clsSediment > 0.6 ? "carico elevato" : "funzionamento regolare") : "fermo" },
       ],
-      controls: [],
-      note: s.autoCorrect.enabled
-        ? "Sistema automatico attivo. Verificare accumulo sabbie nel classificatore. Svuotamento consigliato quando TSS uscita supera il 15% del valore ingresso."
-        : "Modalità manuale. Verificare accumulo sabbie e procedere allo svuotamento se TSS uscita supera il 15% del TSS in ingresso.",
+      controls: clsCfg.mode === "continuous"
+        ? [
+          { label:"Velocità classificatore", value:clsCfg.speed,                              unit:"%" },
+          { label:"Carico sedimento",         value:Math.round(clsSediment * 100),             unit:"%" },
+        ]
+        : [],
+      note: clsCfg.mode === "timed"
+        ? (s.autoCorrect.enabled
+          ? `Classificatore temporizzato: ON ${clsCfg.timeOn} min / OFF ${clsCfg.timeOff} min. Stato attuale: ${clsIsOn?"IN FUNZIONE":"FERMO"} — prossimo cambio in ${Math.floor(clsSecRemaining/60)}:${String(clsSecRemaining%60).padStart(2,"0")}.`
+          : `Classificatore temporizzato: ON ${clsCfg.timeOn} min / OFF ${clsCfg.timeOff} min. Verificare accumulo manualmente.`)
+        : (s.autoCorrect.enabled
+          ? `Classificatore in continuo al ${clsCfg.speed}% — corrente attuale ${clsCurrent.toFixed(1)} A (soglia allarme ${clsThr} A). Sedimento hopper: ${Math.round(clsSediment*100)}%.`
+          : `Classificatore in continuo al ${clsCfg.speed}%. Verificare corrente inverter. Soglia allarme impostata a ${clsThr} A.`),
     },
     {
       icon:"🦠", function:"Degradazione biologica aerobica del carico organico tramite fanghi attivi",
@@ -311,6 +376,6 @@ export function simTick(s) {
     stageEnergy, energy: { kw, kwh },
     qHistory: [...(s.qHistory||[]).slice(-59), round1(iQ)],
     trend, alarms, alarmState: newAS,
-    stageActions,
+    stageActions, sandClassifier,
   };
 }

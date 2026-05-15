@@ -4,7 +4,44 @@ import MechanicalWidget from "./MechanicalWidget";
 
 const HOLD_MS = 2200;
 
-export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, onClick }) {
+function ClassifierMini({ state, t }) {
+  if (!state) return null;
+  if (state.mode === "timed") {
+    const m = Math.floor(state.secondsRemaining / 60);
+    const ss = state.secondsRemaining % 60;
+    const cd = `${String(m).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+    const sc = state.isOn ? t.green : t.orange;
+    return (
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"5px 9px", background:t.surface2, borderRadius:6, border:`1px solid ${t.border}`}}>
+        <div style={{display:"flex", alignItems:"center", gap:7}}>
+          <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, fontWeight:700,
+            background:`${sc}22`, color:sc, fontFamily:"'Share Tech Mono',monospace",
+            border:`1px solid ${sc}55`}}>
+            {state.isOn ? "ON" : "OFF"}
+          </span>
+          <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:11, color:t.textMuted}}>Classificatore</span>
+        </div>
+        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textSec}}>{cd}</span>
+      </div>
+    );
+  }
+  const tlColor = state.trafficLight === "red" ? t.red : state.trafficLight === "yellow" ? t.orange : t.green;
+  return (
+    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between",
+      padding:"5px 9px", background:t.surface2, borderRadius:6, border:`1px solid ${t.border}`}}>
+      <div style={{display:"flex", alignItems:"center", gap:7}}>
+        <span style={{fontSize:12, color:tlColor}}>●</span>
+        <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:11, color:t.textMuted}}>Classificatore</span>
+      </div>
+      <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:tlColor, fontWeight:700}}>
+        {state.currentDraw.toFixed(1)} A
+      </span>
+    </div>
+  );
+}
+
+export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, classifierState, onClick }) {
   const IDLE = [
     "Nessuna correzione attiva — stadio stabile",
     "Nessuna correzione attiva — stadio stabile",
@@ -91,6 +128,8 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
           }
         </div>
       )}
+
+      {classifierState && <ClassifierMini state={classifierState} t={t}/>}
 
       <div style={{
         padding:"7px 10px", borderRadius:7,

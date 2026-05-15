@@ -48,6 +48,13 @@ export const DEFAULT_STAGE_CONFIG = [
     pumps: [
       pump("p1", "Pompa classificatore sabbie", 2.2, 45, 5, 1450),
     ],
+    classifier: {
+      mode: "timed",    // "timed" | "continuous"
+      timeOn: 10,       // minutes
+      timeOff: 20,      // minutes
+      speed: 60,        // % for continuous mode
+      currentThreshold: 4.0,  // A
+    },
   },
   {
     stageIndex: 2,

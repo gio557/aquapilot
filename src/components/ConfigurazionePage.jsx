@@ -58,6 +58,12 @@ export default function ConfigurazionePage({ t, config, onChange }) {
     ));
   };
 
+  const updateClassifier = (si, field, value) => {
+    onChange(prev => prev.map((sc, i) =>
+      i !== si ? sc : { ...sc, classifier: { ...sc.classifier, [field]: value } }
+    ));
+  };
+
   const resetStage = (si) => {
     onChange(prev => prev.map((sc, i) =>
       i !== si ? sc : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG[i]))
@@ -243,6 +249,55 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                     ))
                   )}
                 </div>
+
+                {/* ── CLASSIFICATORE SABBIE (only for stage 1) ── */}
+                {si === 1 && sc.classifier && (
+                  <div>
+                    <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                      letterSpacing:1, marginBottom:12}}>MODALITÀ CLASSIFICATORE SABBIE</div>
+
+                    <div style={{display:"flex", gap:8, marginBottom:16}}>
+                      {[["timed","⏱  Temporizzato"],["continuous","⟳  Continuo"]].map(([m, label]) => (
+                        <button key={m} onClick={() => updateClassifier(si, "mode", m)}
+                          style={{flex:1, padding:"9px", borderRadius:8, cursor:"pointer",
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                            border:`2px solid ${sc.classifier.mode === m ? color : t.border}`,
+                            background: sc.classifier.mode === m ? `${color}18` : t.surface2,
+                            color: sc.classifier.mode === m ? color : t.textSec}}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div style={{display:"flex", gap:16, flexWrap:"wrap", marginBottom:12}}>
+                      {sc.classifier.mode === "timed" ? (
+                        <>
+                          <NumField label="Tempo ON" value={sc.classifier.timeOn} unit="min"
+                            onChange={v => updateClassifier(si, "timeOn", Math.max(1, Math.round(v)))} t={t}/>
+                          <NumField label="Tempo OFF" value={sc.classifier.timeOff} unit="min"
+                            onChange={v => updateClassifier(si, "timeOff", Math.max(1, Math.round(v)))} t={t}/>
+                          <NumField label="Soglia corrente" value={sc.classifier.currentThreshold} unit="A"
+                            onChange={v => updateClassifier(si, "currentThreshold", Math.max(0.5, v))} t={t}/>
+                        </>
+                      ) : (
+                        <>
+                          <NumField label="Velocità rotazione" value={sc.classifier.speed} unit="%"
+                            onChange={v => updateClassifier(si, "speed", Math.max(10, Math.min(100, Math.round(v))))} t={t}/>
+                          <NumField label="Soglia corrente" value={sc.classifier.currentThreshold} unit="A"
+                            onChange={v => updateClassifier(si, "currentThreshold", Math.max(0.5, v))} t={t}/>
+                        </>
+                      )}
+                    </div>
+
+                    <div style={{padding:"8px 12px", background:t.surface2, borderRadius:6,
+                      border:`1px solid ${t.border}`, fontSize:12, color:t.textMuted,
+                      fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5}}>
+                      {sc.classifier.mode === "timed"
+                        ? `Tramoggia attiva per ${sc.classifier.timeOn} min, poi ferma per ${sc.classifier.timeOff} min. La corrente assorbita durante il ciclo ON è un indicatore indiretto della concentrazione dello slurry estratto.`
+                        : `Tramoggia in funzione continua al ${sc.classifier.speed}% della velocità nominale. La corrente dell'inverter indica la concentrazione del sedimento: superata la soglia di ${sc.classifier.currentThreshold} A il semaforo passa in rosso.`}
+                    </div>
+                  </div>
+                )}
 
               </div>
             )}

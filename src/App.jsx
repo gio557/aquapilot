@@ -103,6 +103,12 @@ export default function App() {
   const autoOn = sim.autoCorrect?.enabled ?? false;
   const card = { background:t.surface, border:`2px solid ${t.border}`, borderRadius:12, boxShadow:t.cardShadow };
 
+  const classifierCfgJson = JSON.stringify(stageConfig[1]?.classifier);
+  useEffect(() => {
+    const cfg = stageConfig[1]?.classifier;
+    if (cfg) setSim(prev => ({ ...prev, classifierConfig: cfg }));
+  }, [classifierCfgJson]);
+
   const selectedStageData = selectedStage != null ? {
     stage:       stages[selectedStage],
     index:       selectedStage,
@@ -222,7 +228,8 @@ export default function App() {
               <StageCard key={s.id} stage={s} index={i}
                 stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
                 eff={sim.stageEff?.[i]}
-                autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}/>
+                autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}
+                classifierState={i === 1 ? sim.sandClassifier : null}/>
             ))}
             <button onClick={() => setShowConfigurator(true)}
               style={{flexShrink:0, width:44, borderRadius:10, cursor:"pointer",

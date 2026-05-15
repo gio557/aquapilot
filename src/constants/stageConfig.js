@@ -36,6 +36,16 @@ export const DEFAULT_STAGE_CONFIG = [
       tss:    { enabled: false },
     },
     pumps: [],
+    grigliatura: {
+      DH_AVVIO_PULIZIA:        0.15,
+      DH_STOP_PULIZIA:         0.05,
+      DH_GUARDIA_ALTA:         0.35,
+      TIMER_BACKUP_INTERVALLO: 1800,
+      DURATA_MINIMA_CICLO:     120,
+      CORRENTE_NOMINALE:       4.5,
+      CORRENTE_SOVRACCARICO:   8.0,
+      BYPASS_AUTO:             true,
+    },
   },
   {
     stageIndex: 1,

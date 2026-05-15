@@ -4,6 +4,81 @@ import MechanicalWidget from "./MechanicalWidget";
 
 const HOLD_MS = 2200;
 
+function GrigliaturaBanner({ state, onReset, t }) {
+  const PHASES = {
+    STANDBY:           { label:"STANDBY",        icon:"✓", rank:0 },
+    AVVIO_PRESSA:      { label:"AVVIO PRESSA",   icon:"⟳", rank:1 },
+    PULIZIA_ATTIVA:    { label:"PULIZIA ATTIVA", icon:"⟳", rank:1 },
+    POST_CICLO_PRESSA: { label:"POST CICLO",     icon:"✓", rank:0 },
+    ALLARME_MOTORE:    { label:"ALLARME MOTORE", icon:"✗", rank:2 },
+  };
+  const ph = PHASES[state.fase] || { label:state.fase, icon:"●", rank:0 };
+  const phRank = state.bypass_aperto ? Math.max(ph.rank, 1) : ph.rank;
+  const color  = phRank === 2 ? t.red : phRank === 1 ? t.orange : t.green;
+  const bgDim  = phRank === 2 ? t.redDim : phRank === 1 ? t.orangeDim : t.greenDim;
+  const dhMax  = 0.60;
+  const dhPct  = Math.min(100, (state.delta_h / dhMax) * 100);
+  const dhColor= state.delta_h >= 0.35 ? t.red : state.delta_h >= 0.15 ? t.orange : t.green;
+  return (
+    <div style={{width:"100%", display:"flex", flexDirection:"column", gap:6, padding:"4px 0"}}>
+      <div style={{display:"flex", alignItems:"center", gap:8, padding:"8px 14px", borderRadius:10,
+        background:bgDim, border:`2px solid ${color}55`, justifyContent:"space-between",
+        transition:"background 0.6s, border-color 0.6s"}}>
+        <div style={{display:"flex", alignItems:"center", gap:8}}>
+          <span style={{fontSize:16, lineHeight:1}}>{ph.icon}</span>
+          <span style={{fontFamily:"'Orbitron',sans-serif", fontSize:12, fontWeight:900, color, letterSpacing:1, transition:"color 0.6s"}}>{ph.label}</span>
+        </div>
+        {state.fase === "ALLARME_MOTORE" && (
+          <button onClick={e => { e.stopPropagation(); onReset?.(); }}
+            style={{fontSize:9, padding:"2px 8px", borderRadius:3, cursor:"pointer",
+              background:`${t.red}22`, color:t.red, border:`1px solid ${t.red}66`,
+              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, flexShrink:0}}>
+            RESET
+          </button>
+        )}
+      </div>
+      <div>
+        <div style={{display:"flex", justifyContent:"space-between", marginBottom:2}}>
+          <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>ΔH livello</span>
+          <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:dhColor, fontWeight:700}}>
+            {(+state.delta_h).toFixed(3)} m
+          </span>
+        </div>
+        <div style={{height:4, background:t.surface3, borderRadius:2, overflow:"hidden"}}>
+          <div style={{height:"100%", width:`${dhPct}%`, background:dhColor, borderRadius:2, transition:"width 0.6s ease"}}/>
+        </div>
+      </div>
+      <div style={{display:"flex", gap:5, flexWrap:"wrap"}}>
+        <span style={{fontSize:9, padding:"1px 6px", borderRadius:3,
+          background:`${state.pressa_attiva ? t.green : t.surface3}22`,
+          color:state.pressa_attiva ? t.green : t.textMuted,
+          border:`1px solid ${state.pressa_attiva ? t.green+"55" : t.border}`,
+          fontFamily:"'Share Tech Mono',monospace"}}>
+          PRESSA {state.pressa_attiva ? "ON" : "OFF"}
+        </span>
+        {state.bypass_aperto && (
+          <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.orange}22`,
+            color:t.orange, border:`1px solid ${t.orange}55`, fontFamily:"'Share Tech Mono',monospace"}}>
+            BYPASS
+          </span>
+        )}
+        {(state.fase === "PULIZIA_ATTIVA" || state.fase === "ALLARME_MOTORE") && state.corrente_motore > 0 && (
+          <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.accent}18`,
+            color:t.accent, border:`1px solid ${t.accent}44`, fontFamily:"'Share Tech Mono',monospace"}}>
+            {(+state.corrente_motore).toFixed(1)} A
+          </span>
+        )}
+        {state.allarmi?.length > 0 && (
+          <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.red}22`,
+            color:t.red, border:`1px solid ${t.red}55`, fontFamily:"'Share Tech Mono',monospace"}}>
+            ALM
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ClassifierBanner({ state, t }) {
   const color  = state.trafficLight === "red" ? t.red : state.trafficLight === "yellow" ? t.orange : t.green;
   const bgDim  = state.trafficLight === "red" ? t.redDim : state.trafficLight === "yellow" ? t.orangeDim : t.greenDim;
@@ -67,7 +142,7 @@ function ClassifierMini({ state, t }) {
   );
 }
 
-export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, classifierState, onClick }) {
+export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, classifierState, grigliaturaState, onGrigliaturaReset, onClick }) {
   const IDLE = [
     "Nessuna correzione attiva — stadio stabile",
     "Nessuna correzione attiva — stadio stabile",
@@ -115,7 +190,10 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
   const clsRank = classifierState?.mode === "continuous"
     ? (classifierState.trafficLight === "red" ? 2 : classifierState.trafficLight === "yellow" ? 1 : 0)
     : 0;
-  const rank = Math.max(sevRank(stable.sev), gaugeRank, clsRank);
+  const grRank = grigliaturaState
+    ? (grigliaturaState.fase === "ALLARME_MOTORE" ? 2 : grigliaturaState.bypass_aperto ? 1 : 0)
+    : 0;
+  const rank = Math.max(sevRank(stable.sev), gaugeRank, clsRank, grRank);
   const bColor = rank === 2 ? t.red : rank === 1 ? t.orange : t.green;
   const bIcon  = stable.sev === "ALTO" ? "🔴" : stable.sev === "MEDIO" ? "🟡" : "🟢";
 
@@ -151,11 +229,13 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
       {stageOutput && (
         <div style={{display:"flex", justifyContent:"center"}}>
-          {classifierState?.mode === "continuous"
-            ? <ClassifierBanner state={classifierState} t={t}/>
-            : isEfficiency
-              ? <MechanicalWidget stageOutput={stageOutput} t={t}/>
-              : <Gauge stageOutput={stageOutput} t={t}/>
+          {grigliaturaState
+            ? <GrigliaturaBanner state={grigliaturaState} onReset={onGrigliaturaReset} t={t}/>
+            : classifierState?.mode === "continuous"
+              ? <ClassifierBanner state={classifierState} t={t}/>
+              : isEfficiency
+                ? <MechanicalWidget stageOutput={stageOutput} t={t}/>
+                : <Gauge stageOutput={stageOutput} t={t}/>
           }
         </div>
       )}

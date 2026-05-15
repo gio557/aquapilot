@@ -109,6 +109,25 @@ export default function App() {
     if (cfg) setSim(prev => ({ ...prev, classifierConfig: cfg }));
   }, [classifierCfgJson]);
 
+  const grCfgJson = JSON.stringify(stageConfig[0]?.grigliatura);
+  useEffect(() => {
+    const cfg = stageConfig[0]?.grigliatura;
+    if (cfg) setSim(prev => ({ ...prev, grigliaturaConfig: cfg }));
+  }, [grCfgJson]);
+
+  const handleGrigliaturaReset = () => {
+    setSim(prev => ({
+      ...prev,
+      grigliaturaState: {
+        ...prev.grigliaturaState,
+        fase: "STANDBY", sovraccarico: false, ostacolo_presente: false,
+        timer_fase: 0, corrente_motore: 0,
+        finecorsa_ritorno: true, finecorsa_partenza: false,
+        allarmi: (prev.grigliaturaState?.allarmi || []).filter(a => a !== "ALM-02"),
+      }
+    }));
+  };
+
   const selectedStageData = selectedStage != null ? {
     stage:       stages[selectedStage],
     index:       selectedStage,
@@ -229,7 +248,9 @@ export default function App() {
                 stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
                 eff={sim.stageEff?.[i]}
                 autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}
-                classifierState={i === 1 ? sim.sandClassifier : null}/>
+                classifierState={i === 1 ? sim.sandClassifier : null}
+                grigliaturaState={i === 0 ? sim.grigliaturaState : null}
+                onGrigliaturaReset={i === 0 ? handleGrigliaturaReset : undefined}/>
             ))}
             <button onClick={() => setShowConfigurator(true)}
               style={{flexShrink:0, width:44, borderRadius:10, cursor:"pointer",

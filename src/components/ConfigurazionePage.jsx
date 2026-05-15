@@ -64,6 +64,12 @@ export default function ConfigurazionePage({ t, config, onChange }) {
     ));
   };
 
+  const updateGrigliatura = (si, field, value) => {
+    onChange(prev => prev.map((sc, i) =>
+      i !== si ? sc : { ...sc, grigliatura: { ...sc.grigliatura, [field]: value } }
+    ));
+  };
+
   const resetStage = (si) => {
     onChange(prev => prev.map((sc, i) =>
       i !== si ? sc : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG[i]))
@@ -249,6 +255,57 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                     ))
                   )}
                 </div>
+
+                {/* ── GRIGLIATURA (only for stage 0) ── */}
+                {si === 0 && sc.grigliatura && (
+                  <div>
+                    <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                      letterSpacing:1, marginBottom:12}}>PARAMETRI CICLO GRIGLIATURA</div>
+
+                    <div style={{display:"flex", gap:16, flexWrap:"wrap", marginBottom:12}}>
+                      <NumField label="ΔH avvio pulizia" value={sc.grigliatura.DH_AVVIO_PULIZIA} unit="m"
+                        onChange={v => updateGrigliatura(si, "DH_AVVIO_PULIZIA", Math.max(0.01, Math.min(sc.grigliatura.DH_GUARDIA_ALTA-0.01, v)))} t={t}/>
+                      <NumField label="ΔH stop pulizia" value={sc.grigliatura.DH_STOP_PULIZIA} unit="m"
+                        onChange={v => updateGrigliatura(si, "DH_STOP_PULIZIA", Math.max(0.01, Math.min(sc.grigliatura.DH_AVVIO_PULIZIA-0.01, v)))} t={t}/>
+                      <NumField label="ΔH guardia alta" value={sc.grigliatura.DH_GUARDIA_ALTA} unit="m"
+                        onChange={v => updateGrigliatura(si, "DH_GUARDIA_ALTA", Math.max(sc.grigliatura.DH_AVVIO_PULIZIA+0.01, v))} t={t}/>
+                      <NumField label="Timer backup" value={sc.grigliatura.TIMER_BACKUP_INTERVALLO} unit="s"
+                        onChange={v => updateGrigliatura(si, "TIMER_BACKUP_INTERVALLO", Math.max(60, Math.round(v)))} t={t}/>
+                      <NumField label="Durata min. ciclo" value={sc.grigliatura.DURATA_MINIMA_CICLO} unit="s"
+                        onChange={v => updateGrigliatura(si, "DURATA_MINIMA_CICLO", Math.max(10, Math.round(v)))} t={t}/>
+                      <NumField label="Corrente nominale" value={sc.grigliatura.CORRENTE_NOMINALE} unit="A"
+                        onChange={v => updateGrigliatura(si, "CORRENTE_NOMINALE", Math.max(1, v))} t={t}/>
+                      <NumField label="Soglia sovraccarico" value={sc.grigliatura.CORRENTE_SOVRACCARICO} unit="A"
+                        onChange={v => updateGrigliatura(si, "CORRENTE_SOVRACCARICO", Math.max(sc.grigliatura.CORRENTE_NOMINALE+1, v))} t={t}/>
+                    </div>
+
+                    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between",
+                      padding:"10px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`, marginBottom:8}}>
+                      <div>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, color:t.text}}>Bypass automatico</div>
+                        <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                          Apre la valvola bypass se ΔH supera la soglia guardia alta ({sc.grigliatura.DH_GUARDIA_ALTA} m)
+                        </div>
+                      </div>
+                      <div onClick={() => updateGrigliatura(si, "BYPASS_AUTO", !sc.grigliatura.BYPASS_AUTO)}
+                        style={{flexShrink:0, width:44, height:24, borderRadius:12, cursor:"pointer", position:"relative",
+                          background: sc.grigliatura.BYPASS_AUTO ? t.green : t.surface3,
+                          border:`1px solid ${sc.grigliatura.BYPASS_AUTO ? t.green : t.border}`,
+                          transition:"background 0.2s"}}>
+                        <div style={{position:"absolute", top:3,
+                          left: sc.grigliatura.BYPASS_AUTO ? 21 : 3,
+                          width:16, height:16, borderRadius:"50%", background:"#fff",
+                          transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                      </div>
+                    </div>
+
+                    <div style={{padding:"8px 12px", background:t.surface2, borderRadius:6,
+                      border:`1px solid ${t.border}`, fontSize:12, color:t.textMuted,
+                      fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5}}>
+                      {`Ciclo pulizia: avvio a ΔH>${sc.grigliatura.DH_AVVIO_PULIZIA} m, stop a ΔH<${sc.grigliatura.DH_STOP_PULIZIA} m. Bypass ${sc.grigliatura.BYPASS_AUTO?"automatico":"manuale"} oltre ${sc.grigliatura.DH_GUARDIA_ALTA} m. Timer backup: ${sc.grigliatura.TIMER_BACKUP_INTERVALLO} s. Soglia sovraccarico motore: ${sc.grigliatura.CORRENTE_SOVRACCARICO} A.`}
+                    </div>
+                  </div>
+                )}
 
                 {/* ── CLASSIFICATORE SABBIE (only for stage 1) ── */}
                 {si === 1 && sc.classifier && (

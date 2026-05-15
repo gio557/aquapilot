@@ -49,6 +49,22 @@ export const INIT_SIM = {
   sandClassifier: {
     isOn: true, secondsRemaining: 600, currentDraw: 3.7, sedimentLevel: 0.25, trafficLight: "green", mode: "timed",
   },
+  grigliaturaConfig: {
+    DH_AVVIO_PULIZIA:0.15, DH_STOP_PULIZIA:0.05, DH_GUARDIA_ALTA:0.35, DH_MAX_FISICO:0.60,
+    INTASAMENTO_AVVIO:0.60, INTASAMENTO_STOP:0.20,
+    VELOCITA_INTASAMENTO:0.004, VELOCITA_PULIZIA:0.015,
+    TIMER_BACKUP_INTERVALLO:1800, DURATA_MINIMA_CICLO:120,
+    CORRENTE_NOMINALE:4.5, CORRENTE_SOVRACCARICO:8.0, PROB_OSTACOLO_PER_CICLO:0.03,
+    PRESSA_PRECONDIZIONAMENTO:15, PRESSA_POST_CICLO:30,
+    RENDIMENTO_BASE:0.24, RENDIMENTO_MIN:0.05, BYPASS_AUTO:true,
+  },
+  grigliaturaState: {
+    intasamento:0.10, delta_h:0.02, rendimento:0.24,
+    fase:"STANDBY", timer_backup:0, timer_fase:0, timer_ciclo_totale:0,
+    finecorsa_partenza:false, finecorsa_ritorno:true,
+    corrente_motore:0, sovraccarico:false, ostacolo_presente:false,
+    pressa_attiva:false, bypass_aperto:false, allarmi:[],
+  },
   autoCorrect: {
     enabled: true,
     blower:        { on: true, label: "Regolazione Soffianti",   desc: "Controlla O2 disciolto, rimozione COD/BOD5 e nitrificazione NH4" },
@@ -82,8 +98,97 @@ export function simTick(s) {
   const ipH  = Math.max(5.5, Math.min(10, s.inlet.pH + (Math.random()-0.5)*0.02));
   const iT   = Math.max(10,  Math.min(35, s.inlet.T  + (Math.random()-0.5)*0.05));
 
-  // Stage 1: Grigliatura
-  const s1 = { COD:iCOD*0.92, BOD5:iBOD*0.96, TSS:iTSS*0.76, NH4:iNH4, pH:ipH, T:iT };
+  // ── GRIGLIATURA STATE MACHINE ────────────────────────────────
+  const gCfg = s.grigliaturaConfig || {
+    DH_AVVIO_PULIZIA:0.15, DH_STOP_PULIZIA:0.05, DH_GUARDIA_ALTA:0.35, DH_MAX_FISICO:0.60,
+    INTASAMENTO_AVVIO:0.60, INTASAMENTO_STOP:0.20, VELOCITA_INTASAMENTO:0.004, VELOCITA_PULIZIA:0.015,
+    TIMER_BACKUP_INTERVALLO:1800, DURATA_MINIMA_CICLO:120, CORRENTE_NOMINALE:4.5, CORRENTE_SOVRACCARICO:8.0,
+    PROB_OSTACOLO_PER_CICLO:0.03, PRESSA_PRECONDIZIONAMENTO:15, PRESSA_POST_CICLO:30,
+    RENDIMENTO_BASE:0.24, RENDIMENTO_MIN:0.05, BYPASS_AUTO:true,
+  };
+  const gPrev = s.grigliaturaState || {
+    intasamento:0.10, delta_h:0.02, rendimento:0.24, fase:"STANDBY",
+    timer_backup:0, timer_fase:0, timer_ciclo_totale:0,
+    finecorsa_partenza:false, finecorsa_ritorno:true,
+    corrente_motore:0, sovraccarico:false, ostacolo_presente:false,
+    pressa_attiva:false, bypass_aperto:false, allarmi:[],
+  };
+  const g = { ...gPrev, allarmi: [...gPrev.allarmi] };
+
+  // 1. Clogging
+  const carico_norm = Math.max(0.1, iTSS / 200);
+  if (g.fase === "PULIZIA_ATTIVA") {
+    g.intasamento -= gCfg.VELOCITA_PULIZIA * dt;
+  } else {
+    g.intasamento += gCfg.VELOCITA_INTASAMENTO * carico_norm * dt;
+  }
+  g.intasamento = Math.max(0, Math.min(1, g.intasamento));
+
+  // 2. Derived process variables
+  g.delta_h    = +(gCfg.DH_MAX_FISICO * g.intasamento).toFixed(3);
+  g.rendimento = gCfg.RENDIMENTO_BASE - (gCfg.RENDIMENTO_BASE - gCfg.RENDIMENTO_MIN) * g.intasamento;
+
+  // 3. Bypass emergency check
+  if (+g.delta_h >= gCfg.DH_GUARDIA_ALTA && !g.bypass_aperto) {
+    if (!g.allarmi.includes("ALM-01")) g.allarmi.push("ALM-01");
+    if (gCfg.BYPASS_AUTO) g.bypass_aperto = true;
+  }
+  if (+g.delta_h < gCfg.DH_AVVIO_PULIZIA && g.bypass_aperto && !g.allarmi.includes("ALM-02")) {
+    g.bypass_aperto = false;
+    g.allarmi = g.allarmi.filter(a => a !== "ALM-01");
+  }
+
+  // 4. Backup timer
+  g.timer_backup += dt;
+  const gBackup = g.timer_backup >= gCfg.TIMER_BACKUP_INTERVALLO;
+
+  // 5. State machine
+  g.timer_fase += dt;
+  switch (g.fase) {
+    case "STANDBY":
+      g.corrente_motore = 0; g.pressa_attiva = false; g.finecorsa_ritorno = true;
+      if (g.intasamento >= gCfg.INTASAMENTO_AVVIO || gBackup) {
+        g.ostacolo_presente = Math.random() < gCfg.PROB_OSTACOLO_PER_CICLO;
+        g.fase = "AVVIO_PRESSA"; g.timer_fase = 0; g.timer_ciclo_totale = 0;
+        if (gBackup) g.timer_backup = 0;
+      }
+      break;
+    case "AVVIO_PRESSA":
+      g.pressa_attiva = true; g.corrente_motore = 0;
+      if (g.timer_fase >= gCfg.PRESSA_PRECONDIZIONAMENTO) {
+        g.fase = "PULIZIA_ATTIVA"; g.timer_fase = 0;
+        g.finecorsa_partenza = true; g.finecorsa_ritorno = false;
+      }
+      break;
+    case "PULIZIA_ATTIVA":
+      g.pressa_attiva = true;
+      g.corrente_motore = g.ostacolo_presente ? 11.0
+        : +(gCfg.CORRENTE_NOMINALE * (1 + g.intasamento * 0.4) + (Math.random()-0.5)*0.15).toFixed(1);
+      g.timer_ciclo_totale += dt;
+      if (g.corrente_motore >= gCfg.CORRENTE_SOVRACCARICO) {
+        if (!g.allarmi.includes("ALM-02")) g.allarmi.push("ALM-02");
+        g.sovraccarico = true; g.fase = "ALLARME_MOTORE"; g.timer_fase = 0;
+      } else if (g.intasamento <= gCfg.INTASAMENTO_STOP && g.timer_fase >= gCfg.DURATA_MINIMA_CICLO) {
+        g.finecorsa_ritorno = true; g.finecorsa_partenza = false;
+        g.fase = "POST_CICLO_PRESSA"; g.timer_fase = 0;
+      }
+      break;
+    case "POST_CICLO_PRESSA":
+      g.pressa_attiva = true; g.corrente_motore = 0;
+      if (g.timer_fase >= gCfg.PRESSA_POST_CICLO) {
+        g.pressa_attiva = false; g.fase = "STANDBY"; g.timer_fase = 0; g.timer_backup = 0;
+      }
+      break;
+    case "ALLARME_MOTORE":
+      g.pressa_attiva = false; g.corrente_motore = 0;
+      g.finecorsa_ritorno = false; g.finecorsa_partenza = false;
+      break;
+    default: break;
+  }
+  const grigliaturaState = g;
+
+  // Stage 1: Grigliatura — TSS removal depends on actual clogging state
+  const s1 = { COD:iCOD*0.92, BOD5:iBOD*0.96, TSS:iTSS*(1-grigliaturaState.rendimento), NH4:iNH4, pH:ipH, T:iT };
 
   // Stage 2: Dissabbiatura
   const s2 = { COD:s1.COD*0.96, BOD5:s1.BOD5*0.97, TSS:s1.TSS*0.63, NH4:s1.NH4, pH:s1.pH, T:s1.T };
@@ -128,7 +233,7 @@ export function simTick(s) {
   };
 
   const eff = [
-    Math.round(Math.min(99, Math.max(70, 92 + noise(3) * 100))),
+    Math.round(Math.max(5, Math.min(100, (grigliaturaState.rendimento / gCfg.RENDIMENTO_BASE) * 100))),
     Math.round(Math.min(99, Math.max(70, 90 + noise(4) * 100))),
     Math.round(Math.min(99, Math.max(50, bioC * 100))),
     Math.round(Math.min(99, Math.max(60, sedE * 100))),
@@ -183,7 +288,12 @@ export function simTick(s) {
     mode: clsCfg.mode,
   };
 
-  const e1 = +(0.35 + Math.random()*0.05).toFixed(2);
+  const grCorrNorm = grigliaturaState.corrente_motore / (gCfg.CORRENTE_NOMINALE || 4.5);
+  const e1 = grigliaturaState.fase === "PULIZIA_ATTIVA"
+    ? +(0.20 + grCorrNorm * 0.55 + (grigliaturaState.pressa_attiva ? 0.22 : 0) + Math.random()*0.02).toFixed(2)
+    : grigliaturaState.pressa_attiva
+      ? +(0.18 + Math.random()*0.02).toFixed(2)
+      : +(0.08 + Math.random()*0.01).toFixed(2);
   const e2 = clsEffSpeed > 0
     ? +(0.15 + 1.8 * clsEffSpeed * (1 + 0.8 * clsSediment) + Math.random()*0.05).toFixed(2)
     : +(0.05 + Math.random()*0.02).toFixed(2);
@@ -273,19 +383,29 @@ export function simTick(s) {
 
   const stageDetails = [
     {
-      icon:"🔲", function:"Rimozione meccanica dei solidi grossolani mediante griglia",
+      icon:"🔲", function:"Rimozione meccanica dei solidi grossolani mediante griglia a rastrello motorizzato con ciclo di pulizia automatico",
       params:[
-        { label:"COD ingresso",  value:round1(iCOD),        unit:"mg/L", note:"valore ingresso impianto" },
-        { label:"BOD5 ingresso", value:round1(iBOD),        unit:"mg/L", note:"valore ingresso impianto" },
-        { label:"TSS ingresso",  value:round1(s.inlet.TSS), unit:"mg/L", note:"solidi totali in ingresso" },
-        { label:"TSS uscita",    value:round1(s1.TSS),      unit:"mg/L", note:"solidi dopo grigliatura" },
-        { label:"Portata",       value:round1(iQ),          unit:"m³/h", note:"portata attuale" },
-        { label:"Temperatura",   value:round1(iT),          unit:"°C",   note:"" },
+        { label:"TSS ingresso",        value:round1(s.inlet.TSS),                                  unit:"mg/L", note:"solidi totali in ingresso" },
+        { label:"TSS uscita",          value:round1(s1.TSS),                                       unit:"mg/L", note:"dopo grigliatura" },
+        { label:"COD ingresso",        value:round1(iCOD),                                         unit:"mg/L", note:"" },
+        { label:"BOD5 ingresso",       value:round1(iBOD),                                         unit:"mg/L", note:"" },
+        { label:"Portata",             value:round1(iQ),                                           unit:"m³/h", note:"" },
+        { label:"Temperatura",         value:round1(iT),                                           unit:"°C",   note:"" },
+        { label:"ΔH livello",          value:+grigliaturaState.delta_h,                            unit:"m",    note:`avvio>${gCfg.DH_AVVIO_PULIZIA} m | bypass>${gCfg.DH_GUARDIA_ALTA} m` },
+        { label:"Intasamento griglia", value:Math.round(grigliaturaState.intasamento*100),          unit:"%",    note:"0=libera · 100=occlusa" },
+        { label:"Rendimento",          value:round1(grigliaturaState.rendimento*100),               unit:"%",    note:`base:${(gCfg.RENDIMENTO_BASE*100).toFixed(0)}% · min:${(gCfg.RENDIMENTO_MIN*100).toFixed(0)}%` },
+        { label:"Corrente rastrello",  value:round1(grigliaturaState.corrente_motore),              unit:"A",    note:grigliaturaState.fase==="PULIZIA_ATTIVA"?"ciclo attivo":"fermo" },
+        { label:"Timer backup",        value:Math.round(grigliaturaState.timer_backup),             unit:"s",    note:`ciclo forzato ogni ${gCfg.TIMER_BACKUP_INTERVALLO} s` },
       ],
-      controls: [],
-      note: s.autoCorrect.enabled
-        ? "Sistema automatico attivo. Questo stadio non ha controlli automatici — monitorare visivamente il livello di intasamento della griglia e lo smaltimento dei solidi grigliati."
-        : "Modalità manuale. Verificare periodicamente il livello di intasamento della griglia e procedere alla pulizia quando necessario.",
+      controls:[
+        { label:"Intasamento griglia", value:Math.round(grigliaturaState.intasamento*100),          unit:"%" },
+        { label:"Corrente / sov.",     value:Math.round(grigliaturaState.corrente_motore/gCfg.CORRENTE_SOVRACCARICO*100), unit:"%" },
+      ],
+      note: grigliaturaState.allarmi.length > 0
+        ? `⚠ ALLARMI: ${grigliaturaState.allarmi.join(" · ")}${grigliaturaState.bypass_aperto?" — BYPASS APERTO":""}`
+        : grigliaturaState.fase === "STANDBY"
+          ? `Griglia in standby — intasamento ${Math.round(grigliaturaState.intasamento*100)}% — ΔH: ${grigliaturaState.delta_h} m. Prossimo ciclo: ΔH>${gCfg.DH_AVVIO_PULIZIA}m o timer backup ${gCfg.TIMER_BACKUP_INTERVALLO}s.`
+          : `Fase: ${grigliaturaState.fase} — ciclo in corso da ${grigliaturaState.timer_ciclo_totale.toFixed(0)} s — corrente rastrello: ${grigliaturaState.corrente_motore.toFixed(1)} A.`,
     },
     {
       icon:"⏳", function:"Rimozione di sabbie, ghiaie e materiali inerti per sedimentazione accelerata",
@@ -377,6 +497,6 @@ export function simTick(s) {
     stageEnergy, energy: { kw, kwh },
     qHistory: [...(s.qHistory||[]).slice(-59), round1(iQ)],
     trend, alarms, alarmState: newAS,
-    stageActions, sandClassifier,
+    stageActions, sandClassifier, grigliaturaState,
   };
 }

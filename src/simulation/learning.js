@@ -104,6 +104,10 @@ export function recordTick(sim, prevSim) {
       kw:  sim.energy?.kw  ?? null,
       kwh: sim.energy?.kwh ?? null,
       stageEnergy: Array.isArray(sim.stageEnergy) ? sim.stageEnergy.slice() : null,
+      alarmState: sim.alarmState ? { ...sim.alarmState } : null,
+      activeAlarms: Array.isArray(sim.alarms)
+        ? sim.alarms.filter(a => a.sev && a.sev !== "OK").slice(-10)
+        : null,
       auto: !!sim.autoCorrect?.enabled,
     });
     if (h.length > HISTORY_MAX) h.splice(0, h.length - HISTORY_MAX);

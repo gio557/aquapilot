@@ -510,7 +510,7 @@ export default function StoricaPage({ t }) {
 
       {/* ── INTERVENTI VICINI + CONSUMI ── */}
       {snap && (
-      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:14}}>
+      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14}}>
         <div style={{...card, padding:"20px 22px"}}>
           <div style={{...secHd}}>
             <span style={{color:t.yellow}}>▸</span>
@@ -558,6 +558,82 @@ export default function StoricaPage({ t }) {
               })}
             </div>
           )}
+        </div>
+
+        {/* ALLARMI */}
+        <div style={{...card, padding:"20px 22px"}}>
+          <div style={{...secHd}}>
+            <span style={{color:t.red}}>▸</span>
+            ALLARMI — {snap ? fmtTime(new Date(snap.t)) : "—"}
+          </div>
+          {!snap.alarmState ? (
+            <div style={{padding:"30px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+              fontSize:15, textAlign:"center", lineHeight:1.6}}>
+              Dati allarmi non disponibili per questo snapshot.<br/>
+              <span style={{fontSize:13}}>(salvati a partire da questa versione)</span>
+            </div>
+          ) : (() => {
+            const active = Object.entries(snap.alarmState).filter(([,v]) => v !== "OK");
+            const crits  = active.filter(([,v]) => v === "ALTO");
+            const warns  = active.filter(([,v]) => v === "MEDIO");
+            return (
+              <>
+                {/* summary badges */}
+                <div style={{display:"flex", gap:10, marginBottom:16, flexWrap:"wrap"}}>
+                  {[
+                    { label:`${crits.length} Critici`,  c: crits.length > 0 ? t.red    : t.green, filled: crits.length > 0 },
+                    { label:`${warns.length} Medi`,     c: warns.length > 0 ? t.orange : t.green, filled: warns.length > 0 },
+                    { label:`${Object.keys(snap.alarmState).length - active.length} OK`, c: t.green, filled: false },
+                  ].map(x => (
+                    <span key={x.label} style={{fontSize:14, padding:"4px 12px", borderRadius:6,
+                      background: x.filled ? `${x.c}22` : t.surface2,
+                      color:x.c, border:`1px solid ${x.c}44`,
+                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, fontWeight:700}}>
+                      {x.label}
+                    </span>
+                  ))}
+                </div>
+
+                {active.length === 0 ? (
+                  <div style={{padding:"28px 0", textAlign:"center", color:t.green,
+                    fontFamily:"'Rajdhani',sans-serif", fontSize:16}}>
+                    ✓ Nessun allarme attivo a quest'ora
+                  </div>
+                ) : (
+                  <div style={{display:"flex", flexDirection:"column", gap:7,
+                    maxHeight:330, overflowY:"auto", paddingRight:4}}>
+                    {active.sort(([,a],[,b]) => (a==="ALTO"?0:1) - (b==="ALTO"?0:1)).map(([param, sev]) => {
+                      const c = sev === "ALTO" ? t.red : t.orange;
+                      const icon = sev === "ALTO" ? "🔴" : "🟡";
+                      const detail = (snap.activeAlarms || []).find(a => a.msg?.includes(param));
+                      return (
+                        <div key={param} style={{padding:"10px 14px", borderRadius:8,
+                          background:`${c}10`, border:`1px solid ${c}33`,
+                          display:"flex", alignItems:"flex-start", gap:10}}>
+                          <span style={{fontSize:16, flexShrink:0, marginTop:1}}>{icon}</span>
+                          <div style={{flex:1, minWidth:0}}>
+                            <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
+                              fontSize:17, color:c}}>{param}</div>
+                            {detail && (
+                              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12,
+                                color:t.textMuted, marginTop:3, whiteSpace:"nowrap",
+                                overflow:"hidden", textOverflow:"ellipsis"}}>
+                                {detail.msg}
+                              </div>
+                            )}
+                            <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12,
+                              color:c, marginTop:2, letterSpacing:1}}>
+                              {sev === "ALTO" ? "CRITICO" : "ATTENZIONE"}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* CONSUMI ENERGETICI */}

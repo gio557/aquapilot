@@ -252,12 +252,6 @@ export default function App() {
                 grigliaturaState={i === 0 ? sim.grigliaturaState : null}
                 onGrigliaturaReset={i === 0 ? handleGrigliaturaReset : undefined}/>
             ))}
-            <button onClick={() => setShowConfigurator(true)}
-              style={{flexShrink:0, width:44, borderRadius:10, cursor:"pointer",
-                border:`2px dashed ${t.border}`, background:"transparent",
-                color:t.textMuted, fontSize:20, display:"flex", alignItems:"center", justifyContent:"center"}}>
-              +
-            </button>
           </div>
 
           {/* ── MAIN ROW: left sidebar | trend | right panel ── */}

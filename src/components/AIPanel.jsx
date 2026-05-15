@@ -139,20 +139,20 @@ export default function AIPanel({ sim, autoOn, t }) {
   const modeIcon  = autoOn ? "🤖" : "💡";
 
   return (
-    <div style={{background:t.surface, border:`2px solid ${modeColor}44`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", flex:1, minHeight:180, position:"relative", overflow:"hidden"}}>
+    <div style={{background:t.surface, border:`2px solid ${modeColor}66`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", flex:1, minHeight:180, position:"relative", overflow:"hidden", boxShadow:t.cardShadow}}>
       <div style={{position:"absolute", inset:0, opacity:0.03, background:`radial-gradient(ellipse at top,${modeColor},transparent 60%)`, pointerEvents:"none"}}/>
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10}}>
         <div>
-          <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:11, letterSpacing:2, textTransform:"uppercase", color:t.textSec, marginBottom:5, display:"flex", alignItems:"center", gap:6}}>
+          <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:2, textTransform:"uppercase", color:t.textSec, marginBottom:5, display:"flex", alignItems:"center", gap:6}}>
             <span style={{color:modeColor}}>▸</span>AI ADVISOR
           </div>
-          <span style={{fontSize:10, padding:"2px 7px", borderRadius:4, background:`${modeColor}22`, color:modeColor, border:`1px solid ${modeColor}44`, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>{modeIcon} {modeLabel}</span>
+          <span style={{fontSize:12, padding:"2px 8px", borderRadius:4, background:`${modeColor}22`, color:modeColor, border:`1px solid ${modeColor}55`, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>{modeIcon} {modeLabel}</span>
         </div>
         <div style={{display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end"}}>
           <div style={{display:"flex", gap:3}}>
             {["offline","online"].map(e => (
               <button key={e} onClick={() => setEngine(e)}
-                style={{padding:"3px 8px", borderRadius:4, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:1, border:`1px solid ${engine===e?modeColor:t.border}`, background:engine===e?`${modeColor}22`:t.surface2, color:engine===e?modeColor:t.textMuted}}>
+                style={{padding:"3px 9px", borderRadius:4, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${engine===e?modeColor:t.border}`, background:engine===e?`${modeColor}22`:t.surface2, color:engine===e?modeColor:t.textMuted}}>
                 {e==="online" ? "CLOUD" : "LOCAL"}
               </button>
             ))}
@@ -165,18 +165,18 @@ export default function AIPanel({ sim, autoOn, t }) {
       </div>
       <div style={{flex:1, overflowY:"auto", maxHeight:220, paddingRight:2}}>
         {msg.loading ? (
-          <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"28px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:12}}>
-            <span style={{animation:"blink 0.7s infinite", fontSize:12, color:modeColor}}>●</span>
+          <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"28px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:14}}>
+            <span style={{animation:"blink 0.7s infinite", fontSize:14, color:modeColor}}>●</span>
             {engine==="online" ? "Interrogazione Claude API..." : "Analisi in corso..."}
           </div>
         ) : (
-          <pre style={{fontFamily:"'Rajdhani',sans-serif", fontSize:12, color:t.text, lineHeight:1.65, whiteSpace:"pre-wrap", margin:0, wordBreak:"break-word"}}>
+          <pre style={{fontFamily:"'Rajdhani',sans-serif", fontSize:14, color:t.text, lineHeight:1.65, whiteSpace:"pre-wrap", margin:0, wordBreak:"break-word"}}>
             {msg.text}
           </pre>
         )}
       </div>
       {msg.ts && !msg.loading && (
-        <div style={{marginTop:8, paddingTop:6, borderTop:`1px solid ${t.border}`, display:"flex", justifyContent:"space-between", fontSize:9, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
+        <div style={{marginTop:8, paddingTop:6, borderTop:`1px solid ${t.border}`, display:"flex", justifyContent:"space-between", fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
           <span>Aggiornato: {msg.ts.toLocaleTimeString("it-IT")}</span>
           <span style={{color:engine==="online"?t.accent:t.textMuted}}>{engine==="online"?"CLAUDE API":"OFFLINE"}</span>
         </div>

@@ -112,7 +112,7 @@ export default function App() {
   const grCfgJson = JSON.stringify(stageConfig[0]?.grigliatura);
   useEffect(() => {
     const cfg = stageConfig[0]?.grigliatura;
-    if (cfg) setSim(prev => ({ ...prev, grigliaturaConfig: cfg }));
+    if (cfg) setSim(prev => ({ ...prev, grigliaturaConfig: { ...prev.grigliaturaConfig, ...cfg } }));
   }, [grCfgJson]);
 
   const handleGrigliaturaReset = () => {

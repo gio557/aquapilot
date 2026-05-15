@@ -234,7 +234,7 @@ export default function StoricaPage({ t }) {
   const hasData = history.length > 0;
   const firstTs = hasData ? new Date(history[0].t) : null;
   const lastTs  = hasData ? new Date(history[history.length - 1].t) : null;
-  const spanDays = hasData ? Math.ceil((lastTs - firstTs) / 86_400_000) + 1 : 0;
+  const spanDays = Object.keys(byDate).length;
 
   const card  = { background:t.surface, border:`1px solid ${t.border}`, borderRadius:14, boxShadow:t.cardShadow };
   const secHd = { fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, letterSpacing:2,

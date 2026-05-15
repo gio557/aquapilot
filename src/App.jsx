@@ -169,7 +169,7 @@ export default function App() {
             </div>
             <div style={{display:"flex", alignItems:"center", gap:6}}>
               <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, letterSpacing:1}}>by</span>
-              <GreenEcoLogo height={40} textColor={darkMode ? "#e0e0e0" : "#2D2D2D"} />
+              <GreenEcoLogo height={42} />
             </div>
           </div>
 

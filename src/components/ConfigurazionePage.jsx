@@ -6,13 +6,13 @@ const STAGE_COLORS = ["#00CFFF","#00E599","#BB66FF","#FF9422","#FFD060"];
 
 function NumField({ label, value, unit, onChange, t }) {
   return (
-    <div style={{display:"flex", flexDirection:"column", gap:2}}>
-      <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{label}</div>
-      <div style={{display:"flex", alignItems:"center", gap:4}}>
+    <div style={{display:"flex", flexDirection:"column", gap:3}}>
+      <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{label}</div>
+      <div style={{display:"flex", alignItems:"center", gap:5}}>
         <input type="number" value={value} onChange={e => onChange(parseFloat(e.target.value)||0)}
-          style={{width:72, background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
-            color:t.text, padding:"4px 6px", fontFamily:"'Share Tech Mono',monospace", fontSize:12}}/>
-        {unit && <span style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{unit}</span>}
+          style={{width:84, background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
+            color:t.text, padding:"5px 8px", fontFamily:"'Share Tech Mono',monospace", fontSize:14}}/>
+        {unit && <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{unit}</span>}
       </div>
     </div>
   );
@@ -80,10 +80,10 @@ export default function ConfigurazionePage({ t, config, onChange }) {
     <div style={{padding:"20px 24px 40px"}}>
 
       <div style={{marginBottom:24}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:16, fontWeight:900, color:t.accent, letterSpacing:2, marginBottom:4}}>
+        <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:18, fontWeight:900, color:t.accent, letterSpacing:2, marginBottom:6}}>
           CONFIGURAZIONE IMPIANTO
         </div>
-        <div style={{fontSize:14, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>
+        <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>
           Definisci la strumentazione installata per ogni stadio. I parametri dei sensori disabilitati
           non saranno visualizzati nella dashboard — verranno sostituiti da "N/D".
         </div>
@@ -101,25 +101,25 @@ export default function ConfigurazionePage({ t, config, onChange }) {
             {/* Accordion header */}
             <button onClick={() => setExpanded(isOpen ? null : si)}
               style={{width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
-                padding:"12px 16px", background:t.surface, cursor:"pointer",
+                padding:"14px 18px", background:t.surface, cursor:"pointer",
                 border:`1px solid ${isOpen ? color : t.border}`,
                 borderLeft:`4px solid ${color}`,
                 borderRadius: isOpen ? "10px 10px 0 0" : "10px",
                 transition:"border-color 0.2s"}}>
-              <div style={{display:"flex", alignItems:"center", gap:12, minWidth:0, flex:1, overflow:"hidden"}}>
-                <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted, letterSpacing:1, flexShrink:0}}>
+              <div style={{display:"flex", alignItems:"center", gap:14, minWidth:0, flex:1, overflow:"hidden"}}>
+                <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted, letterSpacing:1, flexShrink:0}}>
                   ST-0{si+1}
                 </span>
                 <div style={{textAlign:"left", minWidth:0, flexShrink:1}}>
-                  <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, color:t.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.name}</div>
-                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.sub}</div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:16, color:t.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.name}</div>
+                  <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.sub}</div>
                 </div>
                 <div style={{display:"flex", gap:6, flexShrink:0}}>
-                  <span style={{fontSize:10, padding:"2px 8px", borderRadius:4, background:`${color}18`,
+                  <span style={{fontSize:12, padding:"2px 10px", borderRadius:4, background:`${color}18`,
                     color, border:`1px solid ${color}44`, fontFamily:"'Share Tech Mono',monospace"}}>
                     {sensorsEnabled}/{totalSensors} sensori
                   </span>
-                  <span style={{fontSize:10, padding:"2px 8px", borderRadius:4, background:`${t.accent}18`,
+                  <span style={{fontSize:12, padding:"2px 10px", borderRadius:4, background:`${t.accent}18`,
                     color:t.accent, border:`1px solid ${t.accent}44`, fontFamily:"'Share Tech Mono',monospace"}}>
                     {sc.pumps.length} {sc.pumps.length === 1 ? "pompa" : "pompe"}
                   </span>
@@ -127,24 +127,24 @@ export default function ConfigurazionePage({ t, config, onChange }) {
               </div>
               <div style={{display:"flex", alignItems:"center", gap:8}}>
                 <button onClick={e => { e.stopPropagation(); resetStage(si); }}
-                  style={{padding:"3px 10px", borderRadius:5, cursor:"pointer", fontSize:11,
+                  style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", fontSize:13,
                     fontFamily:"'Rajdhani',sans-serif", fontWeight:600,
                     border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
                   ↺ Default
                 </button>
-                <span style={{color:t.textMuted, fontSize:12, transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s"}}>▼</span>
+                <span style={{color:t.textMuted, fontSize:14, transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s"}}>▼</span>
               </div>
             </button>
 
             {isOpen && (
               <div style={{background:t.surface, border:`1px solid ${t.border}`, borderTop:"none",
-                borderRadius:"0 0 10px 10px", padding:"16px 20px", display:"flex", flexDirection:"column", gap:20}}>
+                borderRadius:"0 0 10px 10px", padding:"20px 24px", display:"flex", flexDirection:"column", gap:24}}>
 
                 {/* ── SENSORI ── */}
                 <div>
-                  <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
-                    letterSpacing:1, marginBottom:12}}>STRUMENTAZIONE INSTALLATA</div>
-                  <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:8}}>
+                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                    letterSpacing:1, marginBottom:14}}>STRUMENTAZIONE INSTALLATA</div>
+                  <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))", gap:10}}>
                     {Object.entries(sc.sensors).map(([sensorId, sData]) => {
                       const meta = SENSOR_TYPES[sensorId] || { label: sensorId, unit:"", icon:"●" };
                       const on = sData.enabled;
@@ -152,16 +152,16 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                         <div key={sensorId}
                           onClick={() => toggleSensor(si, sensorId)}
                           style={{display:"flex", alignItems:"center", justifyContent:"space-between",
-                            padding:"10px 14px", borderRadius:8, cursor:"pointer",
+                            padding:"11px 14px", borderRadius:8, cursor:"pointer",
                             background: on ? `${color}12` : t.surface2,
                             border: `1px solid ${on ? color+"66" : t.border}`,
                             transition:"all 0.2s"}}>
-                          <div style={{display:"flex", alignItems:"center", gap:8}}>
-                            <span style={{fontSize:14}}>{meta.icon}</span>
+                          <div style={{display:"flex", alignItems:"center", gap:10}}>
+                            <span style={{fontSize:16}}>{meta.icon}</span>
                             <div>
-                              <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                              <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14,
                                 color: on ? color : t.textSec}}>{meta.label}</div>
-                              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:10,
+                              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12,
                                 color:t.textMuted}}>{meta.unit}</div>
                             </div>
                           </div>
@@ -183,21 +183,21 @@ export default function ConfigurazionePage({ t, config, onChange }) {
 
                 {/* ── POMPE ── */}
                 <div>
-                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12}}>
-                    <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
+                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
+                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
                       POMPE E MOTORI
                     </div>
                     <button onClick={() => addPump(si)}
-                      style={{padding:"4px 12px", borderRadius:6, cursor:"pointer",
-                        fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12,
+                      style={{padding:"5px 14px", borderRadius:6, cursor:"pointer",
+                        fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                         border:`1px solid ${color}`, background:`${color}18`, color}}>
                       + Aggiungi pompa
                     </button>
                   </div>
 
                   {sc.pumps.length === 0 ? (
-                    <div style={{padding:"14px", textAlign:"center", color:t.textMuted,
-                      fontFamily:"'Rajdhani',sans-serif", fontSize:12,
+                    <div style={{padding:"16px", textAlign:"center", color:t.textMuted,
+                      fontFamily:"'Rajdhani',sans-serif", fontSize:14,
                       background:t.surface2, borderRadius:8, border:`1px dashed ${t.border}`}}>
                       Nessuna pompa installata in questo stadio
                     </div>
@@ -206,9 +206,8 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                       <div key={pump.id} style={{marginBottom:10, padding:"14px 16px", borderRadius:9,
                         background: pump.enabled ? `${t.accent}08` : t.surface2,
                         border:`1px solid ${pump.enabled ? t.accent+"44" : t.border}`}}>
-                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, gap:8, minWidth:0}}>
+                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, gap:8, minWidth:0}}>
                           <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0, overflow:"hidden"}}>
-                            {/* Enable toggle */}
                             <div onClick={() => updatePump(si, pi, "enabled", !pump.enabled)}
                               style={{flexShrink:0, width:36, height:20, borderRadius:10, cursor:"pointer",
                                 position:"relative", background: pump.enabled ? t.green : t.surface3,
@@ -221,12 +220,11 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                               onChange={e => updatePump(si, pi, "name", e.target.value)}
                               style={{background:"transparent", border:"none", borderBottom:`1px solid ${t.border}`,
                                 color:t.text, fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
-                                fontSize:14, outline:"none", padding:"2px 4px", flex:1, minWidth:0}}/>
+                                fontSize:15, outline:"none", padding:"2px 4px", flex:1, minWidth:0}}/>
                           </div>
                           <div style={{display:"flex", alignItems:"center", gap:8, flexShrink:0}}>
-                            {/* VFD toggle */}
                             <div onClick={() => updatePump(si, pi, "vfd", !pump.vfd)}
-                              style={{padding:"3px 9px", borderRadius:5, cursor:"pointer", fontSize:10,
+                              style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", fontSize:12,
                                 fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
                                 background: pump.vfd ? `${t.accent}22` : t.surface3,
                                 border:`1px solid ${pump.vfd ? t.accent : t.border}`,
@@ -234,14 +232,14 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                               INVERTER {pump.vfd ? "ON" : "OFF"}
                             </div>
                             <button onClick={() => removePump(si, pi)}
-                              style={{padding:"3px 9px", borderRadius:5, cursor:"pointer",
-                                fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:12,
+                              style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
+                                fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
                                 border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
                               Rimuovi
                             </button>
                           </div>
                         </div>
-                        <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+                        <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
                           <NumField label="Potenza" value={pump.power_kw} unit="kW"
                             onChange={v => updatePump(si, pi, "power_kw", v)} t={t}/>
                           <NumField label="Portata" value={pump.flow_m3h} unit="m³/h"
@@ -259,10 +257,10 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                 {/* ── GRIGLIATURA (only for stage 0) ── */}
                 {si === 0 && sc.grigliatura && (
                   <div>
-                    <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
-                      letterSpacing:1, marginBottom:12}}>PARAMETRI CICLO GRIGLIATURA</div>
+                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                      letterSpacing:1, marginBottom:14}}>PARAMETRI CICLO GRIGLIATURA</div>
 
-                    <div style={{display:"flex", gap:16, flexWrap:"wrap", marginBottom:12}}>
+                    <div style={{display:"flex", gap:18, flexWrap:"wrap", marginBottom:14}}>
                       <NumField label="ΔH avvio pulizia" value={sc.grigliatura.DH_AVVIO_PULIZIA} unit="m"
                         onChange={v => updateGrigliatura(si, "DH_AVVIO_PULIZIA", Math.max(0.01, Math.min(sc.grigliatura.DH_GUARDIA_ALTA-0.01, v)))} t={t}/>
                       <NumField label="ΔH stop pulizia" value={sc.grigliatura.DH_STOP_PULIZIA} unit="m"
@@ -280,10 +278,10 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                     </div>
 
                     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between",
-                      padding:"10px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`, marginBottom:8}}>
+                      padding:"12px 16px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`, marginBottom:10}}>
                       <div>
-                        <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, color:t.text}}>Bypass automatico</div>
-                        <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                        <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, color:t.text}}>Bypass automatico</div>
+                        <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
                           Apre la valvola bypass se ΔH supera la soglia guardia alta ({sc.grigliatura.DH_GUARDIA_ALTA} m)
                         </div>
                       </div>
@@ -299,9 +297,9 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                       </div>
                     </div>
 
-                    <div style={{padding:"8px 12px", background:t.surface2, borderRadius:6,
-                      border:`1px solid ${t.border}`, fontSize:12, color:t.textMuted,
-                      fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5}}>
+                    <div style={{padding:"10px 14px", background:t.surface2, borderRadius:6,
+                      border:`1px solid ${t.border}`, fontSize:13, color:t.textMuted,
+                      fontFamily:"'Rajdhani',sans-serif", lineHeight:1.6}}>
                       {`Ciclo pulizia: avvio a ΔH>${sc.grigliatura.DH_AVVIO_PULIZIA} m, stop a ΔH<${sc.grigliatura.DH_STOP_PULIZIA} m. Bypass ${sc.grigliatura.BYPASS_AUTO?"automatico":"manuale"} oltre ${sc.grigliatura.DH_GUARDIA_ALTA} m. Timer backup: ${sc.grigliatura.TIMER_BACKUP_INTERVALLO} s. Soglia sovraccarico motore: ${sc.grigliatura.CORRENTE_SOVRACCARICO} A.`}
                     </div>
                   </div>
@@ -310,14 +308,14 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                 {/* ── CLASSIFICATORE SABBIE (only for stage 1) ── */}
                 {si === 1 && sc.classifier && (
                   <div>
-                    <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
-                      letterSpacing:1, marginBottom:12}}>MODALITÀ CLASSIFICATORE SABBIE</div>
+                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                      letterSpacing:1, marginBottom:14}}>MODALITÀ CLASSIFICATORE SABBIE</div>
 
-                    <div style={{display:"flex", gap:8, marginBottom:16}}>
+                    <div style={{display:"flex", gap:8, marginBottom:18}}>
                       {[["timed","⏱  Temporizzato"],["continuous","⟳  Continuo"]].map(([m, label]) => (
                         <button key={m} onClick={() => updateClassifier(si, "mode", m)}
-                          style={{flex:1, padding:"9px", borderRadius:8, cursor:"pointer",
-                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                          style={{flex:1, padding:"10px", borderRadius:8, cursor:"pointer",
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15,
                             border:`2px solid ${sc.classifier.mode === m ? color : t.border}`,
                             background: sc.classifier.mode === m ? `${color}18` : t.surface2,
                             color: sc.classifier.mode === m ? color : t.textSec}}>
@@ -326,7 +324,7 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                       ))}
                     </div>
 
-                    <div style={{display:"flex", gap:16, flexWrap:"wrap", marginBottom:12}}>
+                    <div style={{display:"flex", gap:18, flexWrap:"wrap", marginBottom:14}}>
                       {sc.classifier.mode === "timed" ? (
                         <>
                           <NumField label="Tempo ON" value={sc.classifier.timeOn} unit="min"
@@ -344,9 +342,9 @@ export default function ConfigurazionePage({ t, config, onChange }) {
                         onChange={v => updateClassifier(si, "thresholdAlarm", Math.max(0.5, v))} t={t}/>
                     </div>
 
-                    <div style={{padding:"8px 12px", background:t.surface2, borderRadius:6,
-                      border:`1px solid ${t.border}`, fontSize:12, color:t.textMuted,
-                      fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5}}>
+                    <div style={{padding:"10px 14px", background:t.surface2, borderRadius:6,
+                      border:`1px solid ${t.border}`, fontSize:13, color:t.textMuted,
+                      fontFamily:"'Rajdhani',sans-serif", lineHeight:1.6}}>
                       {sc.classifier.mode === "timed"
                         ? `Tramoggia attiva per ${sc.classifier.timeOn} min, poi ferma per ${sc.classifier.timeOff} min. La corrente nel ciclo ON indica la concentrazione dello slurry estratto — soglia 🟡 ${sc.classifier.thresholdWarn ?? 3.0} A / 🔴 ${sc.classifier.thresholdAlarm ?? 4.2} A.`
                         : `Tramoggia in continuo al ${sc.classifier.speed}% della velocità nominale. Semaforo: 🟢 < ${sc.classifier.thresholdWarn ?? 3.0} A — 🟡 ${sc.classifier.thresholdWarn ?? 3.0}÷${sc.classifier.thresholdAlarm ?? 4.2} A — 🔴 > ${sc.classifier.thresholdAlarm ?? 4.2} A.`}

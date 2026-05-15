@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { loadHistory, loadInterventions } from "../simulation/learning";
 import { STAGE_META } from "../constants/stages";
 import {
@@ -32,6 +32,79 @@ const CONTROL_LABELS = {
   h2so4:         "Dosaggio H₂SO₄",
 };
 const OUTCOME_LABELS = { good:"BUONO", bad:"INEFFICACE", neutral:"NEUTRO" };
+
+// ── Dual-handle slider ────────────────────────────────────────
+function DualSlider({ count, left, right, onLeft, onRight, t }) {
+  const trackRef = useRef(null);
+  const dragging  = useRef(null); // "left" | "right"
+
+  const pct = i => count > 1 ? i / (count - 1) * 100 : 0;
+
+  const valueFromClientX = x => {
+    const rect = trackRef.current?.getBoundingClientRect();
+    if (!rect) return 0;
+    const ratio = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+    return Math.round(ratio * (count - 1));
+  };
+
+  const onMove = useCallback(e => {
+    if (!dragging.current) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const v = valueFromClientX(x);
+    if (dragging.current === "left")  onLeft(Math.min(v, right));
+    else                              onRight(Math.max(v, left));
+  }, [left, right, onLeft, onRight]);
+
+  const onUp = useCallback(() => { dragging.current = null; }, []);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup",   onUp);
+    window.addEventListener("touchmove", onMove, { passive:true });
+    window.addEventListener("touchend",  onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup",   onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend",  onUp);
+    };
+  }, [onMove, onUp]);
+
+  const startDrag = (handle, e) => { e.preventDefault(); dragging.current = handle; };
+
+  const handleStyle = (color) => ({
+    position:"absolute", top:"50%", transform:"translate(-50%,-50%)",
+    width:22, height:22, borderRadius:"50%", background:color,
+    border:"2.5px solid #fff", boxShadow:"0 2px 8px rgba(0,0,0,0.35)",
+    cursor:"grab", zIndex:2, touchAction:"none",
+  });
+
+  return (
+    <div ref={trackRef} style={{position:"relative", height:30, userSelect:"none"}}
+      onClick={e => {
+        const v = valueFromClientX(e.clientX);
+        const dl = Math.abs(v - left), dr = Math.abs(v - right);
+        if (dl <= dr) onLeft(Math.min(v, right));
+        else          onRight(Math.max(v, left));
+      }}>
+      {/* background track */}
+      <div style={{position:"absolute", top:"50%", left:0, right:0,
+        height:6, background:t.surface3, borderRadius:3, transform:"translateY(-50%)", pointerEvents:"none"}}>
+        {/* filled window */}
+        <div style={{position:"absolute", top:0, bottom:0, borderRadius:3,
+          left:`${pct(left)}%`, width:`${pct(right) - pct(left)}%`, background:t.accent}} />
+      </div>
+      {/* left handle */}
+      <div style={{...handleStyle(t.green), left:`${pct(left)}%`}}
+        onMouseDown={e => startDrag("left",  e)}
+        onTouchStart={e => startDrag("left",  e)} />
+      {/* right handle */}
+      <div style={{...handleStyle(t.accent), left:`${pct(right)}%`}}
+        onMouseDown={e => startDrag("right", e)}
+        onTouchStart={e => startDrag("right", e)} />
+    </div>
+  );
+}
 
 function groupByDate(history) {
   const m = {};
@@ -173,6 +246,7 @@ export default function StoricaPage({ t }) {
   const [interventions, setInterventions] = useState([]);
   const [calMonth,      setCalMonth]      = useState(new Date());
   const [selectedKey,   setSelectedKey]   = useState(null);
+  const [windowStart,   setWindowStart]   = useState(0);
   const [selectedIdx,   setSelectedIdx]   = useState(0);
   const [activeParams,  setActiveParams]  = useState(["COD", "TSS", "O2"]);
 
@@ -200,8 +274,9 @@ export default function StoricaPage({ t }) {
     }
   }, [history]);
 
-  // reset slider when day changes
+  // reset sliders when day changes
   useEffect(() => {
+    setWindowStart(0);
     setSelectedIdx(daySnaps.length > 0 ? daySnaps.length - 1 : 0);
   }, [selectedKey]);
 
@@ -242,7 +317,7 @@ export default function StoricaPage({ t }) {
     color:t.textSec, textTransform:"uppercase", marginBottom:14, display:"flex", alignItems:"center", gap:6 };
 
   // chart data: full day snapshots mapped to recharts-friendly format
-  const chartData = useMemo(() => daySnaps.map(s => ({
+  const chartData = useMemo(() => daySnaps.slice(windowStart, selectedIdx + 1).map(s => ({
     t: fmtTime(new Date(s.t)),
     COD: s.COD, BOD5: s.BOD5, TSS: s.TSS, NH4: s.NH4, pH: s.pH, O2: s.O2,
     _ts: s.t,
@@ -349,18 +424,31 @@ export default function StoricaPage({ t }) {
                 </div>
               </div>
 
-              {/* slider */}
+              {/* dual slider */}
               <div style={{padding:"0 8px"}}>
-                <div style={{display:"flex", justifyContent:"space-between", marginBottom:8,
+                <div style={{display:"flex", justifyContent:"space-between", marginBottom:10,
                   fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted}}>
                   <span>{fmtTime(new Date(daySnaps[0].t))}</span>
-                  <span style={{color:t.accent, fontSize:14}}>◂ trascina ▸</span>
-                  <span>{fmtTime(new Date(daySnaps[daySnaps.length-1].t))}</span>
+                  <span style={{fontSize:12}}>◂ trascina le maniglie ▸</span>
+                  <span>{fmtTime(new Date(daySnaps[daySnaps.length - 1].t))}</span>
                 </div>
-                <input type="range"
-                  min={0} max={daySnaps.length - 1} value={selectedIdx}
-                  onChange={e => setSelectedIdx(Number(e.target.value))}
-                  style={{width:"100%", accentColor:t.accent, height:8, cursor:"pointer"}} />
+                <DualSlider
+                  count={daySnaps.length}
+                  left={windowStart} right={selectedIdx}
+                  onLeft={setWindowStart} onRight={setSelectedIdx}
+                  t={t} />
+                <div style={{display:"flex", justifyContent:"space-between", marginTop:10,
+                  fontFamily:"'Share Tech Mono',monospace", fontSize:13}}>
+                  <span style={{color:t.green}}>
+                    ▸ DA: {fmtTime(new Date(daySnaps[windowStart].t))}
+                  </span>
+                  <span style={{color:t.textMuted, fontSize:12}}>
+                    {selectedIdx - windowStart + 1} snapshot
+                  </span>
+                  <span style={{color:t.accent}}>
+                    A: {fmtTime(new Date(daySnaps[selectedIdx].t))} ◂
+                  </span>
+                </div>
               </div>
 
               {/* mini sparklines for quick orientation */}

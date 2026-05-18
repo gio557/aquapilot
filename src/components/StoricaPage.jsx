@@ -364,7 +364,6 @@ export default function StoricaPage({ t }) {
       {/* ── TOP INFO BAR ── */}
       <div style={{...card, padding:"12px 22px", display:"flex", alignItems:"center", gap:32, flexWrap:"wrap"}}>
         <div style={{display:"flex", alignItems:"center", gap:10}}>
-          <span style={{fontSize:28}}>⏮</span>
           <div>
             <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:18, color:t.accent, letterSpacing:3, fontWeight:700}}>
               TIME MACHINE

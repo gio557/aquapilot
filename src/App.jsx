@@ -537,7 +537,7 @@ export default function App() {
           {/* ── FOOTER ── */}
           <div style={{borderTop:`1px solid ${t.border}`, paddingTop:10, textAlign:"center",
             fontSize:10, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:2}}>
-            AQUAPILOT v1.0.0 — PHASE 1 SIMULATION MODULE — © 2025 PURELOGIC / GREENECO WASTEWATER
+            AQUAPILOT v1.0.0 — PHASE 1 SIMULATION MODULE — © 2025 AQUAPILOT / GREENECO WASTEWATER
           </div>
 
         </main>

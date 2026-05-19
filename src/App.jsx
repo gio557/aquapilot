@@ -374,7 +374,7 @@ export default function App() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendData} margin={{top:4, right:4, bottom:0, left:-20}}>
                     <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid}/>
-                    <XAxis dataKey="t" tick={{fill:t.textMuted, fontSize:11, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false}/>
+                    <XAxis dataKey="t" tick={{fill:t.textMuted, fontSize:11, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false} interval={Math.max(0, Math.ceil(trendData.length / 8) - 1)}/>
                     <YAxis tick={{fill:t.textMuted, fontSize:11, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false}/>
                     <Tooltip content={<CustomTooltip t={t}/>}/>
                     {TREND_KEYS.filter(tk => activeTrends.includes(tk.key)).map(tk => (

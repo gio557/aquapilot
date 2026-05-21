@@ -41,6 +41,7 @@ export const INIT_SIM = {
     { param:"NH4", value:7.9, target:8,   unit:"mg/L", label:"NH4 uscita" },
   ],
   stageDetails: null,
+  stageConfig: null,
   qHistory: [],
   output: { Q: 1245, COD: 22.4, BOD5: 8.1, TSS: 7.3, NH4: 0.80, pH: 7.2, T: 18.4, O2: 4.5 },
   stageEnergy: [0.35, 0.55, 13.5, 0.65, 0.32],
@@ -380,13 +381,47 @@ export function simTick(s) {
   const eff01 = Math.max(0, Math.min(100, round1((inletTSS - s1.TSS) / inletTSS * 100)));
   const eff02 = Math.max(0, Math.min(100, round1((s1.TSS   - s2.TSS) / Math.max(1,s1.TSS) * 100)));
   const tgt = s.stageTargets || {};
-  const stageOutputs = [
-    { param:"EFF",  value:eff01,           target:24,           unit:"%",    label:"Rendimento rimozione solidi", higherIsBetter:true },
-    { param:"EFF",  value:eff02,           target:37,           unit:"%",    label:"Rendimento rimozione sabbie",  higherIsBetter:true },
-    { param:"COD",  value:round1(s3.COD),  target:tgt.COD??125, unit:"mg/L", label:"COD biologico" },
-    { param:"TSS",  value:round1(s4.TSS),  target:tgt.SST??35,  unit:"mg/L", label:"SST sediment." },
-    { param:"NH4",  value:round2(s5.NH4),  target:tgt.NH4??8,   unit:"mg/L", label:"NH4 uscita" },
+
+  // Per-stage water quality (output of each stage, capped to available stages)
+  const stageWater = [s1, s2, s3, s4, s5];
+
+  // Default stageOutputs for the 5 fixed stages
+  const defaultStageOutputs = [
+    { value:eff01,           target:24,           unit:"%",    label:"Rendimento rimozione solidi", higherIsBetter:true },
+    { value:eff02,           target:37,           unit:"%",    label:"Rendimento rimozione sabbie",  higherIsBetter:true },
+    { value:round1(s3.COD),  target:tgt.COD??125, unit:"mg/L", label:"COD biologico" },
+    { value:round1(s4.TSS),  target:tgt.SST??35,  unit:"mg/L", label:"SST sediment." },
+    { value:round2(s5.NH4),  target:tgt.NH4??8,   unit:"mg/L", label:"NH4 uscita" },
   ];
+
+  // Compute gauge output for a given sensor type at a given stage index
+  const sensorGauge = (si, sensorId) => {
+    const w = stageWater[Math.min(si, stageWater.length - 1)];
+    switch (sensorId) {
+      case "flow":   return { value: round1(iQ),    target: round1((s.inlet?.Q ?? 1000) * 1.5), unit: "m³/h", label: "Portata" };
+      case "level":
+      case "diff_p": return { value: round2(+(grigliaturaState.delta_h || 0)), target: 0.35, unit: "m", label: "ΔH livello" };
+      case "o2":     return { value: round2(O2),    target: 8,              unit: "mg/L", label: "O₂ disciolto", higherIsBetter: true };
+      case "ph":     return { value: round2(w.pH),  target: 8.5,            unit: "",     label: "pH" };
+      case "tss":    return { value: round1(w.TSS), target: tgt.SST ?? 35,  unit: "mg/L", label: "TSS" };
+      case "temp":   return { value: round1(w.T),   target: 30,             unit: "°C",   label: "Temperatura" };
+      case "cod":    return { value: round1(w.COD), target: tgt.COD ?? 125, unit: "mg/L", label: "COD" };
+      case "nh4":    return { value: round2(w.NH4), target: tgt.NH4 ?? 8,   unit: "mg/L", label: "NH₄" };
+      default: return null;
+    }
+  };
+
+  const stageOutputs = (s.stageConfig ?? []).map((sc, si) => {
+    const ref = sc?.referenceSensor;
+    if (ref) {
+      const g = sensorGauge(si, ref);
+      if (g) return g;
+    }
+    return defaultStageOutputs[si] ?? sensorGauge(si, "cod") ?? defaultStageOutputs[4];
+  });
+  // Pad to at least 5 entries so the rest of the code is safe
+  while (stageOutputs.length < defaultStageOutputs.length)
+    stageOutputs.push(defaultStageOutputs[stageOutputs.length]);
 
   const { changes: acChanges, actions: stageActions } = applyAutoCorrect(s, output, O2, MLSS);
 

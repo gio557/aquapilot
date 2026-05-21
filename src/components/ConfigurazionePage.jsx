@@ -26,11 +26,21 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   const availableTypes = (stageTypes || []).filter(st => !stages.some(s => s.name === st.name));
 
   const toggleSensor = (si, sensorId) => {
-    onChange(prev => prev.map((sc, i) =>
-      i !== si ? sc : {
+    onChange(prev => prev.map((sc, i) => {
+      if (i !== si) return sc;
+      const current = sc.sensors?.[sensorId];
+      const newEnabled = current ? !current.enabled : true;
+      return {
         ...sc,
-        sensors: { ...sc.sensors, [sensorId]: { ...sc.sensors[sensorId], enabled: !sc.sensors[sensorId].enabled } }
-      }
+        sensors: { ...sc.sensors, [sensorId]: { ...(current || {}), enabled: newEnabled } },
+        referenceSensor: !newEnabled && sc.referenceSensor === sensorId ? null : sc.referenceSensor,
+      };
+    }));
+  };
+
+  const setReferenceSensor = (si, sensorId) => {
+    onChange(prev => prev.map((sc, i) =>
+      i !== si ? sc : { ...sc, referenceSensor: sc.referenceSensor === sensorId ? null : sensorId }
     ));
   };
 
@@ -97,8 +107,9 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
         const stage   = stages[si] || { name:`ST-0${si+1}`, sub:"" };
         const color   = STAGE_COLORS[si] || t.accent;
         const isOpen  = expanded === si;
-        const sensorsEnabled = Object.values(sc.sensors).filter(s => s.enabled).length;
-        const totalSensors   = Object.keys(sc.sensors).length;
+        const sensorsEnabled = Object.values(sc.sensors || {}).filter(s => s.enabled).length;
+        const totalSensors   = Object.keys(SENSOR_TYPES).length;
+        const refMeta = sc.referenceSensor ? SENSOR_TYPES[sc.referenceSensor] : null;
 
         return (
           <div key={si} style={{marginBottom:12}}>
@@ -118,7 +129,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                   <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:16, color:t.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.name}</div>
                   <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>{stage.sub}</div>
                 </div>
-                <div style={{display:"flex", gap:6, flexShrink:0}}>
+                <div style={{display:"flex", gap:6, flexShrink:0, flexWrap:"wrap"}}>
                   <span style={{fontSize:12, padding:"2px 10px", borderRadius:4, background:`${color}18`,
                     color, border:`1px solid ${color}44`, fontFamily:"'Share Tech Mono',monospace"}}>
                     {sensorsEnabled}/{totalSensors} sensori
@@ -127,6 +138,12 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     color:t.accent, border:`1px solid ${t.accent}44`, fontFamily:"'Share Tech Mono',monospace"}}>
                     {sc.pumps.length} {sc.pumps.length === 1 ? "pompa" : "pompe"}
                   </span>
+                  {refMeta && (
+                    <span style={{fontSize:12, padding:"2px 10px", borderRadius:4, background:`#FFD06018`,
+                      color:"#FFD060", border:`1px solid #FFD06044`, fontFamily:"'Share Tech Mono',monospace"}}>
+                      ★ {refMeta.label}
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{display:"flex", alignItems:"center", gap:8}}>
@@ -156,38 +173,62 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
 
                 {/* ── SENSORI ── */}
                 <div>
-                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
-                    letterSpacing:1, marginBottom:14}}>STRUMENTAZIONE INSTALLATA</div>
-                  <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))", gap:10}}>
-                    {Object.entries(sc.sensors).map(([sensorId, sData]) => {
-                      const meta = SENSOR_TYPES[sensorId] || { label: sensorId, unit:"", icon:"●" };
-                      const on = sData.enabled;
+                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
+                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
+                      STRUMENTAZIONE INSTALLATA
+                    </div>
+                    <div style={{fontSize:12, color:"#FFD060", fontFamily:"'Rajdhani',sans-serif"}}>
+                      ★ = riferimento dashboard
+                    </div>
+                  </div>
+                  <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:10}}>
+                    {Object.entries(SENSOR_TYPES).map(([sensorId, meta]) => {
+                      const on  = sc.sensors?.[sensorId]?.enabled ?? false;
+                      const isRef = sc.referenceSensor === sensorId;
                       return (
                         <div key={sensorId}
                           onClick={() => toggleSensor(si, sensorId)}
                           style={{display:"flex", alignItems:"center", justifyContent:"space-between",
                             padding:"11px 14px", borderRadius:8, cursor:"pointer",
-                            background: on ? `${color}12` : t.surface2,
-                            border: `1px solid ${on ? color+"66" : t.border}`,
+                            background: on ? (isRef ? `#FFD06014` : `${color}12`) : t.surface2,
+                            border: `1px solid ${on ? (isRef ? "#FFD06088" : color+"66") : t.border}`,
                             transition:"all 0.2s"}}>
-                          <div style={{display:"flex", alignItems:"center", gap:10}}>
+                          <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0}}>
                             <span style={{fontSize:16}}>{meta.icon}</span>
-                            <div>
+                            <div style={{flex:1, minWidth:0}}>
                               <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14,
-                                color: on ? color : t.textSec}}>{meta.label}</div>
+                                color: on ? (isRef ? "#FFD060" : color) : t.textSec,
+                                whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+                                {meta.label}
+                              </div>
                               <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12,
                                 color:t.textMuted}}>{meta.unit}</div>
                             </div>
                           </div>
-                          <div style={{flexShrink:0, width:36, height:20, borderRadius:10, position:"relative",
-                            background: on ? color : t.surface3,
-                            border:`1px solid ${on ? color : t.border}`,
-                            transition:"background 0.2s"}}>
-                            <div style={{position:"absolute", top:2,
-                              left: on ? 17 : 2,
-                              width:14, height:14, borderRadius:"50%",
-                              background:"#fff", transition:"left 0.2s",
-                              boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                          <div style={{display:"flex", alignItems:"center", gap:8, flexShrink:0}}>
+                            {on && (
+                              <button
+                                onClick={e => { e.stopPropagation(); setReferenceSensor(si, sensorId); }}
+                                title="Imposta come riferimento dashboard"
+                                style={{padding:"3px 8px", borderRadius:5, cursor:"pointer", fontSize:13,
+                                  lineHeight:1, fontWeight:700,
+                                  border:`1px solid ${isRef ? "#FFD060" : t.border}`,
+                                  background: isRef ? "#FFD06022" : t.surface3,
+                                  color: isRef ? "#FFD060" : t.textMuted,
+                                  transition:"all 0.2s"}}>
+                                ★
+                              </button>
+                            )}
+                            <div style={{flexShrink:0, width:36, height:20, borderRadius:10, position:"relative",
+                              background: on ? color : t.surface3,
+                              border:`1px solid ${on ? color : t.border}`,
+                              transition:"background 0.2s"}}>
+                              <div style={{position:"absolute", top:2,
+                                left: on ? 17 : 2,
+                                width:14, height:14, borderRadius:"50%",
+                                background:"#fff", transition:"left 0.2s",
+                                boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                            </div>
                           </div>
                         </div>
                       );

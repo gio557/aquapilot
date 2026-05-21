@@ -28,6 +28,7 @@ const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>
 export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 0,
+    referenceSensor: "diff_p",
     sensors: {
       flow:   { enabled: true  },
       level:  { enabled: true  },
@@ -49,6 +50,7 @@ export const DEFAULT_STAGE_CONFIG = [
   },
   {
     stageIndex: 1,
+    referenceSensor: "tss",
     sensors: {
       flow:  { enabled: true  },
       tss:   { enabled: true  },
@@ -69,6 +71,7 @@ export const DEFAULT_STAGE_CONFIG = [
   },
   {
     stageIndex: 2,
+    referenceSensor: "cod",
     sensors: {
       o2:    { enabled: true  },
       ph:    { enabled: true  },
@@ -85,6 +88,7 @@ export const DEFAULT_STAGE_CONFIG = [
   },
   {
     stageIndex: 3,
+    referenceSensor: "tss",
     sensors: {
       tss:  { enabled: true  },
       sbl:  { enabled: true  },
@@ -97,6 +101,7 @@ export const DEFAULT_STAGE_CONFIG = [
   },
   {
     stageIndex: 4,
+    referenceSensor: "nh4",
     sensors: {
       ph:   { enabled: true  },
       flow: { enabled: true  },
@@ -113,6 +118,7 @@ export const DEFAULT_STAGE_CONFIG = [
 export function makeDefaultStageConfig(stageIndex) {
   return {
     stageIndex,
+    referenceSensor: "cod",
     sensors: {
       flow:  { enabled: true  },
       level: { enabled: false },

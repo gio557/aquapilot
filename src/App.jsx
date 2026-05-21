@@ -97,29 +97,20 @@ export default function App() {
   })();
 
   const handleAddStage = (stageType) => {
-    setStages(prev => [...prev, { id: Date.now(), name: stageType.name, sub: stageType.sub }]);
-    setStageConfig(prev => [...prev, makeDefaultStageConfig(prev.length)]);
+    const typeOrder = STAGE_TYPES.findIndex(st => st.name === stageType.name);
+    const insertIdx = (() => {
+      const idx = stages.findIndex(s => STAGE_TYPES.findIndex(st => st.name === s.name) > typeOrder);
+      return idx === -1 ? stages.length : idx;
+    })();
+    const newStage  = { id: Date.now(), name: stageType.name, sub: stageType.sub };
+    const newConfig = makeDefaultStageConfig(insertIdx);
+    setStages(prev => { const a = [...prev]; a.splice(insertIdx, 0, newStage);  return a; });
+    setStageConfig(prev => { const a = [...prev]; a.splice(insertIdx, 0, newConfig); return a; });
   };
 
   const handleRemoveStage = (si) => {
     setStages(prev => prev.filter((_, i) => i !== si));
     setStageConfig(prev => prev.filter((_, i) => i !== si));
-  };
-
-  const handleMoveStage = (si, dir) => {
-    const newIdx = si + dir;
-    setStages(prev => {
-      if (newIdx < 0 || newIdx >= prev.length) return prev;
-      const a = [...prev];
-      [a[si], a[newIdx]] = [a[newIdx], a[si]];
-      return a;
-    });
-    setStageConfig(prev => {
-      if (newIdx < 0 || newIdx >= prev.length) return prev;
-      const a = [...prev];
-      [a[si], a[newIdx]] = [a[newIdx], a[si]];
-      return a;
-    });
   };
 
   const autoOn = sim.autoCorrect?.enabled ?? false;
@@ -271,8 +262,7 @@ export default function App() {
           dosageMax={sim.dosageMax}
           onDosageMax={upd => setSim(prev => ({ ...prev, dosageMax: { ...prev.dosageMax, ...(typeof upd === "function" ? upd(prev.dosageMax) : upd) } }))}
           stages={stages} stageTypes={STAGE_TYPES}
-          onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}
-          onMoveStage={handleMoveStage}/>
+          onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}/>
       ) : page === "storica" ? (
         <StoricaPage t={t} />
       ) : (

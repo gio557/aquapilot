@@ -18,7 +18,7 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, onMoveStage }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage }) {
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const stages = stagesProp || STAGE_META;
@@ -130,26 +130,6 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                 </div>
               </div>
               <div style={{display:"flex", alignItems:"center", gap:8}}>
-                {onMoveStage && (
-                  <div style={{display:"flex", flexDirection:"column", gap:2}}>
-                    <button onClick={e => { e.stopPropagation(); onMoveStage(si, -1); }}
-                      disabled={si === 0}
-                      style={{padding:"2px 8px", borderRadius:4, cursor:si===0?"default":"pointer",
-                        fontSize:11, lineHeight:1, fontFamily:"'Share Tech Mono',monospace",
-                        border:`1px solid ${t.border}`, background:t.surface2,
-                        color:si===0?t.textMuted:t.textSec, opacity:si===0?0.4:1}}>
-                      ▲
-                    </button>
-                    <button onClick={e => { e.stopPropagation(); onMoveStage(si, +1); }}
-                      disabled={si === config.length - 1}
-                      style={{padding:"2px 8px", borderRadius:4, cursor:si===config.length-1?"default":"pointer",
-                        fontSize:11, lineHeight:1, fontFamily:"'Share Tech Mono',monospace",
-                        border:`1px solid ${t.border}`, background:t.surface2,
-                        color:si===config.length-1?t.textMuted:t.textSec, opacity:si===config.length-1?0.4:1}}>
-                      ▼
-                    </button>
-                  </div>
-                )}
                 {DEFAULT_STAGE_CONFIG[si] && (
                   <button onClick={e => { e.stopPropagation(); resetStage(si); }}
                     style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", fontSize:13,

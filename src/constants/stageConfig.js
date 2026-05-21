@@ -13,13 +13,17 @@ export const SENSOR_TYPES = {
 };
 
 // Maps stageIndex → param label in stageDetails → required sensorId
-// If the sensor is disabled the param shows "N/D" in the detail popup
+// Params not listed here are always shown (process-calculated values).
 export const PARAM_SENSOR_MAP = {
-  0: { "Portata": "flow",  "Temperatura": "temp", "TSS uscita": "tss" },
+  0: { "Portata": "flow", "Temperatura": "temp", "TSS uscita": "tss", "ΔH livello": "diff_p" },
   1: { "TSS ingresso": "tss", "TSS uscita": "tss" },
-  2: { "O2 disciolto": "o2", "NH4 uscita": "nh4", "COD uscita": "cod", "BOD5 uscita": "cod", "Nitrificaz.": "nh4" },
-  3: { "TSS ingresso": "tss", "TSS uscita": "tss", "pH": "ph" },
-  4: { "pH finale": "ph", "T° uscita": "temp", "O2 uscita": "o2" },
+  2: { "COD ingresso": "cod", "COD uscita": "cod", "BOD5 uscita": "cod",
+       "NH4 uscita": "nh4", "Nitrificaz.": "nh4",
+       "O2 disciolto": "o2", "Rimozione COD": "cod" },
+  3: { "TSS ingresso": "tss", "TSS uscita": "tss", "pH": "ph",
+       "COD uscita": "cod", "BOD5 uscita": "cod" },
+  4: { "COD uscita": "cod", "BOD5 uscita": "cod", "TSS uscita": "tss",
+       "NH4 uscita": "nh4", "pH finale": "ph", "T° uscita": "temp", "O2 uscita": "o2" },
 };
 
 const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>

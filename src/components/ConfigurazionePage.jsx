@@ -18,9 +18,12 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage }) {
   const [expanded, setExpanded] = useState(null);
-  const stages = STAGE_META;
+  const [showAddPopup, setShowAddPopup] = useState(false);
+  const stages = stagesProp || STAGE_META;
+
+  const availableTypes = (stageTypes || []).filter(st => !stages.some(s => s.name === st.name));
 
   const toggleSensor = (si, sensorId) => {
     onChange(prev => prev.map((sc, i) =>
@@ -71,6 +74,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   };
 
   const resetStage = (si) => {
+    if (!DEFAULT_STAGE_CONFIG[si]) return;
     onChange(prev => prev.map((sc, i) =>
       i !== si ? sc : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG[i]))
     ));
@@ -126,12 +130,22 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                 </div>
               </div>
               <div style={{display:"flex", alignItems:"center", gap:8}}>
-                <button onClick={e => { e.stopPropagation(); resetStage(si); }}
-                  style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", fontSize:13,
-                    fontFamily:"'Rajdhani',sans-serif", fontWeight:600,
-                    border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
-                  ↺ Default
-                </button>
+                {DEFAULT_STAGE_CONFIG[si] && (
+                  <button onClick={e => { e.stopPropagation(); resetStage(si); }}
+                    style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", fontSize:13,
+                      fontFamily:"'Rajdhani',sans-serif", fontWeight:600,
+                      border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
+                    ↺ Default
+                  </button>
+                )}
+                {onRemoveStage && (
+                  <button onClick={e => { e.stopPropagation(); onRemoveStage(si); }}
+                    style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", fontSize:14,
+                      fontFamily:"'Rajdhani',sans-serif", fontWeight:700, lineHeight:1,
+                      border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
+                    ×
+                  </button>
+                )}
                 <span style={{color:t.textMuted, fontSize:14, transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s"}}>▼</span>
               </div>
             </button>
@@ -357,6 +371,64 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
           </div>
         );
       })}
+
+      {/* ── AGGIUNGI STADIO ── */}
+      {onAddStage && (
+        <div style={{display:"flex", justifyContent:"center", marginTop:4, marginBottom:8}}>
+          <button onClick={() => setShowAddPopup(true)}
+            style={{padding:"10px 32px", borderRadius:8, cursor:"pointer",
+              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, letterSpacing:1,
+              border:`2px dashed ${t.accent}66`, background:`${t.accent}10`, color:t.accent,
+              transition:"all 0.2s"}}>
+            + Aggiungi stadio
+          </button>
+        </div>
+      )}
+
+      {/* ── POPUP AGGIUNGI STADIO ── */}
+      {showAddPopup && (
+        <div style={{position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center",
+          background:"rgba(0,0,0,0.55)", backdropFilter:"blur(3px)"}}
+          onClick={() => setShowAddPopup(false)}>
+          <div style={{background:t.surface, border:`1px solid ${t.border}`, borderRadius:14,
+            padding:"24px 28px", minWidth:340, maxWidth:480, width:"90%",
+            boxShadow:"0 8px 40px rgba(0,0,0,0.5)", maxHeight:"80vh", display:"flex", flexDirection:"column"}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:16,
+              color:t.accent, letterSpacing:2, marginBottom:6}}>AGGIUNGI STADIO</div>
+            <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:18}}>
+              Seleziona il tipo di stadio da aggiungere alla configurazione
+            </div>
+            <div style={{overflowY:"auto", flex:1, display:"flex", flexDirection:"column", gap:8}}>
+              {availableTypes.length === 0 ? (
+                <div style={{padding:"20px", textAlign:"center", color:t.textMuted,
+                  fontFamily:"'Rajdhani',sans-serif", fontSize:14}}>
+                  Tutti gli stadi disponibili sono già presenti nella configurazione
+                </div>
+              ) : availableTypes.map((st, i) => (
+                <button key={i} onClick={() => { onAddStage(st); setShowAddPopup(false); }}
+                  style={{display:"flex", flexDirection:"column", alignItems:"flex-start",
+                    padding:"12px 16px", borderRadius:9, cursor:"pointer", textAlign:"left",
+                    border:`1px solid ${t.border}`, background:t.surface2, width:"100%",
+                    transition:"all 0.15s"}}>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15,
+                    color:t.text}}>{st.name}</div>
+                  <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                    marginTop:2}}>{st.sub}</div>
+                </button>
+              ))}
+            </div>
+            <div style={{marginTop:18, display:"flex", justifyContent:"flex-end"}}>
+              <button onClick={() => setShowAddPopup(false)}
+                style={{padding:"8px 20px", borderRadius:7, cursor:"pointer",
+                  fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14,
+                  border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
+                Annulla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── DOSAGGI MASSIMI ── */}
       {dosageMax && onDosageMax && (

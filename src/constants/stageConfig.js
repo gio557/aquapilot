@@ -109,3 +109,19 @@ export const DEFAULT_STAGE_CONFIG = [
     ],
   },
 ];
+
+export function makeDefaultStageConfig(stageIndex) {
+  return {
+    stageIndex,
+    sensors: {
+      flow:  { enabled: true  },
+      level: { enabled: false },
+      tss:   { enabled: false },
+      ph:    { enabled: false },
+      temp:  { enabled: false },
+      o2:    { enabled: false },
+    },
+    pumps: [],
+  };
+}
+

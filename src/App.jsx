@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { DARK, LIGHT } from "./constants/theme";
-import { STAGE_META, TIME_RANGES } from "./constants/stages";
-import { DEFAULT_STAGE_CONFIG } from "./constants/stageConfig";
+import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
+import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
 import { NORMATIVA_DEFAULT, NORMATIVA_SETS } from "./constants/normativa";
 import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -63,6 +63,7 @@ export default function App() {
   const d = display || { ...sim.output, O2: sim.O2, MLSS: sim.MLSS, blower: sim.blower, kw: sim.energy?.kw ?? 0 };
 
   const [stageConfig, setStageConfig] = useState(() => JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)));
+  const [stages,      setStages]      = useState(STAGE_META);
   const [norms, setNorms] = useState(() => JSON.parse(JSON.stringify(NORMATIVA_DEFAULT)));
 
   // Sync normativa targets → sim.stageTargets whenever norms changes
@@ -95,7 +96,15 @@ export default function App() {
     return (sim.trend || []).slice(-pts);
   })();
 
-  const stages = STAGE_META;
+  const handleAddStage = (stageType) => {
+    setStages(prev => [...prev, { id: Date.now(), name: stageType.name, sub: stageType.sub }]);
+    setStageConfig(prev => [...prev, makeDefaultStageConfig(prev.length)]);
+  };
+
+  const handleRemoveStage = (si) => {
+    setStages(prev => prev.filter((_, i) => i !== si));
+    setStageConfig(prev => prev.filter((_, i) => i !== si));
+  };
 
   const autoOn = sim.autoCorrect?.enabled ?? false;
   const card = { background:t.surface, border:`2px solid ${t.border}`, borderRadius:12, boxShadow:t.cardShadow };
@@ -244,7 +253,9 @@ export default function App() {
       ) : page === "configurazione" ? (
         <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}
           dosageMax={sim.dosageMax}
-          onDosageMax={upd => setSim(prev => ({ ...prev, dosageMax: { ...prev.dosageMax, ...(typeof upd === "function" ? upd(prev.dosageMax) : upd) } }))}/>
+          onDosageMax={upd => setSim(prev => ({ ...prev, dosageMax: { ...prev.dosageMax, ...(typeof upd === "function" ? upd(prev.dosageMax) : upd) } }))}
+          stages={stages} stageTypes={STAGE_TYPES}
+          onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}/>
       ) : page === "storica" ? (
         <StoricaPage t={t} />
       ) : (

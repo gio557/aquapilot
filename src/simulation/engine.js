@@ -397,16 +397,31 @@ export function simTick(s) {
   // Compute gauge output for a given sensor type at a given stage index
   const sensorGauge = (si, sensorId) => {
     const w = stageWater[Math.min(si, stageWater.length - 1)];
+    // Redox/ORP: correlated to dissolved O2 in aerobic tank (~+50..+350 mV)
+    const redoxVal = Math.round(-50 + (O2 / 8) * 350 + noise(800));
+    // Sludge blanket level: rises with TSS loading, drops with sludge recycle
+    const sblVal   = round2(Math.max(0.05, Math.min(2.5, 0.3 + (s3.TSS / 2000) * 2.5 + noise(4))));
     switch (sensorId) {
-      case "flow":   return { value: round1(iQ),    target: round1((s.inlet?.Q ?? 1000) * 1.5), unit: "m³/h", label: "Portata" };
+      // flow: show vs designed max (inlet Q * 1.2)
+      case "flow":   return { value: round1(iQ),    target: round1((s.inlet?.Q ?? 1000) * 1.2), unit: "m³/h", label: "Portata" };
+      // level / diff_p: griglia ΔH vs alarm threshold
       case "level":
       case "diff_p": return { value: round2(+(grigliaturaState.delta_h || 0)), target: 0.35, unit: "m", label: "ΔH livello" };
-      case "o2":     return { value: round2(O2),    target: 8,              unit: "mg/L", label: "O₂ disciolto", higherIsBetter: true };
-      case "ph":     return { value: round2(w.pH),  target: 8.5,            unit: "",     label: "pH" };
-      case "tss":    return { value: round1(w.TSS), target: tgt.SST ?? 35,  unit: "mg/L", label: "TSS" };
+      // o2: monitor vs minimum setpoint (2 mg/L) — higher is better
+      case "o2":     return { value: round2(O2),    target: 2,              unit: "mg/L", label: "O₂ disciolto", higherIsBetter: true };
+      // ph: optimal biological window 6.5–8.0, alert if > 8.0
+      case "ph":     return { value: round2(w.pH),  target: 8.0,            unit: "",     label: "pH" };
+      // tss: per-stage appropriate target
+      case "tss": {
+        const tssTgt = si <= 1 ? 150 : si === 2 ? 4000 : tgt.SST ?? 35;
+        return { value: round1(w.TSS), target: tssTgt, unit: "mg/L", label: "TSS" };
+      }
+      // temp: process should stay < 30 °C
       case "temp":   return { value: round1(w.T),   target: 30,             unit: "°C",   label: "Temperatura" };
       case "cod":    return { value: round1(w.COD), target: tgt.COD ?? 125, unit: "mg/L", label: "COD" };
       case "nh4":    return { value: round2(w.NH4), target: tgt.NH4 ?? 8,   unit: "mg/L", label: "NH₄" };
+      case "redox":  return { value: redoxVal,       target: 200,            unit: "mV",   label: "Redox / ORP", higherIsBetter: true };
+      case "sbl":    return { value: sblVal,         target: 1.0,            unit: "m",    label: "Interfaccia fanghi" };
       default: return null;
     }
   };

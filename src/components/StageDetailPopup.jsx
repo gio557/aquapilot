@@ -49,27 +49,21 @@ function useSmoothedControls(controls) {
   return smooth;
 }
 
-function ParamRow({ label, value, unit, note, unavailable, t }) {
+function ParamRow({ label, value, unit, note, t }) {
   const isNum = typeof value === "number";
   const display = isNum
     ? (Math.abs(value) < 10 ? (Math.round(value * 100) / 100).toFixed(2) : Math.round(value * 10) / 10)
     : value;
   return (
-    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`, opacity: unavailable ? 0.45 : 1}}>
+    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
       <div>
         <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
         {note && <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{note}</div>}
-        {unavailable && <div style={{fontSize:10, color:t.orange, fontFamily:"'Share Tech Mono',monospace", marginTop:1}}>sensore non installato</div>}
       </div>
-      {unavailable ? (
-        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted, padding:"2px 8px",
-          borderRadius:4, background:t.surface2, border:`1px solid ${t.border}`}}>N/D</span>
-      ) : (
-        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
-          {display}
-          {unit && <span style={{fontSize:14, color:t.textMuted, marginLeft:3}}>{unit}</span>}
-        </span>
-      )}
+      <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
+        {display}
+        {unit && <span style={{fontSize:14, color:t.textMuted, marginLeft:3}}>{unit}</span>}
+      </span>
     </div>
   );
 }
@@ -186,8 +180,8 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
             <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>PARAMETRI DI PROCESSO</div>
             {(smoothParams || stageDetail.params).map((p, i) => {
               const sensorId = PARAM_SENSOR_MAP[index]?.[p.label];
-              const unavailable = sensorId != null && stageConfig?.sensors?.[sensorId]?.enabled === false;
-              return <ParamRow key={i} {...p} unavailable={unavailable} t={t}/>;
+              if (sensorId != null && stageConfig?.sensors?.[sensorId]?.enabled !== true) return null;
+              return <ParamRow key={i} {...p} t={t}/>;
             })}
           </div>
 

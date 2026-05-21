@@ -106,6 +106,22 @@ export default function App() {
     setStageConfig(prev => prev.filter((_, i) => i !== si));
   };
 
+  const handleMoveStage = (si, dir) => {
+    const newIdx = si + dir;
+    setStages(prev => {
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      const a = [...prev];
+      [a[si], a[newIdx]] = [a[newIdx], a[si]];
+      return a;
+    });
+    setStageConfig(prev => {
+      if (newIdx < 0 || newIdx >= prev.length) return prev;
+      const a = [...prev];
+      [a[si], a[newIdx]] = [a[newIdx], a[si]];
+      return a;
+    });
+  };
+
   const autoOn = sim.autoCorrect?.enabled ?? false;
   const card = { background:t.surface, border:`2px solid ${t.border}`, borderRadius:12, boxShadow:t.cardShadow };
 
@@ -255,7 +271,8 @@ export default function App() {
           dosageMax={sim.dosageMax}
           onDosageMax={upd => setSim(prev => ({ ...prev, dosageMax: { ...prev.dosageMax, ...(typeof upd === "function" ? upd(prev.dosageMax) : upd) } }))}
           stages={stages} stageTypes={STAGE_TYPES}
-          onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}/>
+          onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}
+          onMoveStage={handleMoveStage}/>
       ) : page === "storica" ? (
         <StoricaPage t={t} />
       ) : (

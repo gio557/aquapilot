@@ -28,7 +28,7 @@ const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>
 export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 0,
-    referenceSensor: "diff_p",
+    referenceSensor: null,
     sensors: {
       flow:   { enabled: true  },
       level:  { enabled: true  },
@@ -50,7 +50,7 @@ export const DEFAULT_STAGE_CONFIG = [
   },
   {
     stageIndex: 1,
-    referenceSensor: "tss",
+    referenceSensor: null,
     sensors: {
       flow:  { enabled: true  },
       tss:   { enabled: true  },

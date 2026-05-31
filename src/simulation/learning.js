@@ -11,7 +11,7 @@ const KEY_INTERV   = "aquapilot.learning.interventions.v1";
 
 const HISTORY_MAX     = 5000;   // ~83h a 1 snapshot/min
 const INTERV_MAX      = 500;
-const SNAPSHOT_EVERY  = 120;    // tick (= 60 s sim a velocità 1×)
+const SNAPSHOT_EVERY  = 60;     // tick (= 30 s real time a velocità 5×)
 const EVAL_AFTER_TICKS= 30;     // ~15 s sim — orizzonte per valutare effetto
 const GAIN_MIN        = 0.4;
 const GAIN_MAX        = 2.2;

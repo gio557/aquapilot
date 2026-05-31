@@ -569,7 +569,7 @@ export default function StoricaPage({ t }) {
       )}
 
       {/* ── TREND GIORNALIERO ── */}
-      {snap && chartData.length > 1 && (
+      {snap && (
         <div style={{...card, padding:"20px 22px"}}>
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16}}>
             <div style={{...secHd, marginBottom:0}}>
@@ -580,6 +580,21 @@ export default function StoricaPage({ t }) {
               {chartData.length} campioni · cursore ↕ puntatore corrente
             </div>
           </div>
+          {chartData.length < 2 ? (
+            <div style={{height:260, display:"flex", flexDirection:"column", alignItems:"center",
+              justifyContent:"center", gap:12}}>
+              <div style={{fontSize:36, opacity:0.4}}>⏳</div>
+              <div style={{fontFamily:"'Rajdhani',sans-serif", fontSize:16, color:t.textMuted, textAlign:"center", lineHeight:1.6}}>
+                Dati insufficienti per il grafico.<br/>
+                {chartData.length === 0
+                  ? "Seleziona un intervallo con almeno 2 campioni."
+                  : "Solo 1 campione nel range — allarga la finestra o attendi nuovi snapshot."}
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:t.textMuted}}>
+                Un nuovo campione viene salvato ogni ~60 secondi (velocità 5×)
+              </div>
+            </div>
+          ) : (
           <div style={{height:260}}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{top:6, right:8, bottom:0, left:-14}}>
@@ -611,6 +626,7 @@ export default function StoricaPage({ t }) {
               </LineChart>
             </ResponsiveContainer>
           </div>
+          )}
         </div>
       )}
 

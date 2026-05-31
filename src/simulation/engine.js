@@ -1,5 +1,7 @@
 import { applyAutoCorrect } from "./autoCorrect";
 import { STAGE_PROCESSORS, initStageState } from "./stageProcessors";
+import { STAGE_META } from "../constants/stages";
+import { DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 
 export function initTrend() {
   const pts = [];
@@ -42,7 +44,8 @@ export const INIT_SIM = {
     { param:"NH4", value:7.9, target:8,   unit:"mg/L", label:"NH4 uscita" },
   ],
   stageDetails: null,
-  stageConfig:  null,
+  stageConfig:  JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)),
+  stages:       STAGE_META,
   stageStates:  null,   // per-stage persistent state (array parallel to stageConfig)
   qHistory: [],
   output: { Q: 1245, COD: 22.4, BOD5: 8.1, TSS: 7.3, NH4: 0.80, pH: 7.2, T: 18.4, O2: 4.5 },

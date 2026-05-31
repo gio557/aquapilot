@@ -203,12 +203,16 @@ export default function AIPanel({ sim, autoOn, t }) {
         </div>
         <div style={{display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end"}}>
           <div style={{display:"flex", gap:3}}>
-            {["offline","online"].map(e => (
-              <button key={e} onClick={() => setEngine(e)}
-                style={{padding:"3px 9px", borderRadius:4, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${engine===e?modeColor:t.border}`, background:engine===e?`${modeColor}22`:t.surface2, color:engine===e?modeColor:t.textMuted}}>
-                {e==="online" ? "CLOUD" : "LOCAL"}
-              </button>
-            ))}
+            <button onClick={() => setEngine("offline")}
+              style={{padding:"3px 9px", borderRadius:4, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${engine==="offline"?modeColor:t.border}`, background:engine==="offline"?`${modeColor}22`:t.surface2, color:engine==="offline"?modeColor:t.textMuted}}>
+              LOCAL
+            </button>
+            <button
+              title="Richiede backend server (prossimamente)"
+              onClick={() => alert("Funzione CLOUD richiede un server backend.\nDisponibile nella prossima versione.")}
+              style={{padding:"3px 9px", borderRadius:4, cursor:"not-allowed", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${t.border}44`, background:t.surface2, color:t.textMuted+"88", opacity:0.5}}>
+              CLOUD 🔒
+            </button>
           </div>
           <div style={{display:"flex", gap:3}}>
             <button onClick={() => { if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn, engine); } }}

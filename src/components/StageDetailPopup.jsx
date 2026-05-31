@@ -179,7 +179,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
           <div>
             <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>PARAMETRI DI PROCESSO</div>
             {(smoothParams || stageDetail.params).map((p, i) => {
-              const sensorId = PARAM_SENSOR_MAP[index]?.[p.label];
+              const sensorId = PARAM_SENSOR_MAP[stage?.name]?.[p.label];
               if (sensorId != null && stageConfig?.sensors?.[sensorId]?.enabled !== true) return null;
               return <ParamRow key={i} {...p} t={t}/>;
             })}

@@ -1,6 +1,9 @@
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-export function applyAutoCorrect(s, out, O2, MLSS) {
+export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
+  const bioIdx = stageIndexMap?.bio >= 0 ? stageIndexMap.bio : 2;
+  const sedIdx = stageIndexMap?.sed >= 0 ? stageIndexMap.sed : 3;
+  const disIdx = stageIndexMap?.dis >= 0 ? stageIndexMap.dis : 4;
   const ac = s.autoCorrect;
   if (!ac || !ac.enabled) return { changes: {}, actions: {} };
   const ch = {};
@@ -25,12 +28,12 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
     if (Math.abs(delta) >= 1) {
       ch.blower = newBlower;
       if (O2 < 1.5) {
-        actions[2] = { text: `URGENTE Soffianti: ${s.blower}→${newBlower}% — O2 critico ${O2.toFixed(1)} mg/L (set ${O2sp})`, sev: "ALTO" };
+        actions[bioIdx] = { text: `URGENTE Soffianti: ${s.blower}→${newBlower}% — O2 critico ${O2.toFixed(1)} mg/L (set ${O2sp})`, sev: "ALTO" };
       } else if (delta > 0) {
         const reason = out.NH4 > 8 ? `NH4 ${out.NH4.toFixed(1)} mg/L — set O2>${O2sp.toFixed(1)}` : out.BOD5 > 25 ? `BOD5 ${out.BOD5.toFixed(1)} mg/L` : out.COD > 100 ? `COD ${out.COD.toFixed(1)} mg/L` : `O2 ${O2.toFixed(1)} mg/L → set ${O2sp.toFixed(1)}`;
-        actions[2] = { text: `Soffianti: ${s.blower}→${newBlower}% (+${delta}%) — ${reason}`, sev: "MEDIO" };
+        actions[bioIdx] = { text: `Soffianti: ${s.blower}→${newBlower}% (+${delta}%) — ${reason}`, sev: "MEDIO" };
       } else {
-        actions[2] = { text: `Ottimiz. energia: soffianti ${s.blower}→${newBlower}% — O2 ${O2.toFixed(1)} mg/L, margine ok`, sev: "OK" };
+        actions[bioIdx] = { text: `Ottimiz. energia: soffianti ${s.blower}→${newBlower}% — O2 ${O2.toFixed(1)} mg/L, margine ok`, sev: "OK" };
       }
     }
   }
@@ -46,11 +49,11 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
     if (Math.abs(delta) >= 1) {
       ch.coagulant = newCoag;
       if (out.TSS > 80) {
-        actions[3] = { text: `URGENTE Coagulante: ${s.coagulant}→${newCoag}% — TSS critico ${out.TSS.toFixed(1)} mg/L`, sev: "ALTO" };
+        actions[sedIdx] = { text: `URGENTE Coagulante: ${s.coagulant}→${newCoag}% — TSS critico ${out.TSS.toFixed(1)} mg/L`, sev: "ALTO" };
       } else if (delta > 0) {
-        actions[3] = { text: `Coagulante: ${s.coagulant}→${newCoag}% (+${delta}%) — TSS ${out.TSS.toFixed(1)} mg/L > set ${TSSsp}`, sev: "MEDIO" };
+        actions[sedIdx] = { text: `Coagulante: ${s.coagulant}→${newCoag}% (+${delta}%) — TSS ${out.TSS.toFixed(1)} mg/L > set ${TSSsp}`, sev: "MEDIO" };
       } else {
-        actions[3] = { text: `Risparmio coagulante: ${s.coagulant}→${newCoag}% — TSS ${out.TSS.toFixed(1)} mg/L ottimale`, sev: "OK" };
+        actions[sedIdx] = { text: `Risparmio coagulante: ${s.coagulant}→${newCoag}% — TSS ${out.TSS.toFixed(1)} mg/L ottimale`, sev: "OK" };
       }
     }
   }
@@ -62,15 +65,15 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
     const Kp = 0.008 * gRas;
     const delta = clamp(Math.round(errMLSS * Kp), -6, 6);
     const newRAS = clamp(s.sludgeRecycle - delta, 20, 100);
-    const prev = actions[2];
+    const prev = actions[bioIdx];
 
     if (Math.abs(delta) >= 1) {
       ch.sludgeRecycle = newRAS;
       const rasMsg = `RAS: ${s.sludgeRecycle}→${newRAS}% — MLSS ${Math.round(MLSS)} mg/L (set ${MLSSsp})`;
       if (prev) {
-        actions[2] = { ...prev, text: prev.text + ` | ${rasMsg}` };
+        actions[bioIdx] = { ...prev, text: prev.text + ` | ${rasMsg}` };
       } else {
-        actions[2] = { text: rasMsg, sev: Math.abs(errMLSS) > 1500 ? "MEDIO" : "OK" };
+        actions[bioIdx] = { text: rasMsg, sev: Math.abs(errMLSS) > 1500 ? "MEDIO" : "OK" };
       }
     }
   }
@@ -80,25 +83,25 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
     const pHsp = 7.2;
     const errpH = pHsp - out.pH;
     const Kp = 3 * gPH;
-    const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 5); // max +5% per tick (era 25)
+    const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 5);
 
-    if (Math.abs(errpH) > 0.20 && delta >= 2) {           // banda morta 0.20 (era 0.15), soglia min 2%
+    if (Math.abs(errpH) > 0.20 && delta >= 2) {
       if (errpH > 0) {
         ch.naoh   = clamp(s.naoh + delta, 0, 100);
         ch.h2so4  = 0;
         const sev = out.pH < 5.5 ? "ALTO" : "MEDIO";
-        actions[4] = { text: `NaOH: ${s.naoh}→${ch.naoh}% (+${delta}%) — pH ${out.pH.toFixed(2)} < ${pHsp} (err ${errpH.toFixed(2)})`, sev };
+        actions[disIdx] = { text: `NaOH: ${s.naoh}→${ch.naoh}% (+${delta}%) — pH ${out.pH.toFixed(2)} < ${pHsp} (err ${errpH.toFixed(2)})`, sev };
       } else {
         ch.h2so4  = clamp(s.h2so4 + delta, 0, 100);
         ch.naoh   = 0;
         const sev = out.pH > 9.5 ? "ALTO" : "MEDIO";
-        actions[4] = { text: `H2SO4: ${s.h2so4}→${ch.h2so4}% (+${delta}%) — pH ${out.pH.toFixed(2)} > ${pHsp} (err ${(-errpH).toFixed(2)})`, sev };
+        actions[disIdx] = { text: `H2SO4: ${s.h2so4}→${ch.h2so4}% (+${delta}%) — pH ${out.pH.toFixed(2)} > ${pHsp} (err ${(-errpH).toFixed(2)})`, sev };
       }
     } else if (Math.abs(errpH) <= 0.20) {
-      if (s.naoh > 0)  { ch.naoh  = Math.max(0, s.naoh  - 2); } // ramp-down 2%/tick (era 3)
+      if (s.naoh > 0)  { ch.naoh  = Math.max(0, s.naoh  - 2); }
       if (s.h2so4 > 0) { ch.h2so4 = Math.max(0, s.h2so4 - 2); }
       if (s.naoh > 0 || s.h2so4 > 0)
-        actions[4] = { text: `pH normalizzato (${out.pH.toFixed(2)}) — riduzione dosaggi in corso`, sev: "OK" };
+        actions[disIdx] = { text: `pH normalizzato (${out.pH.toFixed(2)}) — riduzione dosaggi in corso`, sev: "OK" };
     }
   }
 

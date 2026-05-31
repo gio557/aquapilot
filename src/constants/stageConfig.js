@@ -12,18 +12,58 @@ export const SENSOR_TYPES = {
   sbl:    { label: "Livello interfaccia fanghi",  unit: "m",     icon: "📊" },
 };
 
-// Maps stageIndex → param label in stageDetails → required sensorId
-// Params not listed here are always shown (process-calculated values).
+// Maps stage NAME → param label in stageDetails → required sensorId.
+// Params not listed are always shown (process-calculated values).
 export const PARAM_SENSOR_MAP = {
-  0: { "Portata": "flow", "Temperatura": "temp", "TSS uscita": "tss", "ΔH livello": "diff_p" },
-  1: { "TSS ingresso": "tss", "TSS uscita": "tss" },
-  2: { "COD ingresso": "cod", "COD uscita": "cod", "BOD5 uscita": "cod",
-       "NH4 uscita": "nh4", "Nitrificaz.": "nh4",
-       "O2 disciolto": "o2", "Rimozione COD": "cod" },
-  3: { "TSS ingresso": "tss", "TSS uscita": "tss", "pH": "ph",
-       "COD uscita": "cod", "BOD5 uscita": "cod" },
-  4: { "COD uscita": "cod", "BOD5 uscita": "cod", "TSS uscita": "tss",
-       "NH4 uscita": "nh4", "pH finale": "ph", "T° uscita": "temp", "O2 uscita": "o2" },
+  "Grigliatura": {
+    "Portata": "flow", "Temperatura": "temp",
+    "TSS uscita": "tss", "ΔH livello": "diff_p",
+  },
+  "Dissabbiatura": {
+    "TSS ingresso": "tss", "TSS uscita": "tss",
+  },
+  "Degrassatore": {},
+  "Equalizzazione": {
+    "Portata in ingresso": "flow", "Portata equalizzata": "flow",
+  },
+  "Biologico": {
+    "COD ingresso": "cod", "COD uscita": "cod", "BOD5 uscita": "cod",
+    "NH4 uscita": "nh4", "Nitrificaz.": "nh4",
+    "O2 disciolto": "o2", "Rimozione COD": "cod",
+  },
+  "Nitrificazione": {
+    "NH4 ingresso": "nh4", "NH4 uscita": "nh4",
+    "NO3 prodotto": "nh4", "O2 disciolto": "o2",
+  },
+  "Denitrificazione": {
+    "NO3 ingresso": "nh4", "NO3 uscita": "nh4",
+  },
+  "Sedimentazione": {
+    "TSS ingresso": "tss", "TSS uscita": "tss", "pH": "ph",
+    "COD uscita": "cod", "BOD5 uscita": "cod",
+  },
+  "Flottazione DAF": {
+    "TSS ingresso": "tss", "TSS uscita": "tss",
+  },
+  "Filtrazione": {
+    "TSS ingresso": "tss", "TSS uscita": "tss", "COD uscita": "cod",
+  },
+  "Osmosi Inversa": {
+    "COD ingresso": "cod", "COD uscita": "cod",
+    "TSS uscita": "tss", "NH4 uscita": "nh4",
+  },
+  "Disinfezione UV": { "TSS uscita": "tss" },
+  "Disinfezione Cloro": {
+    "COD uscita": "cod", "BOD5 uscita": "cod", "TSS uscita": "tss",
+    "NH4 uscita": "nh4", "pH finale": "ph", "T° uscita": "temp", "O2 uscita": "o2",
+  },
+  "Disinfezione": {
+    "COD uscita": "cod", "BOD5 uscita": "cod", "TSS uscita": "tss",
+    "NH4 uscita": "nh4", "pH finale": "ph", "T° uscita": "temp", "O2 uscita": "o2",
+  },
+  "Post-trattamento": {
+    "COD ingresso": "cod", "COD uscita": "cod", "TSS uscita": "tss",
+  },
 };
 
 const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>

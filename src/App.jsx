@@ -62,9 +62,24 @@ export default function App() {
 
   const d = display || { ...sim.output, O2: sim.O2, MLSS: sim.MLSS, blower: sim.blower, kw: sim.energy?.kw ?? 0 };
 
-  const [stageConfig, setStageConfig] = useState(() => JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)));
-  const [stages,      setStages]      = useState(STAGE_META);
-  const [norms, setNorms] = useState(() => JSON.parse(JSON.stringify(NORMATIVA_DEFAULT)));
+  const [stageConfig, setStageConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem("aquapilot.stageConfig.v1");
+      return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG));
+    } catch { return JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)); }
+  });
+  const [stages, setStages] = useState(() => {
+    try {
+      const saved = localStorage.getItem("aquapilot.stages.v1");
+      return saved ? JSON.parse(saved) : STAGE_META;
+    } catch { return STAGE_META; }
+  });
+  const [norms, setNorms] = useState(() => {
+    try {
+      const saved = localStorage.getItem("aquapilot.norms.v1");
+      return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(NORMATIVA_DEFAULT));
+    } catch { return JSON.parse(JSON.stringify(NORMATIVA_DEFAULT)); }
+  });
 
   // Sync normativa targets → sim.stageTargets whenever norms changes
   useEffect(() => {
@@ -130,8 +145,19 @@ export default function App() {
 
   const stageConfigJson = JSON.stringify(stageConfig);
   useEffect(() => {
-    setSim(prev => ({ ...prev, stageConfig }));
+    setSim(prev => ({ ...prev, stageConfig, stages }));
+    try { localStorage.setItem("aquapilot.stageConfig.v1", stageConfigJson); } catch {}
   }, [stageConfigJson]);
+
+  const stagesJson = JSON.stringify(stages);
+  useEffect(() => {
+    setSim(prev => ({ ...prev, stages }));
+    try { localStorage.setItem("aquapilot.stages.v1", stagesJson); } catch {}
+  }, [stagesJson]);
+
+  useEffect(() => {
+    try { localStorage.setItem("aquapilot.norms.v1", JSON.stringify(norms)); } catch {}
+  }, [norms]);
 
   const handleGrigliaturaReset = () => {
     setSim(prev => ({

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { STAGE_META } from "../constants/stages";
+import NormativaPage from "./NormativaPage";
 
 const STAGE_COLORS = ["#00CFFF","#00E599","#BB66FF","#FF9422","#FFD060"];
 
@@ -18,7 +19,8 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, ac, onAC }) {
+  const [activeTab, setActiveTab] = useState("stadi");
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const stages = stagesProp || STAGE_META;
@@ -90,17 +92,53 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     ));
   };
 
+  if (activeTab === "normativa") {
+    return (
+      <div>
+        <div style={{padding:"14px 24px 0", borderBottom:`1px solid ${t.border}`, background:t.surface, display:"flex", gap:8}}>
+          {[
+            { id:"stadi",     label:"CONFIGURAZIONE STADI" },
+            { id:"normativa", label:"NORMATIVA" },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              style={{padding:"9px 20px", borderRadius:"7px 7px 0 0", cursor:"pointer",
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
+                border:`1px solid ${activeTab===tab.id?t.accent:t.border}`,
+                borderBottom: activeTab===tab.id ? `1px solid ${t.surface}` : `1px solid ${t.border}`,
+                background: activeTab===tab.id ? t.surface : t.surface2,
+                color: activeTab===tab.id ? t.accent : t.textSec,
+                marginBottom: activeTab===tab.id ? -1 : 0,
+                transition:"all 0.15s"}}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <NormativaPage t={t} ac={ac} onAC={onAC} norms={norms} setNorms={setNorms} normativaSets={normativaSets} />
+      </div>
+    );
+  }
+
   return (
     <div style={{padding:"20px 24px 40px"}}>
 
-      <div style={{marginBottom:24}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:18, fontWeight:900, color:t.accent, letterSpacing:2, marginBottom:6}}>
-          CONFIGURAZIONE IMPIANTO
-        </div>
-        <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>
-          Definisci la strumentazione installata per ogni stadio. I parametri dei sensori disabilitati
-          non saranno visualizzati nella dashboard — verranno sostituiti da "N/D".
-        </div>
+      {/* ── TAB BAR ── */}
+      <div style={{display:"flex", gap:8, marginBottom:24, borderBottom:`1px solid ${t.border}`, paddingBottom:0}}>
+        {[
+          { id:"stadi",     label:"CONFIGURAZIONE STADI" },
+          { id:"normativa", label:"NORMATIVA" },
+        ].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            style={{padding:"9px 20px", borderRadius:"7px 7px 0 0", cursor:"pointer",
+              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
+              border:`1px solid ${activeTab===tab.id?t.accent:t.border}`,
+              borderBottom: activeTab===tab.id ? `1px solid ${t.surface}` : `1px solid ${t.border}`,
+              background: activeTab===tab.id ? t.surface : t.surface2,
+              color: activeTab===tab.id ? t.accent : t.textSec,
+              marginBottom: activeTab===tab.id ? -1 : 0,
+              transition:"all 0.15s"}}>
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {config.map((sc, si) => {

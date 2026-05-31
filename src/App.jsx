@@ -207,7 +207,6 @@ export default function App() {
           {[
             {id:"dashboard",      label:"DASHBOARD"},
             {id:"configurazione", label:"CONFIGURAZIONE"},
-            {id:"normativa",      label:"NORMATIVA"},
             {id:"storica",        label:"STORICO"},
           ].map(p => (
             <button key={p.id} onClick={() => setPage(p.id)}
@@ -286,14 +285,14 @@ export default function App() {
       )}
 
       {/* ── PAGES ── */}
-      {page === "normativa" ? (
-        <NormativaPage t={t} ac={sim.autoCorrect || {enabled:false}} onAC={setSim} norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}/>
-      ) : page === "configurazione" ? (
+      {page === "configurazione" ? (
         <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}
           dosageMax={sim.dosageMax}
           onDosageMax={upd => setSim(prev => ({ ...prev, dosageMax: { ...prev.dosageMax, ...(typeof upd === "function" ? upd(prev.dosageMax) : upd) } }))}
           stages={stages} stageTypes={STAGE_TYPES}
-          onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}/>
+          onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}
+          norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}
+          ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
       ) : page === "storica" ? (
         <StoricaPage t={t} />
       ) : (

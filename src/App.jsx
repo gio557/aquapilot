@@ -65,6 +65,19 @@ export default function App() {
 
   const d = display || { ...sim.output, O2: sim.O2, MLSS: sim.MLSS, blower: sim.blower, kw: sim.energy?.kw ?? 0 };
 
+  // EMA-smooth the per-stage energy readouts (each processor adds random kw
+  // jitter every tick) so the consumption bars/numbers drift instead of flicker.
+  const [stageEnergyDisp, setStageEnergyDisp] = useState(null);
+  useEffect(() => {
+    const arr = sim.stageEnergy;
+    if (!Array.isArray(arr)) return;
+    setStageEnergyDisp(prev => arr.map((v, i) => {
+      const p = prev?.[i];
+      return Number.isFinite(p) ? p + ALPHA * (v - p) : v;
+    }));
+  }, [sim.stageEnergy]);
+  const seDisp = stageEnergyDisp ?? (sim.stageEnergy || []);
+
   const [stageConfig, setStageConfig] = useState(() => {
     try {
       const saved = localStorage.getItem("aquapilot.stageConfig.v1");
@@ -629,8 +642,8 @@ export default function App() {
                 <span style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ CONSUMI ENERGETICI</span>
                 <span style={{fontSize:11, padding:"2px 8px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", border:`1px solid ${t.green}44`}}>LIVE</span>
               </div>
-              {(sim.stageEnergy || []).map((kw, i) => {
-                const total = (sim.stageEnergy||[]).reduce((a,b)=>a+b,0)||1;
+              {seDisp.map((kw, i) => {
+                const total = seDisp.reduce((a,b)=>a+b,0)||1;
                 const pct = Math.round(kw/total*100);
                 const stageName = stages[i]?.name ?? `ST-0${i+1}`;
                 const barC = i===2 ? t.accent : i===3 ? t.orange : t.green;
@@ -640,7 +653,7 @@ export default function App() {
                       <span style={{fontSize:14, color: i===2?t.accent:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:i===2?700:500}}>
                         ST-0{i+1} {stageName}
                       </span>
-                      <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barC}}>{kw} kW ({pct}%)</span>
+                      <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barC}}>{kw.toFixed(2)} kW ({pct}%)</span>
                     </div>
                     <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
                       <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3, transition:"width 0.5s"}}/>

@@ -45,12 +45,16 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
       (out.NH4  - QL.NH4.pre  * greenTgt) / QL.NH4.warn,
       (out.BOD5 - QL.BOD5.pre * greenTgt) / QL.BOD5.warn,
       (out.COD  - QL.COD.pre  * greenTgt) / QL.COD.warn);
-    const O2I = clamp((s.acO2I ?? 0) + err * 0.4, 0, 6);
+    // Low integral gain + gentle proportional inner loop, rate-limited: the O2
+    // process has a long lag, so aggressive gains caused integral-windup hunting
+    // (blower swinging 57↔92% in a slow limit-cycle). Softer gains track the
+    // slow effluent dynamics smoothly without oscillating.
+    const O2I = clamp((s.acO2I ?? 0) + err * 0.12, 0, 6);
     ch.acO2I = O2I;
     const O2sp = clamp(2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod + O2I, 2.0, 8.0);
     const errO2 = O2sp - O2;
-    const Kp = 6 * gBlower;
-    const delta = clamp(Math.round(errO2 * Kp), -8, 15);
+    const Kp = 3 * gBlower;
+    const delta = clamp(Math.round(errO2 * Kp), -4, 6);
     const newBlower = clamp(s.blower + delta, 20, 100);
 
     if (Math.abs(delta) >= 1) {

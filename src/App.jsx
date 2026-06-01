@@ -600,15 +600,18 @@ export default function App() {
                   <span style={{fontSize:11, padding:"2px 8px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, border:`1px solid ${t.green}44`}}>LIVE</span>
                 </div>
                 {[
-                  {param:"COD",  v:d.COD,  unit:" mg/L", lim:QL.COD.warn,  warn:QL.COD.pre},
-                  {param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre},
-                  {param:"TSS",  v:d.TSS,  unit:" mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre},
-                  {param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre},
-                  {param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:QL.NO3.warn,  warn:QL.NO3.pre},
-                  {param:"N-tot",v:d.NTOT, unit:" mg/L", lim:QL.NTOT.warn, warn:QL.NTOT.pre},
-                  {param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true},
-                  {param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28},
-                  {param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true},
+                  // src: come arriverebbe il dato in un impianto reale —
+                  //  "sensor" = misura diretta online · "calc" = stima/calcolo
+                  //  (analizzatore a correlazione, test di laboratorio o valore derivato)
+                  {param:"COD",  v:d.COD,  unit:" mg/L", lim:QL.COD.warn,  warn:QL.COD.pre,  src:"calc",   srcNote:"analizzatore UV / correlazione"},
+                  {param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre, src:"calc",   srcNote:"test di laboratorio 5 gg / stima da COD"},
+                  {param:"TSS",  v:d.TSS,  unit:" mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre,  src:"sensor", srcNote:"sonda di torbidità"},
+                  {param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre,  src:"sensor", srcNote:"analizzatore NH₄ online"},
+                  {param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:QL.NO3.warn,  warn:QL.NO3.pre,  src:"sensor", srcNote:"analizzatore NO₃ online"},
+                  {param:"N-tot",v:d.NTOT, unit:" mg/L", lim:QL.NTOT.warn, warn:QL.NTOT.pre, src:"calc",   srcNote:"calcolato: NH₄ + NO₃"},
+                  {param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true,   src:"sensor", srcNote:"sonda pH"},
+                  {param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28,    src:"sensor", srcNote:"sensore di temperatura"},
+                  {param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true,   src:"sensor", srcNote:"sonda O₂ disciolto"},
                 ].map(q => {
                   let ok, fuori;
                   if (q.phCheck) { ok = q.v >= 6.5 && q.v <= 8.5; fuori = q.v < 5.5 || q.v > 9.5; }
@@ -616,9 +619,16 @@ export default function App() {
                   else { ok = q.v < (q.warn ?? q.lim); fuori = q.lim != null && q.v >= q.lim; }
                   const c = fuori ? t.red : ok ? t.green : t.orange;
                   const badge = fuori ? "✗ FUORI" : ok ? "✓ OK" : "⚠ PRE";
+                  const isSensor = q.src === "sensor";
+                  const srcColor = isSensor ? t.accent : t.textMuted;
                   return (
                     <div key={q.param} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom:`1px solid ${t.border}`}}>
-                      <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, color:t.text}}>{q.param}</span>
+                      <div style={{display:"flex", flexDirection:"column", gap:2}}>
+                        <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, color:t.text}}>{q.param}</span>
+                        <span title={q.srcNote} style={{display:"inline-flex", alignItems:"center", gap:4, fontSize:10, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color:srcColor, textTransform:"uppercase"}}>
+                          <span style={{fontSize:9}}>{isSensor ? "📡" : "🧮"}</span>{isSensor ? "sensore" : "stimato"}
+                        </span>
+                      </div>
                       <div style={{display:"flex", alignItems:"center", gap:8}}>
                         <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color:c}}>
                           {q.v != null ? (Number.isInteger(q.v) ? q.v : q.v.toFixed(q.param==="pH"||q.param==="NH₄"||q.param==="O₂"?2:1)) : "—"}{q.unit}

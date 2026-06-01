@@ -264,6 +264,13 @@ export default function AIPanel({ sim, autoOn, t }) {
   const lastAutoOn = useRef(autoOn);
   const lastAlarmKey = useRef("");
   const debounceRef = useRef(null);
+  // Always-current refs — prevents stale closure in setInterval/setTimeout callbacks
+  const simRef    = useRef(sim);
+  const autoOnRef = useRef(autoOn);
+  const engineRef = useRef(engine);
+  simRef.current    = sim;
+  autoOnRef.current = autoOn;
+  engineRef.current = engine;
 
   const doRefresh = async (s, ao, eng) => {
     setMsg(prev => ({...prev, loading:true}));
@@ -288,9 +295,9 @@ export default function AIPanel({ sim, autoOn, t }) {
     if (key !== lastAlarmKey.current) { lastAlarmKey.current = key; scheduleRefresh(sim, autoOn, engine); }
   }, [sim.alarmState]);
   useEffect(() => {
-    const id = setInterval(() => scheduleRefresh(sim, autoOn, engine), 30000);
+    const id = setInterval(() => scheduleRefresh(simRef.current, autoOnRef.current, engineRef.current), 30000);
     return () => clearInterval(id);
-  }, [autoOn, engine]);
+  }, []);
 
   const modeColor = autoOn ? t.green : t.orange;
   const modeLabel = autoOn ? "AUTO-CORREZIONE" : "GUIDA MANUALE";

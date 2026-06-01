@@ -211,10 +211,16 @@ function QBadge({ v, lim, warn, phCheck, o2Check, t, unit, decimals=1 }) {
 // ── Actuator bar row ──────────────────────────────────────────
 function ActBar({ label, value, unit="%", t, colorFn }) {
   const c = colorFn ? colorFn(value) : t.accent;
+  const cmd = dataSourceTag("command");
   return (
     <div style={{marginBottom:14}}>
-      <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
-        <span style={{fontSize:16, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{label}</span>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:5}}>
+        <div style={{display:"flex", flexDirection:"column", gap:2}}>
+          <span style={{fontSize:16, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{label}</span>
+          <span title={cmd.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:t.textMuted}}>
+            <span style={{fontSize:9}}>{cmd.icon}</span>{cmd.word}
+          </span>
+        </div>
         <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:18, color:c, fontWeight:700}}>
           {value != null ? value + unit : "—"}
         </span>

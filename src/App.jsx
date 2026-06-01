@@ -5,6 +5,7 @@ import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageC
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
 import { QUALITY_LIMITS as QL } from "./constants/limits";
+import { dataSourceTag } from "./constants/dataSource";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -732,20 +733,27 @@ export default function App() {
                 const abs = (pct, max, unit, dec=0) =>
                   max ? ` · ${((pct/100)*max).toFixed(dec)} ${unit}` : "";
                 return [
-                  {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`,  ref:"portata istantanea in ingresso",        color:t.accent},
-                  {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, ref:"carico organico grezzo",                color:t.textSec},
-                  {label:"Soffianti",        val:`${d.blower?.toFixed(0)??0}%`,           ref:`% pot. max installata${abs(d.blower??0, dm.blower,"kW",1)}`,       color: d.blower>80?t.red:d.blower>60?t.orange:t.green},
-                  {label:"Coagulante",       val:`${sim.coagulant??0}%`,                  ref:`% dosaggio max${abs(sim.coagulant??0, dm.coagulant,"L/h",1)}`,      color:t.orange},
-                  {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`,              ref:`% portata max RAS${abs(sim.sludgeRecycle??0, dm.sludgeRecycle,"m³/h",0)} · target MLSS ${sim.MLSSsp??3200} mg/L`, color:t.purple},
-                ].map(x => (
+                  {label:"Portata Ingresso", val:`${Math.round(sim.inlet?.Q??0)} m³/h`,  ref:"portata istantanea in ingresso",        color:t.accent,  kind:"sensor"},
+                  {label:"COD ingresso",     val:`${Math.round(sim.inlet?.COD??0)} mg/L`, ref:"carico organico grezzo",                color:t.textSec, kind:"calc"},
+                  {label:"Soffianti",        val:`${d.blower?.toFixed(0)??0}%`,           ref:`% pot. max installata${abs(d.blower??0, dm.blower,"kW",1)}`,       color: d.blower>80?t.red:d.blower>60?t.orange:t.green, kind:"command"},
+                  {label:"Coagulante",       val:`${sim.coagulant??0}%`,                  ref:`% dosaggio max${abs(sim.coagulant??0, dm.coagulant,"L/h",1)}`,      color:t.orange, kind:"command"},
+                  {label:"Ric. fanghi",      val:`${sim.sludgeRecycle??0}%`,              ref:`% portata max RAS${abs(sim.sludgeRecycle??0, dm.sludgeRecycle,"m³/h",0)} · target MLSS ${sim.MLSSsp??3200} mg/L`, color:t.purple, kind:"command"},
+                ].map(x => {
+                  const tag = dataSourceTag(x.kind);
+                  const tagColor = tag.kind === "sensor" ? t.accent : t.textMuted;
+                  return (
                   <div key={x.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${t.border}`}}>
                     <div>
                       <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>{x.label}</div>
                       <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{x.ref}</div>
+                      <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:tagColor, marginTop:2}}>
+                        <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
+                      </span>
                     </div>
                     <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color:x.color}}>{x.val}</span>
                   </div>
-                ));
+                  );
+                });
               })()}
             </div>
           </div>

@@ -36,9 +36,10 @@ export function dataSource(label = "", unit = "") {
   return "calc";
 }
 
-// Presentation metadata for a source kind.
+// Presentation metadata for a source kind. "command" is used for actuator
+// outputs (setpoint/posizione inviata all'attuatore) — non è né misura né stima.
 export function dataSourceTag(kind) {
-  return kind === "sensor"
-    ? { kind, icon: "📡", word: "sensore",  note: "misura diretta da sensore online" }
-    : { kind, icon: "🧮", word: "stimato",  note: "valore stimato / calcolato (correlazione, laboratorio o derivato)" };
+  if (kind === "sensor")  return { kind, icon: "📡", word: "sensore", note: "misura diretta da sensore online" };
+  if (kind === "command") return { kind, icon: "⚙️", word: "comando", note: "comando inviato all'attuatore (setpoint/posizione operativa)" };
+  return { kind: "calc", icon: "🧮", word: "stimato", note: "valore stimato / calcolato (correlazione, laboratorio o derivato)" };
 }

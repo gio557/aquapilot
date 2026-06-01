@@ -198,6 +198,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
               <span style={{display:"inline-flex", gap:10, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:t.textMuted, textTransform:"uppercase"}}>
                 <span style={{display:"inline-flex", alignItems:"center", gap:3, color:t.accent}}>📡 sensore</span>
                 <span style={{display:"inline-flex", alignItems:"center", gap:3}}>🧮 stimato</span>
+                <span style={{display:"inline-flex", alignItems:"center", gap:3}}>⚙️ comando</span>
               </span>
             </div>
             {(smoothParams || stageDetail.params).map((p, i) => {
@@ -258,10 +259,16 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
                 {(smoothControls || stageDetail.controls).map((c, i) => {
                   const pct = typeof c.value === "number" ? Math.round(c.value * 10) / 10 : c.value;
                   const barColor = pct > 80 ? t.red : pct > 60 ? t.orange : t.green;
+                  const cmdTag = dataSourceTag("command");
                   return (
                     <div key={i} style={{flex:"1 1 140px", padding:"10px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`}}>
                       <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
-                        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14, color:t.text}}>{c.label}</span>
+                        <div style={{display:"flex", flexDirection:"column"}}>
+                          <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14, color:t.text}}>{c.label}</span>
+                          <span title={cmdTag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:t.textMuted, marginTop:2}}>
+                            <span style={{fontSize:9}}>{cmdTag.icon}</span>{cmdTag.word}
+                          </span>
+                        </div>
                         <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barColor, fontWeight:700}}>{Number.isInteger(pct) ? pct : pct.toFixed(1)}{c.unit}</span>
                       </div>
                       <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>

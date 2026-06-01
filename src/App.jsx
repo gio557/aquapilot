@@ -3,6 +3,7 @@ import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
 import { NORMATIVA_DEFAULT, NORMATIVA_SETS } from "./constants/normativa";
+import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
@@ -280,6 +281,33 @@ export default function App() {
           fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
           <span style={{animation:"blink 0.6s infinite"}}>⚠</span>
           ALLARME CRITICO: {critAlarms.map(([p]) => p).join(" · ")}
+        </div>
+      )}
+
+      {/* ── EVENT BANNER ── */}
+      {(sim.events?.length > 0) && (
+        <div style={{background:t.surface2, borderBottom:`1px solid ${t.border}`, padding:"6px 20px",
+          display:"flex", alignItems:"center", gap:14, flexWrap:"wrap",
+          fontFamily:"'Share Tech Mono',monospace", fontSize:12, letterSpacing:1}}>
+          <span style={{color:t.textMuted}}>🎬 SCENARI ATTIVI:</span>
+          {sim.events.map(ev => {
+            const def = EVENT_TYPES[ev.type];
+            if (!def) return null;
+            const secs = ev.remaining != null ? Math.ceil(ev.remaining * 0.5) : null;
+            return (
+              <span key={ev.id} style={{display:"flex", alignItems:"center", gap:6, padding:"2px 10px",
+                borderRadius:5, background:`${def.color}1a`, border:`1px solid ${def.color}55`, color:def.color}}>
+                <span>{def.icon}</span>{def.label}
+                {secs != null && <span style={{color:t.textMuted}}>· ~{secs}s</span>}
+              </span>
+            );
+          })}
+          <button onClick={() => setShowControlRoom(true)}
+            style={{marginLeft:"auto", padding:"3px 10px", borderRadius:5, cursor:"pointer",
+              background:t.surface3, border:`1px solid ${t.border}`, color:t.textSec,
+              fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:12}}>
+            Gestisci →
+          </button>
         </div>
       )}
 

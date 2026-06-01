@@ -2,6 +2,7 @@ import { applyAutoCorrect } from "./autoCorrect";
 import { STAGE_PROCESSORS, initStageState } from "./stageProcessors";
 import { STAGE_META } from "../constants/stages";
 import { DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
+import { EVENT_TYPES } from "../constants/events";
 
 export function initTrend() {
   const pts = [];
@@ -48,6 +49,7 @@ export const INIT_SIM = {
   stages:       STAGE_META,
   stageStates:  null,   // per-stage persistent state (array parallel to stageConfig)
   qHistory: [],
+  events: [],   // scenari/eventi attivi (vedi constants/events.js)
   output: { Q: 1245, COD: 22.4, BOD5: 8.1, TSS: 7.3, NH4: 0.80, pH: 7.2, T: 18.4, O2: 4.5 },
   stageEnergy: [0.35, 0.55, 13.5, 0.65, 0.32],
   energy: { kw: 15.4, kwh: 128 },
@@ -118,13 +120,32 @@ export function simTick(s) {
   const round1 = v => Math.round(v * 10) / 10;
   const round2 = v => Math.round(v * 100) / 100;
 
-  // ── Inlet water with process noise ──────────────────────────────────────────
-  const iQ   = Math.max(400,  s.inlet.Q    * (1 + noise(0.08)));
-  const iCOD = Math.max(80,   s.inlet.COD  * (1 + noise(0.12)));
-  const iBOD = Math.max(30,   s.inlet.BOD5 * (1 + noise(0.12)));
-  const iTSS = Math.max(40,   s.inlet.TSS  * (1 + noise(0.12)));
-  const iNH4 = Math.max(3,    s.inlet.NH4  * (1 + noise(0.08)));
-  const ipH  = Math.max(5.5, Math.min(10, s.inlet.pH + (Math.random()-0.5)*0.02));
+  // ── Active events: aggregate modifiers ──────────────────────────────────────
+  const events = Array.isArray(s.events) ? s.events : [];
+  const evMod = { Q:1, COD:1, BOD5:1, TSS:1, NH4:1, pH_delta:0 };
+  let blowerCap = 100, sludgeRecycleCap = 100;
+  for (const ev of events) {
+    const def = EVENT_TYPES[ev.type];
+    if (!def) continue;
+    if (def.inlet) {
+      for (const k of ["Q","COD","BOD5","TSS","NH4"]) {
+        if (def.inlet[k] != null) evMod[k] *= def.inlet[k];
+      }
+      if (def.inlet.pH_delta) evMod.pH_delta += def.inlet.pH_delta;
+    }
+    if (def.actuator) {
+      if (def.actuator.blowerCap        != null) blowerCap        = Math.min(blowerCap,        def.actuator.blowerCap);
+      if (def.actuator.sludgeRecycleCap != null) sludgeRecycleCap = Math.min(sludgeRecycleCap, def.actuator.sludgeRecycleCap);
+    }
+  }
+
+  // ── Inlet water with process noise + event modifiers ────────────────────────
+  const iQ   = Math.max(400,  s.inlet.Q    * evMod.Q    * (1 + noise(0.08)));
+  const iCOD = Math.max(80,   s.inlet.COD  * evMod.COD  * (1 + noise(0.12)));
+  const iBOD = Math.max(30,   s.inlet.BOD5 * evMod.BOD5 * (1 + noise(0.12)));
+  const iTSS = Math.max(40,   s.inlet.TSS  * evMod.TSS  * (1 + noise(0.12)));
+  const iNH4 = Math.max(3,    s.inlet.NH4  * evMod.NH4  * (1 + noise(0.08)));
+  const ipH  = Math.max(5.0, Math.min(10, s.inlet.pH + evMod.pH_delta + (Math.random()-0.5)*0.02));
   const iT   = Math.max(10,  Math.min(35, s.inlet.T  + (Math.random()-0.5)*0.05));
 
   const waterInlet = { COD:iCOD, BOD5:iBOD, TSS:iTSS, NH4:iNH4, NO3:0, pH:ipH, T:iT, Q:iQ };
@@ -135,14 +156,16 @@ export function simTick(s) {
   const stages      = s.stages        ?? [];  // stage meta array { name, ... }
   const prevStates  = Array.isArray(s.stageStates) ? s.stageStates : [];
 
-  // Globals passed to every processor
+  // Globals passed to every processor — actuators limited by active faults
+  const effBlower        = Math.min(s.blower,        blowerCap);
+  const effSludgeRecycle = Math.min(s.sludgeRecycle, sludgeRecycleCap);
   let O2   = s.O2;
   let MLSS = s.MLSS;
   const globals = {
     dt, noise, round1, round2, tgt,
     iQ, inlet: s.inlet,
-    blower:        s.blower,
-    sludgeRecycle: s.sludgeRecycle,
+    blower:        effBlower,
+    sludgeRecycle: effSludgeRecycle,
     coagulant:     s.coagulant,
     naoh:          s.naoh,
     h2so4:         s.h2so4,
@@ -286,8 +309,19 @@ export function simTick(s) {
   // ── autoCorrect ───────────────────────────────────────────────────────────────
   const { changes: acChanges, actions: stageActions } = applyAutoCorrect(s, output, O2, MLSS, stageIndexMap);
 
+  // Enforce actuator caps on the persisted values so a fault can't be overridden
+  // by the operator slider or by auto-correction until the event ends.
+  const persistedBlower = Math.min(acChanges.blower        ?? s.blower,        blowerCap);
+  const persistedSludge = Math.min(acChanges.sludgeRecycle ?? s.sludgeRecycle, sludgeRecycleCap);
+
+  // ── Advance event countdowns, drop the expired ones ─────────────────────────
+  const updatedEvents = events
+    .map(ev => (ev.remaining != null ? { ...ev, remaining: ev.remaining - 1 } : ev))
+    .filter(ev => ev.remaining == null || ev.remaining > 0);
+
   return {
     ...s, ...acChanges,
+    blower: persistedBlower, sludgeRecycle: persistedSludge,
     tick: newTick, O2, MLSS: Math.round(MLSS),
     stageEff: stageEffArr, output, stageOutputs: stageOutputsArr, stageDetails: stageDetailsArr,
     stageEnergy: stageEnergyArr, energy: { kw, kwh },
@@ -295,5 +329,6 @@ export function simTick(s) {
     trend, alarms, alarmState: newAS,
     stageActions, sandClassifier, grigliaturaState,
     stageStates: newStageStates,
+    events: updatedEvents,
   };
 }

@@ -1,3 +1,18 @@
+// Trend metrics plottable on charts → the sensor that must be enabled to show them.
+// BOD5 is derived from the COD analyzer; O2 from the dissolved-oxygen probe, etc.
+export const TREND_METRIC_SENSOR = {
+  COD: "cod", BOD5: "cod", TSS: "tss", NH4: "nh4", pH: "ph", O2: "o2",
+};
+
+// Returns the trend metrics that a stage can display, based on its enabled sensors.
+export function stageTrendMetrics(stageConfig) {
+  const sensors = stageConfig?.sensors;
+  if (!sensors) return [];
+  return Object.keys(TREND_METRIC_SENSOR).filter(
+    m => sensors[TREND_METRIC_SENSOR[m]]?.enabled === true
+  );
+}
+
 export const SENSOR_TYPES = {
   flow:   { label: "Misuratore portata",          unit: "m³/h",  icon: "〰" },
   level:  { label: "Sensore livello",             unit: "m",     icon: "📶" },

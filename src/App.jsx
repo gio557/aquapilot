@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
-import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
+import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig, stageTrendMetrics } from "./constants/stageConfig";
 import { NORMATIVA_DEFAULT, NORMATIVA_SETS } from "./constants/normativa";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
@@ -106,6 +106,7 @@ export default function App() {
   const [selectedStage, setSelectedStage] = useState(null);
   const [timeRange, setTimeRange] = useState("1h");
   const [activeTrends, setActiveTrends] = useState(["COD","O2"]);
+  const [trendNode, setTrendNode] = useState("plant"); // "plant" | stage index
   const [clock, setClock] = useState(new Date());
 
   useEffect(() => {
@@ -116,9 +117,26 @@ export default function App() {
   const activeAlarms = Object.entries(sim.alarmState || {}).filter(([,v]) => v !== "OK");
   const critAlarms   = activeAlarms.filter(([,v]) => v === "ALTO");
 
+  // Reset to plant view if the selected stage node no longer exists
+  useEffect(() => {
+    if (trendNode !== "plant" && trendNode >= stages.length) setTrendNode("plant");
+  }, [stages.length, trendNode]);
+
+  // Metrics available for the selected node (gen. impianto = all sensors monitored)
+  const nodeMetrics = trendNode === "plant"
+    ? TREND_KEYS.map(k => k.key)
+    : stageTrendMetrics(stageConfig[trendNode]);
+
   const trendData = (() => {
     const pts = { "15m":15, "1h":60, "6h":72, "24h":96 }[timeRange] || 60;
-    return (sim.trend || []).slice(-pts);
+    const win = (sim.trend || []).slice(-pts);
+    if (trendNode === "plant") return win;
+    // Remap to the selected stage's output water; points before this stage
+    // existed are simply left without series keys (gaps in the line).
+    return win.map(pt => {
+      const sw = pt.stages?.[trendNode];
+      return sw ? { t: pt.t, ...sw } : { t: pt.t };
+    });
   })();
 
   const handleAddStage = (stageType) => {
@@ -445,8 +463,45 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              {/* node selector — one button per active stage + GEN. IMPIANTO */}
+              <div style={{display:"flex", gap:4, flexWrap:"wrap", marginBottom:8,
+                paddingBottom:8, borderBottom:`1px solid ${t.border}`}}>
+                {stages.map((st, i) => {
+                  const active = trendNode === i;
+                  const hasMetrics = stageTrendMetrics(stageConfig[i]).length > 0;
+                  return (
+                    <button key={st.id ?? i} onClick={() => setTrendNode(i)}
+                      title={hasMetrics ? "" : "Nessun sensore di qualità abilitato in questo stadio"}
+                      style={{padding:"3px 9px", borderRadius:4, cursor:"pointer",
+                        fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
+                        opacity: hasMetrics ? 1 : 0.5,
+                        border:`1px solid ${active?t.accent:t.border}`,
+                        background:active?`${t.accent}18`:t.surface2,
+                        color:active?t.accent:t.textSec}}>
+                      ST-{String(i+1).padStart(2,"0")}
+                    </button>
+                  );
+                })}
+                <button onClick={() => setTrendNode("plant")}
+                  style={{padding:"3px 11px", borderRadius:4, cursor:"pointer",
+                    fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, fontWeight:700,
+                    border:`1px solid ${trendNode==="plant"?t.green:t.border}`,
+                    background:trendNode==="plant"?`${t.green}18`:t.surface2,
+                    color:trendNode==="plant"?t.green:t.textSec}}>
+                  GEN. IMPIANTO
+                </button>
+                <span style={{marginLeft:"auto", alignSelf:"center", fontFamily:"'Rajdhani',sans-serif",
+                  fontSize:12, color:t.textMuted, letterSpacing:1}}>
+                  {trendNode==="plant" ? "Uscita impianto" : `Uscita ${stages[trendNode]?.name ?? ""}`}
+                </span>
+              </div>
+              {/* metric toggles — only sensors enabled on the selected node */}
               <div style={{display:"flex", gap:4, flexWrap:"wrap", marginBottom:8}}>
-                {TREND_KEYS.map(tk => (
+                {nodeMetrics.length === 0 ? (
+                  <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13, color:t.textMuted, padding:"3px 0"}}>
+                    Nessun sensore di qualità abilitato — configura i sensori di questo stadio.
+                  </span>
+                ) : TREND_KEYS.filter(tk => nodeMetrics.includes(tk.key)).map(tk => (
                   <button key={tk.key} onClick={() => setActiveTrends(prev =>
                     prev.includes(tk.key) ? prev.filter(k=>k!==tk.key) : [...prev, tk.key]
                   )}
@@ -466,9 +521,9 @@ export default function App() {
                     <XAxis dataKey="t" tick={{fill:t.textMuted, fontSize:11, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false} interval={Math.max(0, Math.ceil(trendData.length / 8) - 1)}/>
                     <YAxis tick={{fill:t.textMuted, fontSize:11, fontFamily:"'Share Tech Mono',monospace"}} tickLine={false} axisLine={false}/>
                     <Tooltip content={<CustomTooltip t={t}/>}/>
-                    {TREND_KEYS.filter(tk => activeTrends.includes(tk.key)).map(tk => (
+                    {TREND_KEYS.filter(tk => activeTrends.includes(tk.key) && nodeMetrics.includes(tk.key)).map(tk => (
                       <Line key={tk.key} type="monotone" dataKey={tk.key} stroke={tk.color}
-                        strokeWidth={1.5} dot={false} isAnimationActive={false}/>
+                        strokeWidth={1.5} dot={false} isAnimationActive={false} connectNulls/>
                     ))}
                   </LineChart>
                 </ResponsiveContainer>

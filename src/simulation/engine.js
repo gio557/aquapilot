@@ -288,6 +288,17 @@ export function simTick(s) {
     ? [...newEvents, ...s.alarms.slice(0, 6)]
     : s.alarms;
 
+  // ── Per-stage output water (for per-stage trend / history nodes) ───────────────
+  // O2 is a global (biological reactor) value; only stages with an O2 sensor show it.
+  const stageWater = stageWaterArr.map(w => ({
+    COD:  round1(w.COD),
+    BOD5: round1(w.BOD5),
+    TSS:  round1(w.TSS),
+    NH4:  round2(w.NH4),
+    pH:   round2(w.pH),
+    O2:   round2(O2),
+  }));
+
   // ── Trend ─────────────────────────────────────────────────────────────────────
   const newTick = s.tick + 1;
   const TEVERY  = Math.max(1, Math.round(6 / s.speed));
@@ -303,6 +314,7 @@ export function simTick(s) {
       NH4:  +finalWater.NH4.toFixed(2),
       pH:   +finalWater.pH.toFixed(2),
       O2:   +O2.toFixed(2),
+      stages: stageWater,
     }];
   }
 
@@ -324,7 +336,7 @@ export function simTick(s) {
     blower: persistedBlower, sludgeRecycle: persistedSludge,
     tick: newTick, O2, MLSS: Math.round(MLSS),
     stageEff: stageEffArr, output, stageOutputs: stageOutputsArr, stageDetails: stageDetailsArr,
-    stageEnergy: stageEnergyArr, energy: { kw, kwh },
+    stageWater, stageEnergy: stageEnergyArr, energy: { kw, kwh },
     qHistory: [...(s.qHistory||[]).slice(-59), round1(iQ)],
     trend, alarms, alarmState: newAS,
     stageActions, sandClassifier, grigliaturaState,

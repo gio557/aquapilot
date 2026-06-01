@@ -250,6 +250,7 @@ export default function StoricaPage({ t }) {
   const [selectedIdx,   setSelectedIdx]   = useState(0);
   const [activeParams,  setActiveParams]  = useState(["COD", "TSS", "O2"]);
   const [highlightTs,   setHighlightTs]   = useState(null);
+  const [histNode,      setHistNode]      = useState("plant"); // "plant" | stage index
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -318,12 +319,29 @@ export default function StoricaPage({ t }) {
   const secHd = { fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, letterSpacing:2,
     color:t.textSec, textTransform:"uppercase", marginBottom:14, display:"flex", alignItems:"center", gap:6 };
 
-  // chart data: full day snapshots mapped to recharts-friendly format
-  const chartData = useMemo(() => daySnaps.slice(windowStart, selectedIdx + 1).map(s => ({
-    t: fmtTime(new Date(s.t)),
-    COD: s.COD, BOD5: s.BOD5, TSS: s.TSS, NH4: s.NH4, pH: s.pH, O2: s.O2,
-    _ts: s.t,
-  })), [daySnaps, windowStart, selectedIdx]);
+  // available stage nodes for the current snapshot (from saved stageNodes)
+  const stageNodes = snap?.stageNodes ?? null;
+
+  // reset to plant view when the selected node is unavailable for this snapshot
+  useEffect(() => {
+    if (histNode !== "plant" && (!stageNodes || histNode >= stageNodes.length))
+      setHistNode("plant");
+  }, [stageNodes, histNode]);
+
+  // metrics available for the selected node (plant = all params)
+  const nodeMetrics = histNode === "plant"
+    ? ALL_PARAMS
+    : (stageNodes?.[histNode]?.metrics ?? []);
+
+  // chart data: full day snapshots mapped to recharts-friendly format.
+  // For a stage node, read that stage's saved output water; gaps where absent.
+  const chartData = useMemo(() => daySnaps.slice(windowStart, selectedIdx + 1).map(s => {
+    const base = { t: fmtTime(new Date(s.t)), _ts: s.t };
+    if (histNode === "plant")
+      return { ...base, COD: s.COD, BOD5: s.BOD5, TSS: s.TSS, NH4: s.NH4, pH: s.pH, O2: s.O2 };
+    const sw = s.stages?.[histNode];
+    return sw ? { ...base, ...sw } : base;
+  }), [daySnaps, windowStart, selectedIdx, histNode]);
 
   const snapTimeStr = snap ? fmtTime(new Date(snap.t)) : null;
 
@@ -463,9 +481,9 @@ export default function StoricaPage({ t }) {
                 </div>
               </div>
 
-              {/* mini sparklines for quick orientation */}
+              {/* mini sparklines for quick orientation — only metrics available on the node */}
               <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:4}}>
-                {ALL_PARAMS.map(p => (
+                {ALL_PARAMS.filter(p => nodeMetrics.includes(p)).map(p => (
                   <button key={p} onClick={() => setActiveParams(prev =>
                     prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
                   )} style={{
@@ -476,6 +494,11 @@ export default function StoricaPage({ t }) {
                     color:activeParams.includes(p) ? PARAM_COLORS[p] : t.textSec,
                   }}>{p}</button>
                 ))}
+                {nodeMetrics.length === 0 && (
+                  <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13, color:t.textMuted}}>
+                    Nessun sensore di qualità abilitato su questo stadio
+                  </span>
+                )}
               </div>
             </>
           )}
@@ -577,9 +600,39 @@ export default function StoricaPage({ t }) {
               TREND GIORNALIERO — {selectedKey?.split("-").reverse().join("/")}
             </div>
             <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.textMuted, letterSpacing:1}}>
-              {chartData.length} campioni · cursore ↕ puntatore corrente
+              {chartData.length} campioni · {histNode==="plant" ? "uscita impianto" : `uscita ${stageNodes?.[histNode]?.name ?? ""}`}
             </div>
           </div>
+          {/* node selector — one per saved stage + GEN. IMPIANTO */}
+          {stageNodes && stageNodes.length > 0 && (
+            <div style={{display:"flex", gap:4, flexWrap:"wrap", marginBottom:14,
+              paddingBottom:12, borderBottom:`1px solid ${t.border}`}}>
+              {stageNodes.map((node, i) => {
+                const active = histNode === i;
+                const hasMetrics = (node.metrics?.length ?? 0) > 0;
+                return (
+                  <button key={i} onClick={() => setHistNode(i)}
+                    title={hasMetrics ? node.name : `${node.name} — nessun sensore di qualità abilitato`}
+                    style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
+                      fontFamily:"'Share Tech Mono',monospace", fontSize:12, letterSpacing:1,
+                      opacity: hasMetrics ? 1 : 0.5,
+                      border:`1px solid ${active?t.accent:t.border}`,
+                      background:active?`${t.accent}22`:t.surface2,
+                      color:active?t.accent:t.textSec}}>
+                    ST-{String(i+1).padStart(2,"0")}
+                  </button>
+                );
+              })}
+              <button onClick={() => setHistNode("plant")}
+                style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", fontWeight:700,
+                  fontFamily:"'Share Tech Mono',monospace", fontSize:12, letterSpacing:1,
+                  border:`1px solid ${histNode==="plant"?t.green:t.border}`,
+                  background:histNode==="plant"?`${t.green}22`:t.surface2,
+                  color:histNode==="plant"?t.green:t.textSec}}>
+                GEN. IMPIANTO
+              </button>
+            </div>
+          )}
           {chartData.length < 2 ? (
             <div style={{height:260, display:"flex", flexDirection:"column", alignItems:"center",
               justifyContent:"center", gap:12}}>
@@ -618,10 +671,10 @@ export default function StoricaPage({ t }) {
                     stroke={t.yellow} strokeDasharray="3 2" strokeWidth={2.5}
                     label={{ value:"★", fill:t.yellow, fontSize:14, position:"insideTopLeft" }} />
                 )}
-                {ALL_PARAMS.filter(p => activeParams.includes(p)).map(p => (
+                {ALL_PARAMS.filter(p => activeParams.includes(p) && nodeMetrics.includes(p)).map(p => (
                   <Line key={p} type="monotone" dataKey={p}
                     stroke={PARAM_COLORS[p]} strokeWidth={2}
-                    dot={false} isAnimationActive={false} />
+                    dot={false} isAnimationActive={false} connectNulls />
                 ))}
               </LineChart>
             </ResponsiveContainer>

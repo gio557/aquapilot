@@ -265,20 +265,34 @@ export function simTick(s) {
 
   CHECKS.forEach(c => {
     let sev = "OK";
+    let limit = null;   // threshold actually breached (for the alarm message)
     if (c.inv) {
       sev = c.v < c.crit ? "ALTO" : c.v < c.warn ? "MEDIO" : "OK";
+      limit = sev === "ALTO" ? c.crit : sev === "MEDIO" ? c.warn : null;
     } else if (c.low_w !== undefined) {
       if (c.v < c.low_c || c.v > c.high_c) sev = "ALTO";
       else if (c.v < c.low_w || c.v > c.high_w) sev = "MEDIO";
+      if (sev !== "OK") {
+        const tooHigh = c.v > c.high_w;
+        limit = tooHigh
+          ? (sev === "ALTO" ? c.high_c : c.high_w)
+          : (sev === "ALTO" ? c.low_c  : c.low_w);
+      }
     } else {
       sev = c.v > c.crit ? "ALTO" : c.v > c.warn ? "MEDIO" : "OK";
+      limit = sev === "ALTO" ? c.crit : sev === "MEDIO" ? c.warn : null;
     }
     newAS[c.p] = sev;
     if (sev !== "OK" && sev !== prevAS[c.p]) {
+      const dec = c.unit === "" ? 2 : 1;
+      const u = c.unit ? " " + c.unit : "";
+      const limStr = limit != null ? ` su ${(+limit).toFixed(dec)}${u}` : "";
       newEvents.push({
         id: Date.now() + Math.random(),
         time: hhmm, sev, auto: true,
-        msg: `${c.p} ${c.inv?"sotto":"oltre"} soglia: ${c.v.toFixed(c.unit===""?2:1)} ${c.unit}`,
+        msg: `${c.p} ${c.inv?"sotto":"oltre"} soglia: ${c.v.toFixed(dec)}${u}${limStr}`,
+        value: +c.v.toFixed(dec), limit: limit != null ? +(+limit).toFixed(dec) : null,
+        unit: c.unit, param: c.p,
         causa: c.causa,
       });
     }

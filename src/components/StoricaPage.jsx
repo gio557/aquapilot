@@ -258,6 +258,9 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
   const [selectedKey,   setSelectedKey]   = useState(null);
   const [windowStart,   setWindowStart]   = useState(0);
   const [selectedIdx,   setSelectedIdx]   = useState(0);
+  // Punto "ispezionato" sul grafico, indipendente dalla finestra dello slider:
+  // null = segue il bordo destro (selectedIdx); altrimenti è l'indice cliccato.
+  const [focusIdx,      setFocusIdx]      = useState(null);
   const [activeParams,  setActiveParams]  = useState(["COD", "TSS", "O2"]);
   const [highlightTs,   setHighlightTs]   = useState(null);
   const [histNode,      setHistNode]      = useState("plant"); // "plant" | stage index
@@ -274,7 +277,10 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
     return (byDate[selectedKey] || []).slice().sort((a, b) => a.t - b.t);
   }, [byDate, selectedKey]);
 
-  const snap = daySnaps[selectedIdx] ?? null;
+  // L'indice del cursore dei pannelli: il punto in focus se impostato, altrimenti
+  // il bordo destro della finestra. Clamp entro i limiti della finestra visibile.
+  const cursorIdx = focusIdx != null ? Math.min(Math.max(focusIdx, windowStart), selectedIdx) : selectedIdx;
+  const snap = daySnaps[cursorIdx] ?? null;
 
   // auto-select most recent day on load
   useEffect(() => {
@@ -291,7 +297,11 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
     setWindowStart(0);
     setSelectedIdx(daySnaps.length > 0 ? daySnaps.length - 1 : 0);
     setHighlightTs(null);
+    setFocusIdx(null);
   }, [selectedKey]);
+
+  // muovendo lo slider (finestra) il focus torna a seguire il bordo destro
+  useEffect(() => { setFocusIdx(null); }, [windowStart, selectedIdx]);
 
   const nearby = useMemo(() => {
     if (!snap) return [];
@@ -379,7 +389,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
     const ts = p?._ts;
     if (ts == null) return;
     const idx = daySnaps.findIndex(s => s.t === ts);
-    if (idx >= 0) setSelectedIdx(idx);
+    if (idx >= 0) setFocusIdx(idx);   // sposta solo il cursore-pannelli, non la finestra
     setHighlightTs(ts);
   }, [daySnaps]);
 
@@ -500,7 +510,8 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
                 </div>
                 <div style={{fontFamily:"'Rajdhani',sans-serif", fontSize:14, color:t.textMuted,
                   marginTop:4, letterSpacing:1}}>
-                  Snapshot {selectedIdx + 1} di {daySnaps.length}
+                  Snapshot {cursorIdx + 1} di {daySnaps.length}
+                  {focusIdx != null ? " · punto selezionato" : ""}
                   {snap?.auto ? " · AUTO-CORREZIONE ATTIVA" : " · MODALITÀ MANUALE"}
                 </div>
               </div>
@@ -718,11 +729,16 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
               </div>
             </div>
           ) : (
-          <div style={{height:260}}>
+          <div style={{height:260, cursor:"pointer"}}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{top:6, right:8, bottom:0, left:-14}}
-                onClick={(e) => { const p = e?.activePayload?.[0]?.payload; if (p) pickAnomaly(p); }}
-                style={{cursor:"pointer"}}>
+                onClick={(state) => {
+                  if (!state) return;
+                  const i = state.activeTooltipIndex;
+                  const p = (typeof i === "number" && chartData[i]) ? chartData[i]
+                          : state.activePayload?.[0]?.payload;
+                  if (p) pickAnomaly(p);
+                }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
                 <XAxis dataKey="t"
                   interval={Math.max(0, Math.ceil(chartData.length / 10) - 1)}

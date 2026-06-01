@@ -3,6 +3,7 @@ import { STAGE_PROCESSORS, initStageState } from "./stageProcessors";
 import { STAGE_META } from "../constants/stages";
 import { DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { EVENT_TYPES } from "../constants/events";
+import { QUALITY_LIMITS } from "../constants/limits";
 
 export function initTrend() {
   const pts = [];
@@ -252,14 +253,14 @@ export function simTick(s) {
   const kw  = +(stageEnergyArr.reduce((a, b) => a + b, 0)).toFixed(1);
   const kwh = +(s.energy.kwh + kw / 60 * dt).toFixed(1);
 
-  // ── Alarm checks ─────────────────────────────────────────────────────────────
+  // ── Alarm checks (thresholds from the shared QUALITY_LIMITS source) ───────────
   const CHECKS = [
-    {p:"COD",  v:finalWater.COD,  warn:125, crit:160,  unit:"mg/L", causa:"Efficienza biologica ridotta"},
-    {p:"BOD₅", v:finalWater.BOD5, warn:25,  crit:40,   unit:"mg/L", causa:"Carico organico elevato"},
-    {p:"TSS",  v:finalWater.TSS,  warn:35,  crit:80,   unit:"mg/L", causa:"Sedimentazione inefficiente"},
-    {p:"NH₄",  v:finalWater.NH4,  warn:8,   crit:15,   unit:"mg/L", causa:"Nitrificazione insufficiente"},
-    {p:"O₂",   v:O2,              warn:2.0, crit:1.5,  unit:"mg/L", causa:"Aerazione insufficiente", inv:true},
-    {p:"pH",   v:finalWater.pH,   low_w:6.5,low_c:5.5, high_w:8.5, high_c:9.5, unit:"", causa:"Dosaggio reagente"},
+    {p:"COD",  v:finalWater.COD,  ...QUALITY_LIMITS.COD},
+    {p:"BOD₅", v:finalWater.BOD5, ...QUALITY_LIMITS.BOD5},
+    {p:"TSS",  v:finalWater.TSS,  ...QUALITY_LIMITS.TSS},
+    {p:"NH₄",  v:finalWater.NH4,  ...QUALITY_LIMITS.NH4},
+    {p:"O₂",   v:O2,              ...QUALITY_LIMITS.O2},
+    {p:"pH",   v:finalWater.pH,   ...QUALITY_LIMITS.pH},
   ];
   const prevAS = s.alarmState || {};
   const newAS  = {};

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { loadHistory, loadInterventions } from "../simulation/learning";
 import { STAGE_META } from "../constants/stages";
 import { STAGE_TREND_DEFS } from "../constants/stageTrend";
+import { QUALITY_LIMITS as QL, MLSS_LIMITS } from "../constants/limits";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -188,8 +189,8 @@ function CalendarWidget({ calMonth, onNav, byDate, selectedKey, onSelect, t }) {
 // ── Quality badge ─────────────────────────────────────────────
 function QBadge({ v, lim, warn, phCheck, o2Check, t, unit, decimals=1 }) {
   let ok, fuori;
-  if (phCheck)  { ok = v >= 6.5 && v <= 8.5; fuori = v < 5.5 || v > 9.5; }
-  else if (o2Check) { ok = v >= 2; fuori = v < 1.5; }
+  if (phCheck)  { ok = v >= QL.pH.low_w && v <= QL.pH.high_w; fuori = v < QL.pH.low_c || v > QL.pH.high_c; }
+  else if (o2Check) { ok = v >= QL.O2.warn; fuori = v < QL.O2.crit; }
   else { ok = v < (warn ?? lim); fuori = lim != null && v >= lim; }
   const c = fuori ? t.red : ok ? t.green : t.orange;
   const label = fuori ? "✗ FUORI" : ok ? "✓ OK" : "⚠ ATT";
@@ -530,9 +531,9 @@ export default function StoricaPage({ t }) {
           <div style={{...card, padding:"20px 22px"}}>
             <div style={{...secHd}}><span style={{color:t.green}}>▸</span>QUALITÀ USCITA</div>
             {[
-              { label:"COD",  v:snap.COD,  unit:"mg/L", lim:125, warn:100 },
-              { label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:25,  warn:20  },
-              { label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:35,  warn:28  },
+              { label:"COD",  v:snap.COD,  unit:"mg/L", lim:QL.COD.warn,  warn:100 },
+              { label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:QL.BOD5.warn, warn:20  },
+              { label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:QL.TSS.warn,  warn:28  },
               { label:"NH4",  v:snap.NH4,  unit:"mg/L", lim:8,   warn:6,  decimals:2 },
               { label:"pH",   v:snap.pH,   unit:"",     phCheck:true,      decimals:2 },
               { label:"O₂",   v:snap.O2,   unit:"mg/L", o2Check:true,      decimals:2 },
@@ -574,17 +575,17 @@ export default function StoricaPage({ t }) {
               {snap.MLSS != null && (
                 <div style={{marginTop:10, padding:"6px 12px", borderRadius:7, fontFamily:"'Share Tech Mono',monospace",
                   fontSize:13, letterSpacing:1,
-                  background: snap.MLSS < 1800 || snap.MLSS > 5500 ? `${t.red}18` :
-                               snap.MLSS < 2500 || snap.MLSS > 4000 ? `${t.orange}18` : `${t.green}18`,
-                  color: snap.MLSS < 1800 || snap.MLSS > 5500 ? t.red :
-                         snap.MLSS < 2500 || snap.MLSS > 4000 ? t.orange : t.green,
-                  border:`1px solid ${ snap.MLSS < 1800 || snap.MLSS > 5500 ? t.red :
-                    snap.MLSS < 2500 || snap.MLSS > 4000 ? t.orange : t.green}44`,
+                  background: snap.MLSS < MLSS_LIMITS.lo_crit || snap.MLSS > MLSS_LIMITS.hi_crit ? `${t.red}18` :
+                               snap.MLSS < MLSS_LIMITS.lo_warn || snap.MLSS > MLSS_LIMITS.hi_warn ? `${t.orange}18` : `${t.green}18`,
+                  color: snap.MLSS < MLSS_LIMITS.lo_crit || snap.MLSS > MLSS_LIMITS.hi_crit ? t.red :
+                         snap.MLSS < MLSS_LIMITS.lo_warn || snap.MLSS > MLSS_LIMITS.hi_warn ? t.orange : t.green,
+                  border:`1px solid ${ snap.MLSS < MLSS_LIMITS.lo_crit || snap.MLSS > MLSS_LIMITS.hi_crit ? t.red :
+                    snap.MLSS < MLSS_LIMITS.lo_warn || snap.MLSS > MLSS_LIMITS.hi_warn ? t.orange : t.green}44`,
                 }}>
-                  {snap.MLSS < 1800 ? "MLSS CRITICO — bassa biomassa" :
-                   snap.MLSS > 5500 ? "MLSS CRITICO — eccesso fanghi" :
-                   snap.MLSS < 2500 ? "MLSS basso" :
-                   snap.MLSS > 4000 ? "MLSS elevato" : "MLSS nella norma"}
+                  {snap.MLSS < MLSS_LIMITS.lo_crit ? "MLSS CRITICO — bassa biomassa" :
+                   snap.MLSS > MLSS_LIMITS.hi_crit ? "MLSS CRITICO — eccesso fanghi" :
+                   snap.MLSS < MLSS_LIMITS.lo_warn ? "MLSS basso" :
+                   snap.MLSS > MLSS_LIMITS.hi_warn ? "MLSS elevato" : "MLSS nella norma"}
                 </div>
               )}
             </div>

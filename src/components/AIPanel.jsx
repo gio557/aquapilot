@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getTrendStats, getInterventionSummary, loadGains, resetLearning } from "../simulation/learning";
+import { QUALITY_LIMITS as QL, MLSS_LIMITS } from "../constants/limits";
 
 function trendLine(stats) {
   if (!stats) return null;
@@ -58,9 +59,9 @@ function generateAIOffline(sim, autoOn) {
       let msg = "INTERVENTO D'EMERGENZA ATTIVO (" + ts + ")\n";
       msg += "Parametri critici: " + crits.map(([p]) => p).join(", ") + "\n\n";
       actions.forEach(a => { msg += "• " + a.text + "\n"; });
-      if (out.O2 < 1.5)
+      if (out.O2 < QL.O2.crit)
         msg += "\nPREVISIONE: Con soffianti al " + sim.blower + "%, l'O2 dovrebbe superare la soglia critica entro " + (sim.mode==="fast"?"2-4":"8-12") + " min.";
-      else if (out.TSS > 80)
+      else if (out.TSS > QL.TSS.crit)
         msg += "\nPREVISIONE: Dosaggio coagulante al " + sim.coagulant + "% — normalizzazione TSS attesa entro " + (sim.mode==="fast"?"5-8":"18-25") + " min.";
       if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return msg;
@@ -85,30 +86,30 @@ function generateAIOffline(sim, autoOn) {
       return m;
     }
     return "Impianto in condizioni ottimali (" + ts + ")\n\n"
-      + "• COD: " + out.COD.toFixed(1) + " mg/L (target 125)\n"
-      + "• BOD5: " + out.BOD5.toFixed(1) + " mg/L (target 25)\n"
-      + "• TSS: " + out.TSS.toFixed(1) + " mg/L (target 35)\n"
-      + "• NH4: " + out.NH4.toFixed(2) + " mg/L (target 8)\n"
-      + "• pH: " + out.pH.toFixed(2) + " (range 6.5-8.5)\n"
+      + "• COD: " + out.COD.toFixed(1) + " mg/L (target " + QL.COD.warn + ")\n"
+      + "• BOD5: " + out.BOD5.toFixed(1) + " mg/L (target " + QL.BOD5.warn + ")\n"
+      + "• TSS: " + out.TSS.toFixed(1) + " mg/L (target " + QL.TSS.warn + ")\n"
+      + "• NH4: " + out.NH4.toFixed(2) + " mg/L (target " + QL.NH4.warn + ")\n"
+      + "• pH: " + out.pH.toFixed(2) + " (range " + QL.pH.low_w + "-" + QL.pH.high_w + ")\n"
       + "• O2: " + out.O2.toFixed(1) + " mg/L\n\n"
       + "Nessun intervento automatico necessario. Soffianti: " + sim.blower + "%, coagulante: " + sim.coagulant + "%."
       + (learnFooter ? "\n\n— APPRENDIMENTO —\n" + learnFooter : "");
   } else {
     const sugg = [];
-    if (out.O2 < 1.5)       sugg.push("URGENTE — O2 critico (" + out.O2.toFixed(1) + " mg/L). Portare le soffianti all'85-95% immediatamente.");
-    else if (out.O2 < 2)    sugg.push("O2 basso (" + out.O2.toFixed(1) + " mg/L). Aumentare le soffianti del 10-15% (attuale: " + sim.blower + "%).");
-    if (out.COD > 160)      sugg.push("COD critico (" + out.COD.toFixed(1) + " mg/L > limite 160). Ridurre carico in ingresso e aumentare HRT.");
-    else if (out.COD > 125) sugg.push("COD oltre target (" + out.COD.toFixed(1) + " mg/L). Aumentare aerazione o ridurre COD in ingresso.");
-    if (out.TSS > 80)       sugg.push("TSS critico (" + out.TSS.toFixed(1) + " mg/L). Portare coagulante all'80-90%.");
-    else if (out.TSS > 35)  sugg.push("TSS oltre target (" + out.TSS.toFixed(1) + " mg/L). Aumentare coagulante al " + Math.min(100,sim.coagulant+15) + "%.");
-    if (out.NH4 > 15)       sugg.push("NH4 critico (" + out.NH4.toFixed(1) + " mg/L). Aerazione insufficiente per nitrificazione.");
-    else if (out.NH4 > 8)   sugg.push("NH4 elevato (" + out.NH4.toFixed(1) + " mg/L). Aumentare aerazione.");
-    if (out.pH < 5.5)       sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 30-40% immediatamente.");
-    else if (out.pH < 6.5)  sugg.push("pH basso (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 15-20%.");
-    else if (out.pH > 9.5)  sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 30-40%.");
-    else if (out.pH > 8.5)  sugg.push("pH alto (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 10-15%.");
-    if (sim.MLSS > 5500)    sugg.push("MLSS elevato (" + sim.MLSS + " mg/L). Ridurre ricircolo fanghi al " + Math.max(20,sim.sludgeRecycle-15) + "%.");
-    else if (sim.MLSS<1800) sugg.push("MLSS basso (" + sim.MLSS + " mg/L). Aumentare ricircolo fanghi al " + Math.min(100,sim.sludgeRecycle+15) + "%.");
+    if (out.O2 < QL.O2.crit)       sugg.push("URGENTE — O2 critico (" + out.O2.toFixed(1) + " mg/L). Portare le soffianti all'85-95% immediatamente.");
+    else if (out.O2 < QL.O2.warn)  sugg.push("O2 basso (" + out.O2.toFixed(1) + " mg/L). Aumentare le soffianti del 10-15% (attuale: " + sim.blower + "%).");
+    if (out.COD > QL.COD.crit)      sugg.push("COD critico (" + out.COD.toFixed(1) + " mg/L > limite " + QL.COD.crit + "). Ridurre carico in ingresso e aumentare HRT.");
+    else if (out.COD > QL.COD.warn) sugg.push("COD oltre target (" + out.COD.toFixed(1) + " mg/L). Aumentare aerazione o ridurre COD in ingresso.");
+    if (out.TSS > QL.TSS.crit)      sugg.push("TSS critico (" + out.TSS.toFixed(1) + " mg/L). Portare coagulante all'80-90%.");
+    else if (out.TSS > QL.TSS.warn) sugg.push("TSS oltre target (" + out.TSS.toFixed(1) + " mg/L). Aumentare coagulante al " + Math.min(100,sim.coagulant+15) + "%.");
+    if (out.NH4 > QL.NH4.crit)      sugg.push("NH4 critico (" + out.NH4.toFixed(1) + " mg/L). Aerazione insufficiente per nitrificazione.");
+    else if (out.NH4 > QL.NH4.warn) sugg.push("NH4 elevato (" + out.NH4.toFixed(1) + " mg/L). Aumentare aerazione.");
+    if (out.pH < QL.pH.low_c)       sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 30-40% immediatamente.");
+    else if (out.pH < QL.pH.low_w)  sugg.push("pH basso (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 15-20%.");
+    else if (out.pH > QL.pH.high_c) sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 30-40%.");
+    else if (out.pH > QL.pH.high_w) sugg.push("pH alto (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 10-15%.");
+    if (sim.MLSS > MLSS_LIMITS.hi_crit)    sugg.push("MLSS elevato (" + sim.MLSS + " mg/L). Ridurre ricircolo fanghi al " + Math.max(20,sim.sludgeRecycle-15) + "%.");
+    else if (sim.MLSS<MLSS_LIMITS.lo_crit) sugg.push("MLSS basso (" + sim.MLSS + " mg/L). Aumentare ricircolo fanghi al " + Math.min(100,sim.sludgeRecycle+15) + "%.");
 
     if (sugg.length === 0)
       return "Parametri nella norma — monitoraggio manuale attivo (" + ts + ")\n\n"

@@ -512,7 +512,7 @@ export default function App() {
                       style={{padding:"2px 9px", borderRadius:4, cursor:"pointer",
                         fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
                         fontWeight: 400,
-                        border:`1px solid ${timeRange===r ? t.accent : t.border}`,
+                        border:`${timeRange===r ? 2 : 1}px solid ${timeRange===r ? t.accent : t.border}`,
                         background: "transparent",
                         color: timeRange===r ? t.text : t.textMuted,
                         opacity: timeRange===r ? 1 : 0.65}}>

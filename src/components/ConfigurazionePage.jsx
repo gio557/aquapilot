@@ -22,9 +22,9 @@ function InfoDot({ text, t }) {
         color:t.accent, fontSize:10, fontFamily:"'Share Tech Mono',monospace", fontWeight:700,
         display:"flex", alignItems:"center", justifyContent:"center", cursor:"help"}}>i</span>
       {show && (
-        <span style={{position:"absolute", right:0, bottom:"calc(100% + 8px)",
+        <span style={{position:"absolute", left:0, bottom:"calc(100% + 8px)",
           width:280, maxWidth:"70vw", background:t.surface, color:t.textSec, border:`1px solid ${t.accent}55`,
-          borderRadius:"8px 8px 0 8px", padding:"10px 12px", fontSize:12.5, fontFamily:"'Rajdhani',sans-serif",
+          borderRadius:"8px 8px 8px 0", padding:"10px 12px", fontSize:12.5, fontFamily:"'Rajdhani',sans-serif",
           fontWeight:500, lineHeight:1.45, boxShadow:t.cardShadow, zIndex:60, whiteSpace:"normal", textTransform:"none"}}>
           {text}
         </span>

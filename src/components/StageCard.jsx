@@ -4,6 +4,20 @@ import MechanicalWidget from "./MechanicalWidget";
 
 const HOLD_MS = 2200;
 
+// EMA smoothing for numeric readouts so they drift gradually instead of
+// flickering on every 500ms tick of process noise (same idea as the dashboard
+// KPIs). Non-finite values pass through untouched.
+function useSmoothed(value, alpha = 0.15) {
+  const ref = useRef(value);
+  const [disp, setDisp] = useState(value);
+  useEffect(() => {
+    if (!Number.isFinite(value)) { ref.current = value; setDisp(value); return; }
+    ref.current = Number.isFinite(ref.current) ? ref.current + alpha * (value - ref.current) : value;
+    setDisp(ref.current);
+  }, [value, alpha]);
+  return disp;
+}
+
 function GrigliaturaBanner({ state, onReset, t }) {
   const PHASES = {
     STANDBY:           { label:"STANDBY",        icon:"✓", rank:0 },
@@ -173,14 +187,29 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
   const sc = stage.status === "ok" ? t.green : stage.status === "warn" ? t.orange : t.red;
 
+  // Smooth the nervous numeric readouts (EFF %, gauge value, ΔH, motor current)
+  const effSm = useSmoothed(eff);
+  const valSm = useSmoothed(stageOutput?.value);
+  const dhSm  = useSmoothed(grigliaturaState?.delta_h, 0.2);
+  const grISm = useSmoothed(grigliaturaState?.corrente_motore, 0.2);
+  const clsISm = useSmoothed(classifierState?.currentDraw, 0.2);
+  const so = stageOutput ? { ...stageOutput, value: Number.isFinite(valSm) ? valSm : stageOutput.value } : stageOutput;
+  const grState = grigliaturaState
+    ? { ...grigliaturaState, delta_h: Number.isFinite(dhSm) ? dhSm : grigliaturaState.delta_h,
+        corrente_motore: Number.isFinite(grISm) ? grISm : grigliaturaState.corrente_motore }
+    : grigliaturaState;
+  const clsState = classifierState
+    ? { ...classifierState, currentDraw: Number.isFinite(clsISm) ? clsISm : classifierState.currentDraw }
+    : classifierState;
+
   // Gauge color: for proximity-to-limit params, warn when ≥80% of limit
   let gaugeColor = t.green;
-  if (stageOutput) {
-    if (stageOutput.higherIsBetter) {
-      const pct = stageOutput.value / stageOutput.target * 100;
+  if (so) {
+    if (so.higherIsBetter) {
+      const pct = so.value / so.target * 100;
       gaugeColor = pct >= 90 ? t.green : pct >= 65 ? t.orange : t.red;
     } else {
-      const pct = stageOutput.value / stageOutput.target * 100;
+      const pct = so.value / so.target * 100;
       gaugeColor = pct >= 100 ? t.red : pct >= 80 ? t.orange : t.green;
     }
   }
@@ -197,7 +226,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
   const bColor = rank === 2 ? t.red : rank === 1 ? t.orange : t.green;
   const bIcon  = stable.sev === "ALTO" ? "🔴" : stable.sev === "MEDIO" ? "🟡" : "🟢";
 
-  const isEfficiency = stageOutput?.higherIsBetter;
+  const isEfficiency = so?.higherIsBetter;
 
   const glowShadow = `0 6px 24px ${bColor}55, 0 2px 8px ${bColor}33`;
 
@@ -223,24 +252,24 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
           <div style={{fontSize:11, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{stage.sub}</div>
         </div>
         <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:sc, fontWeight:700, textAlign:"right"}}>
-          {eff != null ? `${eff}%` : "—"}<div style={{fontSize:9, color:t.textMuted}}>EFF</div>
+          {Number.isFinite(effSm) ? `${Math.round(effSm)}%` : "—"}<div style={{fontSize:9, color:t.textMuted}}>EFF</div>
         </div>
       </div>
 
       {stageOutput && (
         <div style={{display:"flex", justifyContent:"center"}}>
-          {grigliaturaState
-            ? <GrigliaturaBanner state={grigliaturaState} onReset={onGrigliaturaReset} t={t}/>
-            : classifierState?.mode === "continuous"
-              ? <ClassifierBanner state={classifierState} t={t}/>
+          {grState
+            ? <GrigliaturaBanner state={grState} onReset={onGrigliaturaReset} t={t}/>
+            : clsState?.mode === "continuous"
+              ? <ClassifierBanner state={clsState} t={t}/>
               : isEfficiency
-                ? <MechanicalWidget stageOutput={stageOutput} t={t}/>
-                : <Gauge stageOutput={stageOutput} t={t}/>
+                ? <MechanicalWidget stageOutput={so} t={t}/>
+                : <Gauge stageOutput={so} t={t}/>
           }
         </div>
       )}
 
-      {classifierState?.mode === "timed" && <ClassifierMini state={classifierState} t={t}/>}
+      {clsState?.mode === "timed" && <ClassifierMini state={clsState} t={t}/>}
 
       <div style={{
         padding:"7px 10px", borderRadius:7,

@@ -1,23 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <style><![CDATA[
-      @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
-    ]]></style>
-  </defs>
-  <!-- Dark background -->
-  <rect width="64" height="64" rx="10" fill="#040D1A"/>
-  <!-- Thin cyan border accent -->
-  <rect x="1.5" y="1.5" width="61" height="61" rx="8.5" fill="none" stroke="#00CFFF" stroke-width="1.5" stroke-opacity="0.35"/>
-  <!-- A = AQUA, in accent cyan -->
-  <text x="5" y="45"
-    font-family="'Orbitron', 'Courier New', monospace"
+  <!-- White background -->
+  <rect width="64" height="64" rx="8" fill="#ffffff"/>
+  <!-- A — dark blue, geometric bold -->
+  <text x="2" y="48"
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
     font-weight="900"
-    font-size="36"
-    fill="#00CFFF">A</text>
-  <!-- P = PILOT, in green -->
-  <text x="35" y="45"
-    font-family="'Orbitron', 'Courier New', monospace"
+    font-size="42"
+    letter-spacing="-2"
+    fill="#1B3A6B">A</text>
+  <!-- P — same dark blue -->
+  <text x="33" y="48"
+    font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
     font-weight="900"
-    font-size="36"
-    fill="#00E599">P</text>
+    font-size="42"
+    letter-spacing="-2"
+    fill="#1B3A6B">P</text>
 </svg>

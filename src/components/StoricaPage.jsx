@@ -309,6 +309,21 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
     return interventions.filter(i => Math.abs(i.t - snap.t) <= W).sort((a, b) => b.t - a.t);
   }, [snap, interventions]);
 
+  // Fallback: se nell'intorno ±30 min non c'è nulla (es. soffianti sature → nessun
+  // cambio attuatore registrato), mostra comunque gli interventi più vicini nel
+  // tempo, così il pannello non resta mai vuoto quando esistono interventi.
+  const fallbackInterv = useMemo(() => {
+    if (!snap || nearby.length > 0 || interventions.length === 0) return [];
+    return interventions
+      .map(i => ({ ...i, _dist: Math.abs(i.t - snap.t) }))
+      .sort((a, b) => a._dist - b._dist)
+      .slice(0, 8)
+      .sort((a, b) => b.t - a.t);
+  }, [snap, nearby, interventions]);
+
+  const shownInterv = nearby.length > 0 ? nearby : fallbackInterv;
+  const isFallbackInterv = nearby.length === 0 && fallbackInterv.length > 0;
+
   const navMonth = useCallback(dir => {
     setCalMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + dir, 1));
   }, []);
@@ -395,11 +410,11 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
 
   // indice dell'intervento più vicino all'istante evidenziato (per highlight + scroll)
   const hlIntervIdx = useMemo(() => {
-    if (highlightTs == null || nearby.length === 0) return -1;
+    if (highlightTs == null || shownInterv.length === 0) return -1;
     let best = -1, bd = Infinity;
-    nearby.forEach((it, i) => { const d = Math.abs(it.t - highlightTs); if (d < bd) { bd = d; best = i; } });
+    shownInterv.forEach((it, i) => { const d = Math.abs(it.t - highlightTs); if (d < bd) { bd = d; best = i; } });
     return best;
-  }, [highlightTs, nearby]);
+  }, [highlightTs, shownInterv]);
 
   // punto del grafico attualmente sotto il cursore (aggiornato da onMouseMove);
   // usato dal click sul contenitore per sapere quale snapshot selezionare.
@@ -800,13 +815,20 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
               ({nearby.length} trovati)
             </span>
           </div>
-          {nearby.length === 0 ? (
+          {isFallbackInterv && (
+            <div style={{margin:"-4px 0 10px", padding:"7px 10px", borderRadius:7, background:`${t.orange}14`,
+              border:`1px solid ${t.orange}33`, color:t.orange, fontFamily:"'Rajdhani',sans-serif", fontSize:13, lineHeight:1.4}}>
+              Nessun intervento entro ±30 min da questo punto (es. attuatore già saturo).
+              Mostro gli {fallbackInterv.length} interventi più vicini nel tempo.
+            </div>
+          )}
+          {shownInterv.length === 0 ? (
             <div style={{padding:"20px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:15, textAlign:"center"}}>
-              Nessun intervento registrato in questa finestra temporale
+              Nessun intervento di auto-correzione registrato.
             </div>
           ) : (
             <div style={{display:"flex", flexDirection:"column", gap:8, maxHeight:520, overflowY:"auto", paddingRight:6}}>
-              {nearby.map((it, idx) => {
+              {shownInterv.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";
                 const isHl = idx === hlIntervIdx;

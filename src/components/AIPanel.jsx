@@ -153,6 +153,87 @@ async function generateAIOnline(sim, autoOn) {
   return data.content[0]?.text || "Nessuna risposta ricevuta.";
 }
 
+// Renders the plain-text advisor message with a clear visual hierarchy:
+// heading, bullet/numbered items, metric line, and an "apprendimento" footer.
+function AIMessage({ text, t, modeColor }) {
+  const SEP = "— APPRENDIMENTO —";
+  const sepIdx = text.indexOf(SEP);
+  const mainText  = (sepIdx >= 0 ? text.slice(0, sepIdx) : text).trim();
+  const learnText = sepIdx >= 0 ? text.slice(sepIdx + SEP.length).trim() : null;
+
+  const lines = mainText.split("\n");
+  const headIdx = lines.findIndex(l => l.trim() !== "");
+  const heading = headIdx >= 0 ? lines[headIdx].trim() : "";
+  const bodyLines = headIdx >= 0 ? lines.slice(headIdx + 1) : [];
+
+  const isUrgent  = /URGENT|EMERGENZA|CRITIC/i.test(heading);
+  const headColor = isUrgent ? t.red : modeColor;
+  const tm = heading.match(/\((\d{1,2}:\d{2})\)/);
+  const headText = heading.replace(/\s*\(\d{1,2}:\d{2}\)\s*:?\s*$/, "").replace(/:\s*$/, "");
+
+  const renderLine = (line, i) => {
+    const s = line.trim();
+    if (s === "") return <div key={i} style={{ height: 4 }} />;
+
+    if (s.startsWith("•")) {
+      return (
+        <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start", padding:"3px 0" }}>
+          <span style={{ color:headColor, flexShrink:0, fontSize:13, marginTop:1 }}>▪</span>
+          <span style={{ flex:1 }}>{s.replace(/^•\s*/, "")}</span>
+        </div>
+      );
+    }
+    const num = s.match(/^(\d+)\.\s+(.*)$/);
+    if (num) {
+      return (
+        <div key={i} style={{ display:"flex", gap:8, alignItems:"flex-start", padding:"3px 0" }}>
+          <span style={{ color:headColor, fontFamily:"'Share Tech Mono',monospace", fontWeight:700, flexShrink:0, minWidth:18 }}>{num[1]}.</span>
+          <span style={{ flex:1 }}>{num[2]}</span>
+        </div>
+      );
+    }
+    if (s.includes(" | ") && /mg\/L|%|mV|°C/.test(s)) {
+      return (
+        <div key={i} style={{ margin:"6px 0", padding:"7px 10px", background:t.surface2,
+          border:`1px solid ${t.border}`, borderRadius:7, fontFamily:"'Share Tech Mono',monospace",
+          fontSize:12, color:t.textSec, lineHeight:1.6 }}>
+          {s}
+        </div>
+      );
+    }
+    return <div key={i} style={{ padding:"3px 0" }}>{s}</div>;
+  };
+
+  return (
+    <div style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:14, color:t.text, lineHeight:1.5 }}>
+      {heading && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:9,
+          paddingBottom:8, borderBottom:`1px solid ${t.border}` }}>
+          {isUrgent && <span style={{ fontSize:14, animation:"blink 0.7s infinite" }}>⚠</span>}
+          <span style={{ fontWeight:700, fontSize:14, color:headColor, letterSpacing:0.3, flex:1 }}>{headText}</span>
+          {tm && (
+            <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted,
+              background:t.surface2, padding:"1px 7px", borderRadius:4, flexShrink:0 }}>{tm[1]}</span>
+          )}
+        </div>
+      )}
+      <div>{bodyLines.map(renderLine)}</div>
+      {learnText && (
+        <div style={{ marginTop:12, paddingTop:10, borderTop:`1px dashed ${t.border}` }}>
+          <div style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:2,
+            color:t.textMuted, marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ color:modeColor }}>◆</span>APPRENDIMENTO
+          </div>
+          {learnText.split("\n").filter(l => l.trim()).map((l, i) => (
+            <div key={i} style={{ fontFamily:"'Rajdhani',sans-serif", fontSize:12.5, color:t.textMuted,
+              lineHeight:1.5, padding:"2px 0" }}>{l.trim()}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AIPanel({ sim, autoOn, t }) {
   const [engine, setEngine] = useState("offline");
   const [msg, setMsg] = useState({text:"", loading:true, ts:null});
@@ -188,61 +269,78 @@ export default function AIPanel({ sim, autoOn, t }) {
   }, [autoOn, engine]);
 
   const modeColor = autoOn ? t.green : t.orange;
-  const modeLabel = autoOn ? "SPIEGAZIONE AUTO" : "SUGGERIMENTO MANUALE";
+  const modeLabel = autoOn ? "AUTO-CORREZIONE" : "GUIDA MANUALE";
   const modeIcon  = autoOn ? "🤖" : "💡";
+
+  const iconBtn = {
+    width:30, height:28, display:"flex", alignItems:"center", justifyContent:"center",
+    borderRadius:6, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:13,
+    border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec,
+  };
 
   return (
     <div style={{background:t.surface, border:`2px solid ${modeColor}66`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", flex:1, minHeight:180, position:"relative", overflow:"hidden", boxShadow:t.cardShadow}}>
       <div style={{position:"absolute", inset:0, opacity:0.03, background:`radial-gradient(ellipse at top,${modeColor},transparent 60%)`, pointerEvents:"none"}}/>
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10}}>
-        <div>
-          <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:2, textTransform:"uppercase", color:t.textSec, marginBottom:5, display:"flex", alignItems:"center", gap:6}}>
-            <span style={{color:modeColor}}>▸</span>AI ADVISOR
-          </div>
-          <span style={{fontSize:12, padding:"2px 8px", borderRadius:4, background:`${modeColor}22`, color:modeColor, border:`1px solid ${modeColor}55`, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>{modeIcon} {modeLabel}</span>
+
+      {/* ── HEADER ── */}
+      {/* Row 1: titolo + selezione motore */}
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:9}}>
+        <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:2, textTransform:"uppercase", color:t.textSec, display:"flex", alignItems:"center", gap:6}}>
+          <span style={{color:modeColor}}>▸</span>AI ADVISOR
         </div>
-        <div style={{display:"flex", flexDirection:"column", gap:4, alignItems:"flex-end"}}>
-          <div style={{display:"flex", gap:3}}>
-            <button onClick={() => setEngine("offline")}
-              style={{padding:"3px 9px", borderRadius:4, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${engine==="offline"?modeColor:t.border}`, background:engine==="offline"?`${modeColor}22`:t.surface2, color:engine==="offline"?modeColor:t.textMuted}}>
-              LOCAL
-            </button>
-            <button
-              title="Richiede backend server (prossimamente)"
-              onClick={() => alert("Funzione CLOUD richiede un server backend.\nDisponibile nella prossima versione.")}
-              style={{padding:"3px 9px", borderRadius:4, cursor:"not-allowed", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${t.border}44`, background:t.surface2, color:t.textMuted+"88", opacity:0.5}}>
-              CLOUD 🔒
-            </button>
-          </div>
-          <div style={{display:"flex", gap:3}}>
-            <button onClick={() => { if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn, engine); } }}
-              title="Reset apprendimento"
-              style={{padding:"3px 8px", borderRadius:4, cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:`1px solid ${t.border}`, background:t.surface2, color:t.textMuted}}>
-              ⟲
-            </button>
-            <button onClick={() => doRefresh(sim, autoOn, engine)} disabled={msg.loading}
-              style={{padding:"3px 10px", borderRadius:4, cursor:msg.loading?"wait":"pointer", fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13, border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
-              {msg.loading ? "..." : "Aggiorna"}
-            </button>
-          </div>
+        <div style={{display:"flex", gap:0, border:`1px solid ${t.border}`, borderRadius:6, overflow:"hidden", flexShrink:0}}>
+          <button onClick={() => setEngine("offline")}
+            style={{padding:"4px 11px", cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:"none", borderRight:`1px solid ${t.border}`, background:engine==="offline"?`${modeColor}22`:"transparent", color:engine==="offline"?modeColor:t.textMuted, fontWeight:engine==="offline"?700:400}}>
+            LOCAL
+          </button>
+          <button
+            title="Richiede backend server (prossimamente)"
+            onClick={() => alert("Funzione CLOUD richiede un server backend.\nDisponibile nella prossima versione.")}
+            style={{padding:"4px 11px", cursor:"not-allowed", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:"none", background:"transparent", color:t.textMuted, opacity:0.55, display:"flex", alignItems:"center", gap:3}}>
+            CLOUD <span style={{fontSize:9}}>🔒</span>
+          </button>
         </div>
       </div>
-      <div style={{flex:1, overflowY:"auto", maxHeight:220, paddingRight:2}}>
+
+      {/* Row 2: badge modalità + azioni */}
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8, marginBottom:11}}>
+        <span style={{fontSize:12, padding:"3px 10px", borderRadius:5, background:`${modeColor}22`, color:modeColor, border:`1px solid ${modeColor}55`, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, whiteSpace:"nowrap", display:"inline-flex", alignItems:"center", gap:5}}>
+          <span>{modeIcon}</span>{modeLabel}
+        </span>
+        <div style={{display:"flex", gap:5, flexShrink:0}}>
+          <button onClick={() => { if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn, engine); } }}
+            title="Reset apprendimento" style={iconBtn}>
+            ⟲
+          </button>
+          <button onClick={() => doRefresh(sim, autoOn, engine)} disabled={msg.loading}
+            title="Aggiorna analisi"
+            style={{...iconBtn, width:"auto", padding:"0 12px", gap:5, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13, cursor:msg.loading?"wait":"pointer", color:msg.loading?t.textMuted:t.textSec}}>
+            <span style={{fontSize:13, display:"inline-block", animation:msg.loading?"spin 0.8s linear infinite":"none"}}>↻</span>
+            {msg.loading ? "..." : "Aggiorna"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── BODY ── */}
+      <div style={{flex:1, overflowY:"auto", maxHeight:220, paddingRight:4}}>
         {msg.loading ? (
           <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"28px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:14}}>
             <span style={{animation:"blink 0.7s infinite", fontSize:14, color:modeColor}}>●</span>
             {engine==="online" ? "Interrogazione Claude API..." : "Analisi in corso..."}
           </div>
         ) : (
-          <pre style={{fontFamily:"'Rajdhani',sans-serif", fontSize:14, color:t.text, lineHeight:1.65, whiteSpace:"pre-wrap", margin:0, wordBreak:"break-word"}}>
-            {msg.text}
-          </pre>
+          <AIMessage text={msg.text} t={t} modeColor={modeColor} />
         )}
       </div>
+
+      {/* ── FOOTER ── */}
       {msg.ts && !msg.loading && (
-        <div style={{marginTop:8, paddingTop:6, borderTop:`1px solid ${t.border}`, display:"flex", justifyContent:"space-between", fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
-          <span>Aggiornato: {msg.ts.toLocaleTimeString("it-IT")}</span>
-          <span style={{color:engine==="online"?t.accent:t.textMuted}}>{engine==="online"?"CLAUDE API":"OFFLINE"}</span>
+        <div style={{marginTop:10, paddingTop:8, borderTop:`1px solid ${t.border}`, display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
+          <span>Aggiornato {msg.ts.toLocaleTimeString("it-IT")}</span>
+          <span style={{display:"inline-flex", alignItems:"center", gap:5, color:engine==="online"?t.accent:t.textMuted}}>
+            <span style={{width:6, height:6, borderRadius:"50%", background:engine==="online"?t.accent:t.green, display:"inline-block"}}/>
+            {engine==="online"?"CLAUDE API":"OFFLINE"}
+          </span>
         </div>
       )}
     </div>

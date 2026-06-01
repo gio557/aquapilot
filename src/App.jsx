@@ -202,6 +202,7 @@ export default function App() {
         ::-webkit-scrollbar-thumb { background:${t.border}; border-radius:3px; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
         @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,0.4)} 50%{box-shadow:0 0 0 8px rgba(255,59,92,0)} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         select { appearance:none; }
       `}</style>
 

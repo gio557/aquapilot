@@ -3,6 +3,7 @@ import { loadHistory, loadInterventions } from "../simulation/learning";
 import { STAGE_META } from "../constants/stages";
 import { STAGE_TREND_DEFS } from "../constants/stageTrend";
 import { QUALITY_LIMITS as QL, MLSS_LIMITS } from "../constants/limits";
+import { dataSource, dataSourceTag } from "../constants/dataSource";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -540,9 +541,22 @@ export default function StoricaPage({ t }) {
             ].map(q => (
               <div key={q.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center",
                 padding:"12px 0", borderBottom:`1px solid ${t.border}`}}>
-                <span style={{fontSize:17, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text, minWidth:52}}>
-                  {q.label}
-                </span>
+                <div style={{display:"flex", flexDirection:"column", gap:2, minWidth:52}}>
+                  <span style={{fontSize:17, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text}}>
+                    {q.label}
+                  </span>
+                  {(() => {
+                    const tag = dataSourceTag(dataSource(q.label, q.unit));
+                    const isSensor = tag.kind === "sensor";
+                    return (
+                      <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9,
+                        fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase",
+                        color: isSensor ? t.accent : t.textMuted}}>
+                        <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <QBadge {...q} t={t} />
               </div>
             ))}

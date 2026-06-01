@@ -43,6 +43,12 @@ modo incrementale senza stravolgere l'architettura del motore
   di Biologico, Nitrificazione e Denitrificazione. La nitrificazione è molto
   sensibile (θ≈1.10): a ~9 °C crolla, generando allarmi NH₄ realistici in inverno.
   Aggiunto evento "❄️ Ondata di freddo" (`cold_weather`, `inlet.T_delta`).
+- **Provenienza del dato (sensore vs stimato)**: classificatore centralizzato
+  `src/constants/dataSource.js` — ogni valore mostrato in interfaccia riporta se è
+  una misura diretta da sensore (📡) o un valore stimato/calcolato (🧮: COD da
+  analizzatore a correlazione, BOD₅ da laboratorio, N-tot derivato, efficienze/%).
+  Applicato a: QUALITÀ USCITA (live), Storico, dettaglio stadio (params + parametro
+  di riferimento) e tessere dashboard.
 - **AI Advisor**: reso consapevole di NO₃/N-tot. L'azoto totale non è correggibile
   con le leve automatiche (aerazione/dosaggi) — richiede la denitrificazione — quindi
   l'advisor lo segnala onestamente come "oltre soglia" invece di dichiarare

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Gauge from "./Gauge";
 import MechanicalWidget from "./MechanicalWidget";
+import { dataSource, dataSourceTag } from "../constants/dataSource";
 
 const HOLD_MS = 2200;
 
@@ -268,6 +269,19 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
           }
         </div>
       )}
+
+      {/* Fonte del valore principale (sensore / stimato) — solo per i gauge scalari */}
+      {so && !grState && clsState?.mode !== "continuous" && (() => {
+        const tag = dataSourceTag(dataSource(so.label, so.unit));
+        const isSensor = tag.kind === "sensor";
+        return (
+          <div title={tag.note} style={{display:"flex", justifyContent:"center", alignItems:"center", gap:3, marginTop:-2,
+            fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase",
+            color: isSensor ? t.accent : t.textMuted}}>
+            <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
+          </div>
+        );
+      })()}
 
       {clsState?.mode === "timed" && <ClassifierMini state={clsState} t={t}/>}
 

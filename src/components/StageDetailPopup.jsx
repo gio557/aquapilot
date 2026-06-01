@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Tag from "./ui/Tag";
 import { PARAM_SENSOR_MAP, SENSOR_TYPES } from "../constants/stageConfig";
+import { dataSource, dataSourceTag } from "../constants/dataSource";
 
 const HOLD_MS = 2200;
 const ALPHA = 0.10;
@@ -49,6 +50,17 @@ function useSmoothedControls(controls) {
   return smooth;
 }
 
+function SourceTag({ label, unit, t }) {
+  const tag = dataSourceTag(dataSource(label, unit));
+  const isSensor = tag.kind === "sensor";
+  const color = isSensor ? t.accent : t.textMuted;
+  return (
+    <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color, textTransform:"uppercase", marginTop:2}}>
+      <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
+    </span>
+  );
+}
+
 function ParamRow({ label, value, unit, note, t }) {
   const isNum = typeof value === "number";
   const display = isNum
@@ -56,8 +68,9 @@ function ParamRow({ label, value, unit, note, t }) {
     : value;
   return (
     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
-      <div>
+      <div style={{display:"flex", flexDirection:"column"}}>
         <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
+        <SourceTag label={label} unit={unit} t={t}/>
         {note && <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{note}</div>}
       </div>
       <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
@@ -134,7 +147,10 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
               </div>
               <div style={{flex:1}}>
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                  <span style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{smoothOutput.label}</span>
+                  <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
+                    <span style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{smoothOutput.label}</span>
+                    <SourceTag label={smoothOutput.label} unit={smoothOutput.unit} t={t}/>
+                  </span>
                   <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:scoreColor}}>
                     {hib
                       ? `${Math.round(smoothOutput.value)}% su ${smoothOutput.target}% target`
@@ -177,7 +193,13 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
           </div>
 
           <div>
-            <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>PARAMETRI DI PROCESSO</div>
+            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8, gap:8, flexWrap:"wrap"}}>
+              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>PARAMETRI DI PROCESSO</span>
+              <span style={{display:"inline-flex", gap:10, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:t.textMuted, textTransform:"uppercase"}}>
+                <span style={{display:"inline-flex", alignItems:"center", gap:3, color:t.accent}}>📡 sensore</span>
+                <span style={{display:"inline-flex", alignItems:"center", gap:3}}>🧮 stimato</span>
+              </span>
+            </div>
             {(smoothParams || stageDetail.params).map((p, i) => {
               const sensorId = PARAM_SENSOR_MAP[stage?.name]?.[p.label];
               if (sensorId != null && stageConfig?.sensors?.[sensorId]?.enabled !== true) return null;

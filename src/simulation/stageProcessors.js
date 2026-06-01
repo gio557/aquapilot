@@ -155,6 +155,13 @@ function processGrigliatura(water, cfg, prevState, g) {
       : gr.fase === "STANDBY"
         ? `Griglia in standby — intasamento ${Math.round(gr.intasamento*100)}% — ΔH: ${gr.delta_h} m. Prossimo ciclo: ΔH>${gCfg.DH_AVVIO_PULIZIA}m o timer backup ${gCfg.TIMER_BACKUP_INTERVALLO}s.`
         : `Fase: ${gr.fase} — ciclo in corso da ${gr.timer_ciclo_totale.toFixed(0)} s — corrente rastrello: ${gr.corrente_motore.toFixed(1)} A.`,
+    trendData: {
+      delta_h:    +gr.delta_h,
+      intasamento:Math.round(gr.intasamento * 100),
+      corrente:   +round1(gr.corrente_motore),
+      pulizia:    gr.fase === "PULIZIA_ATTIVA" ? 1 : 0,
+      TSS:        +round1(waterOut.TSS),
+    },
   };
 
   return { waterOut, newState: gr, stageOutput, stageDetail, eff, kw };
@@ -247,6 +254,11 @@ function processDissabbiatura(water, cfg, prevState, g) {
     note: clsCfg.mode === "timed"
       ? `Classificatore temporizzato: ON ${clsCfg.timeOn} min / OFF ${clsCfg.timeOff} min. Stato attuale: ${clsIsOn?"IN FUNZIONE":"FERMO"} — prossimo cambio in ${Math.floor(clsSecRemaining/60)}:${String(clsSecRemaining%60).padStart(2,"0")}.`
       : `Classificatore in continuo al ${clsCfg.speed}% — corrente attuale ${clsCurrent.toFixed(1)} A (⚡${clsWarn.toFixed(1)} warn / 🔴${clsAlarm.toFixed(1)} alarm). Sedimento hopper: ${Math.round(clsSediment*100)}%.`,
+    trendData: {
+      tss_in:       +round1(water.TSS),
+      TSS:          +round1(waterOut.TSS),
+      corrente_inv: clsCurrent,
+    },
   };
 
   return { waterOut, newState, stageOutput, stageDetail, eff: eff02, kw };
@@ -279,6 +291,13 @@ function processDegrassatore(water, cfg, prevState, g) {
     ],
     controls: [],
     note: "Degrassatore in funzione — rimozione grassi e oli con raccolta superficiale automatica.",
+    trendData: {
+      cod_in: +round1(water.COD),
+      COD:    +round1(waterOut.COD),
+      TSS:    +round1(waterOut.TSS),
+      pH:     +round2(water.pH),
+      temp:   +round1(water.T),
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -307,6 +326,12 @@ function processEqualizzazione(water, cfg, prevState, g) {
     ],
     controls: [],
     note: "Vasca di equalizzazione attiva — variazioni di portata in ingresso vengono smorzate prima del trattamento biologico.",
+    trendData: {
+      q_in: +round1(water.Q),
+      Q:    +round1(waterOut.Q),
+      COD:  +round1(water.COD),
+      pH:   +round2(water.pH),
+    },
   };
   return { waterOut, newState: { Qbuf: newBuf }, stageOutput, stageDetail, eff, kw };
 }
@@ -368,6 +393,13 @@ function processBiologico(water, cfg, prevState, g) {
     note: autoCorrect?.enabled
       ? `Sistema automatico attivo — soffianti (${autoCorrect.blower?.on?"ON":"OFF"}) e ricircolo fanghi (${autoCorrect.sludgeRecycle?.on?"ON":"OFF"}) sotto controllo. O2 setpoint adattivo in funzione di COD, BOD5 e NH4 in uscita.`
       : "Modalità manuale. Mantenere O2 > 2 mg/L per nitrificazione efficace. Regolare soffianti e ricircolo fanghi per mantenere MLSS tra 2500 e 4000 mg/L.",
+    trendData: {
+      O2:     +round2(O2),
+      NH4:    +round2(waterOut.NH4),
+      MLSS:   Math.round(MLSS),
+      COD:    +round1(waterOut.COD),
+      blower: blower,
+    },
   };
 
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw, newO2: O2, newMLSS: Math.round(MLSS) };
@@ -413,6 +445,12 @@ function processNitrificazione(water, cfg, prevState, g) {
       { label:"Soffianti (nitrif.)", value:blower, unit:"%" },
     ],
     note: `Nitrificazione attiva — efficienza ${Math.round(nitE*100)}%. O2 corrente: ${round2(O2)} mg/L (target ≥ 2 mg/L).`,
+    trendData: {
+      NH4:    +round2(waterOut.NH4),
+      NO3:    +round2(waterOut.NO3),
+      O2:     +round2(O2),
+      blower: blower,
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw, newO2: O2 };
 }
@@ -453,6 +491,12 @@ function processDenitrificazione(water, cfg, prevState, g) {
     ],
     controls: [],
     note: `Reattore anossico attivo — rimozione NO₃ ${Math.round(denE*100)}%. pH in leggera risalita per produzione alcalinità.`,
+    trendData: {
+      no3_in: +round2(no3In),
+      NO3:    +round2(waterOut.NO3),
+      COD:    +round1(waterOut.COD),
+      pH:     +round2(waterOut.pH),
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -491,6 +535,13 @@ function processSedimentazione(water, cfg, prevState, g) {
     note: autoCorrect?.enabled
       ? `Sistema automatico attivo — dosaggio coagulante (${autoCorrect.coagulant?.on?"ON":"OFF"}) con setpoint TSS 20 mg/L. Attuale: ${round1(waterOut.TSS)} mg/L.`
       : "Modalità manuale. Aumentare coagulante se TSS > 35 mg/L.",
+    trendData: {
+      tss_in:   +round1(water.TSS),
+      TSS:      +round1(waterOut.TSS),
+      COD:      +round1(waterOut.COD),
+      pH:       +round2(water.pH),
+      coagulant: coagulant,
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -521,6 +572,12 @@ function processFlottazioneDAF(water, cfg, prevState, g) {
     ],
     controls: [],
     note: `Flottatore DAF in funzione — rimozione TSS ${Math.round(PC.DAF.TSS_REM*100)}% · COD -${Math.round(PC.DAF.COD_REM*100)}%.`,
+    trendData: {
+      tss_in: +round1(water.TSS),
+      TSS:    +round1(waterOut.TSS),
+      COD:    +round1(waterOut.COD),
+      pH:     +round2(water.pH),
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -550,6 +607,12 @@ function processFiltrazione(water, cfg, prevState, g) {
     ],
     controls: [],
     note: `Filtro in funzione — poliziotto fine per TSS e torbidità. Risciacquo automatico programmato.`,
+    trendData: {
+      tss_in: +round1(water.TSS),
+      TSS:    +round1(waterOut.TSS),
+      COD:    +round1(waterOut.COD),
+      pH:     +round2(water.pH),
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -583,6 +646,12 @@ function processOsmosIInversa(water, cfg, prevState, g) {
     ],
     controls: [],
     note: `Osmosi inversa attiva — trattamento terziario avanzato. Recupero permeato ≈ 75%. Concentrato da gestire separatamente.`,
+    trendData: {
+      cod_in: +round1(water.COD),
+      COD:    +round1(waterOut.COD),
+      NH4:    +round2(waterOut.NH4),
+      TSS:    +round1(waterOut.TSS),
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -608,6 +677,12 @@ function processDisinfezioneUV(water, cfg, prevState, g) {
     ],
     controls: [],
     note: "Reattore UV in funzione. Intensità lampade al 100%. Sostituire lampade ogni 8760 h (1 anno di esercizio).",
+    trendData: {
+      TSS:  +round1(water.TSS),
+      COD:  +round1(water.COD),
+      pH:   +round2(water.pH),
+      temp: +round1(water.T),
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -648,6 +723,14 @@ function processDisinfezioneCloro(water, cfg, prevState, g) {
     note: autoCorrect?.enabled
       ? `Sistema automatico attivo — correzione pH (${autoCorrect.pH?.on?"ON":"OFF"}) con setpoint 7.2. pH attuale: ${round2(waterOut.pH)}.`
       : "Modalità manuale. Dosare NaOH se pH < 6.5, H2SO4 se pH > 8.5. Verificare conformità AIA vigente.",
+    trendData: {
+      COD:   +round1(waterOut.COD),
+      TSS:   +round1(waterOut.TSS),
+      NH4:   +round2(waterOut.NH4),
+      pH:    +round2(waterOut.pH),
+      naoh:  naoh,
+      h2so4: h2so4,
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }
@@ -680,6 +763,12 @@ function processPostTrattamento(water, cfg, prevState, g) {
     ],
     controls: [],
     note: `Post-trattamento attivo — affinamento finale prima dello scarico autorizzato.`,
+    trendData: {
+      cod_in: +round1(water.COD),
+      COD:    +round1(waterOut.COD),
+      TSS:    +round1(waterOut.TSS),
+      pH:     +round2(water.pH),
+    },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
 }

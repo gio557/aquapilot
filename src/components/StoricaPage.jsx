@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { loadHistory, loadInterventions } from "../simulation/learning";
 import { STAGE_META } from "../constants/stages";
+import { STAGE_TREND_DEFS, stageAvailableMetrics } from "../constants/stageTrend";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -328,18 +329,35 @@ export default function StoricaPage({ t }) {
       setHistNode("plant");
   }, [stageNodes, histNode]);
 
-  // metrics available for the selected node (plant = all params)
-  const nodeMetrics = histNode === "plant"
-    ? ALL_PARAMS
-    : (stageNodes?.[histNode]?.metrics ?? []);
+  // metric definitions for the selected node
+  // For historical snapshots, stageNodes has the saved stage names — use them to
+  // reconstruct defs. Fall back to keys saved in snapshot for old snapshots.
+  const nodeMetricDefs = histNode === "plant"
+    ? ALL_PARAMS.map(k => ({ key:k, label:k, color:PARAM_COLORS[k] }))
+    : (() => {
+        const name = stageNodes?.[histNode]?.name;
+        if (!name) return [];
+        const defs = STAGE_TREND_DEFS[name] ?? [];
+        // For historical snapshots we don't have live stageConfig, so show all
+        // defs that have data in the snapshot (no sensor gating needed for history).
+        const savedKeys = stageNodes?.[histNode]?.metrics ?? [];
+        return defs.filter(d => savedKeys.includes(d.key));
+      })();
+  const nodeMetrics = nodeMetricDefs.map(d => d.key);
+
+  // Auto-select all available metrics when switching node
+  useEffect(() => {
+    setActiveParams(nodeMetrics);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [histNode]);
 
   // chart data: full day snapshots mapped to recharts-friendly format.
   // For a stage node, read that stage's saved output water; gaps where absent.
   const chartData = useMemo(() => daySnaps.slice(windowStart, selectedIdx + 1).map(s => {
     const base = { t: fmtTime(new Date(s.t)), _ts: s.t };
     if (histNode === "plant")
-      return { ...base, COD: s.COD, BOD5: s.BOD5, TSS: s.TSS, NH4: s.NH4, pH: s.pH, O2: s.O2 };
-    const sw = s.stages?.[histNode];
+      return { ...base, COD:s.COD, BOD5:s.BOD5, TSS:s.TSS, NH4:s.NH4, pH:s.pH, O2:s.O2 };
+    const sw = s.stageWater?.[histNode] ?? s.stages?.[histNode];
     return sw ? { ...base, ...sw } : base;
   }), [daySnaps, windowStart, selectedIdx, histNode]);
 
@@ -481,24 +499,23 @@ export default function StoricaPage({ t }) {
                 </div>
               </div>
 
-              {/* mini sparklines for quick orientation — only metrics available on the node */}
+              {/* metric toggles — all available metrics for the selected node */}
               <div style={{display:"flex", gap:10, flexWrap:"wrap", marginTop:4}}>
-                {ALL_PARAMS.filter(p => nodeMetrics.includes(p)).map(p => (
-                  <button key={p} onClick={() => setActiveParams(prev =>
-                    prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+                {nodeMetricDefs.length === 0 ? (
+                  <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13, color:t.textMuted}}>
+                    Nessuna metrica disponibile per questo stadio
+                  </span>
+                ) : nodeMetricDefs.map(md => (
+                  <button key={md.key} onClick={() => setActiveParams(prev =>
+                    prev.includes(md.key) ? prev.filter(x => x !== md.key) : [...prev, md.key]
                   )} style={{
                     padding:"4px 11px", borderRadius:5, cursor:"pointer", fontSize:13,
                     fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
-                    border:`1px solid ${activeParams.includes(p) ? PARAM_COLORS[p] : t.border}`,
-                    background:activeParams.includes(p) ? `${PARAM_COLORS[p]}22` : t.surface2,
-                    color:activeParams.includes(p) ? PARAM_COLORS[p] : t.textSec,
-                  }}>{p}</button>
+                    border:`1px solid ${activeParams.includes(md.key) ? md.color : t.border}`,
+                    background:activeParams.includes(md.key) ? `${md.color}22` : t.surface2,
+                    color:activeParams.includes(md.key) ? md.color : t.textSec,
+                  }}>{md.label}</button>
                 ))}
-                {nodeMetrics.length === 0 && (
-                  <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13, color:t.textMuted}}>
-                    Nessun sensore di qualità abilitato su questo stadio
-                  </span>
-                )}
               </div>
             </>
           )}
@@ -609,23 +626,23 @@ export default function StoricaPage({ t }) {
               paddingBottom:12, borderBottom:`1px solid ${t.border}`}}>
               {stageNodes.map((node, i) => {
                 const active = histNode === i;
-                const hasMetrics = (node.metrics?.length ?? 0) > 0;
+                const hasDefs = (STAGE_TREND_DEFS[node.name]?.length ?? 0) > 0;
                 return (
                   <button key={i} onClick={() => setHistNode(i)}
-                    title={hasMetrics ? node.name : `${node.name} — nessun sensore di qualità abilitato`}
+                    title={node.name}
                     style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
-                      fontFamily:"'Share Tech Mono',monospace", fontSize:12, letterSpacing:1,
-                      opacity: hasMetrics ? 1 : 0.5,
+                      fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:600, letterSpacing:1,
+                      opacity: hasDefs ? 1 : 0.5,
                       border:`1px solid ${active?t.accent:t.border}`,
                       background:active?`${t.accent}22`:t.surface2,
                       color:active?t.accent:t.textSec}}>
-                    ST-{String(i+1).padStart(2,"0")}
+                    {node.name}
                   </button>
                 );
               })}
               <button onClick={() => setHistNode("plant")}
-                style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", fontWeight:700,
-                  fontFamily:"'Share Tech Mono',monospace", fontSize:12, letterSpacing:1,
+                style={{padding:"4px 12px", borderRadius:5, cursor:"pointer",
+                  fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:700, letterSpacing:1,
                   border:`1px solid ${histNode==="plant"?t.green:t.border}`,
                   background:histNode==="plant"?`${t.green}22`:t.surface2,
                   color:histNode==="plant"?t.green:t.textSec}}>
@@ -671,9 +688,9 @@ export default function StoricaPage({ t }) {
                     stroke={t.yellow} strokeDasharray="3 2" strokeWidth={2.5}
                     label={{ value:"★", fill:t.yellow, fontSize:14, position:"insideTopLeft" }} />
                 )}
-                {ALL_PARAMS.filter(p => activeParams.includes(p) && nodeMetrics.includes(p)).map(p => (
-                  <Line key={p} type="monotone" dataKey={p}
-                    stroke={PARAM_COLORS[p]} strokeWidth={2}
+                {nodeMetricDefs.filter(md => activeParams.includes(md.key)).map(md => (
+                  <Line key={md.key} type={md.step ? "stepAfter" : "monotone"}
+                    dataKey={md.key} stroke={md.color} strokeWidth={2}
                     dot={false} isAnimationActive={false} connectNulls />
                 ))}
               </LineChart>

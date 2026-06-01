@@ -4,7 +4,7 @@
 // controllo). Tracciamento interventi auto-correzione → valutazione efficacia
 // dopo N tick → aggiornamento gain (Kp moltiplicatore) per ciascun controllo.
 
-import { stageTrendMetrics } from "../constants/stageConfig";
+import { stageAvailableMetrics } from "../constants/stageTrend";
 
 const KEY_HISTORY  = "aquapilot.learning.history.v1";
 const KEY_GAINS    = "aquapilot.learning.gains.v1";
@@ -109,7 +109,7 @@ export function recordTick(sim, prevSim) {
       stageWater: Array.isArray(sim.stageWater) ? sim.stageWater.map(w => ({ ...w })) : null,
       stageNodes: Array.isArray(sim.stages) ? sim.stages.map((st, i) => ({
         name: st?.name ?? `ST-${String(i + 1).padStart(2, "0")}`,
-        metrics: stageTrendMetrics(sim.stageConfig?.[i]),
+        metrics: stageAvailableMetrics(st?.name, sim.stageConfig?.[i]).map(d => d.key),
       })) : null,
       alarmState: sim.alarmState ? { ...sim.alarmState } : null,
       activeAlarms: Array.isArray(sim.alarms)

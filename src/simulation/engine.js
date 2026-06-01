@@ -288,16 +288,20 @@ export function simTick(s) {
     ? [...newEvents, ...s.alarms.slice(0, 6)]
     : s.alarms;
 
-  // ── Per-stage output water (for per-stage trend / history nodes) ───────────────
-  // O2 is a global (biological reactor) value; only stages with an O2 sensor show it.
-  const stageWater = stageWaterArr.map(w => ({
-    COD:  round1(w.COD),
-    BOD5: round1(w.BOD5),
-    TSS:  round1(w.TSS),
-    NH4:  round2(w.NH4),
-    pH:   round2(w.pH),
-    O2:   round2(O2),
-  }));
+  // ── Per-stage trend data (water quality + operational metrics from trendData) ───
+  // Each processor emits stageDetail.trendData; we merge it with the water quality
+  // values so the chart has both water params and mechanical/actuator values.
+  const stageWater = stageWaterArr.map((w, i) => {
+    const td = stageDetailsArr[i]?.trendData ?? {};
+    return {
+      COD:  round1(w.COD),
+      BOD5: round1(w.BOD5),
+      TSS:  round1(w.TSS),
+      NH4:  round2(w.NH4),
+      pH:   round2(w.pH),
+      ...td,   // operational metrics override/extend the baseline
+    };
+  });
 
   // ── Trend ─────────────────────────────────────────────────────────────────────
   const newTick = s.tick + 1;

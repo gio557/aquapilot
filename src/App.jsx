@@ -8,7 +8,6 @@ import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
 import ControlRoom from "./components/ControlRoom";
-import NormativaPage from "./components/NormativaPage";
 import ConfigurazionePage from "./components/ConfigurazionePage";
 import AIPanel from "./components/AIPanel";
 import StoricaPage from "./components/StoricaPage";

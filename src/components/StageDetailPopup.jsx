@@ -69,8 +69,6 @@ function ParamRow({ label, value, unit, note, t }) {
 }
 
 export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, stageConfig, t, onClose }) {
-  if (!stageDetail) return null;
-
   const [stableAction, setStableAction] = useState(action);
   const pendingPopup = useRef(null);
 
@@ -90,6 +88,8 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
     const timer = setTimeout(() => { setStableAction(action); pendingPopup.current = null; }, HOLD_MS);
     pendingPopup.current = { text: nextText, timer };
   }, [action]);
+
+  if (!stageDetail) return null;
 
   const sc = stage.status==="ok" ? t.green : stage.status==="warn" ? t.orange : t.red;
   const hib = smoothOutput?.higherIsBetter;

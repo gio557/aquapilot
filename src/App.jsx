@@ -12,6 +12,7 @@ import ControlRoom from "./components/ControlRoom";
 import ConfigurazionePage from "./components/ConfigurazionePage";
 import AIPanel from "./components/AIPanel";
 import StoricaPage from "./components/StoricaPage";
+import EnergiaPage from "./components/EnergiaPage";
 import KpiNum from "./components/ui/KpiNum";
 import AlarmRow from "./components/ui/AlarmRow";
 import QualRow from "./components/ui/QualRow";
@@ -80,6 +81,15 @@ export default function App() {
       return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(NORMATIVA_DEFAULT));
     } catch { return JSON.parse(JSON.stringify(NORMATIVA_DEFAULT)); }
   });
+  const [energyPrice, setEnergyPrice] = useState(() => {
+    try {
+      const saved = localStorage.getItem("aquapilot.energyPrice.v1");
+      return saved != null ? parseFloat(saved) : 0.22;
+    } catch { return 0.22; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("aquapilot.energyPrice.v1", String(energyPrice)); } catch {}
+  }, [energyPrice]);
 
   // Sync normativa targets → sim.stageTargets whenever norms changes
   useEffect(() => {
@@ -207,6 +217,7 @@ export default function App() {
           {[
             {id:"dashboard",      label:"DASHBOARD"},
             {id:"configurazione", label:"CONFIGURAZIONE"},
+            {id:"energia",        label:"ENERGIA"},
             {id:"storica",        label:"STORICO"},
           ].map(p => (
             <button key={p.id} onClick={() => setPage(p.id)}
@@ -320,6 +331,8 @@ export default function App() {
           onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}
           norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}
           ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
+      ) : page === "energia" ? (
+        <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
       ) : page === "storica" ? (
         <StoricaPage t={t} />
       ) : (

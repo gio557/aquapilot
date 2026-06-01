@@ -48,8 +48,11 @@ modo incrementale senza stravolgere l'architettura del motore
   online/laboratorio, es. COD), 🧮 stimato (correlazione/derivato/%); ⚙️ comando per
   gli attuatori. Applicato a: QUALITÀ USCITA (live), Storico, dettaglio stadio
   (params + parametro di riferimento + controlli), tessere dashboard, pannello IMPIANTO.
-  Per i parametri di QUALITÀ USCITA il tipo è **configurabile** dall'utente
-  (Configurazione → PROVENIENZA DATI), persistito in `aquapilot.qualitySources.v1`.
+  Il tipo è **configurabile** dall'utente (Configurazione → PROVENIENZA DATI) sia
+  per i parametri di QUALITÀ USCITA sia per i **segnali di stadio** (Redox/ORP,
+  portata, livello/ΔH, pressione differenziale, interfaccia fanghi); persistito in
+  `aquapilot.qualitySources.v1`. Un resolver (`resolveSource` + `SENSOR_ID_TO_SOURCE_KEY`)
+  applica la scelta anche ai dettagli di stadio e alle tessere dashboard.
 - **AI Advisor**: reso consapevole di NO₃/N-tot. L'azoto totale non è correggibile
   con le leve automatiche (aerazione/dosaggi) — richiede la denitrificazione — quindi
   l'advisor lo segnala onestamente come "oltre soglia" invece di dichiarare

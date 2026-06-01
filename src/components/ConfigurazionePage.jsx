@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { STAGE_META } from "../constants/stages";
-import { QUALITY_PARAMS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
+import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
 
 const CONFIG_TABS = [
@@ -151,13 +151,51 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
 
   if (activeTab === "provenienza") {
     const setSrc = (key, kind) => onQualitySources?.(prev => ({ ...prev, [key]: kind }));
+    const SrcRow = (p) => {
+      const cur = qualitySources[p.key] ?? "calc";
+      const tag = dataSourceTag(cur);
+      return (
+        <div key={p.key} style={{display:"flex", alignItems:"center", justifyContent:"space-between",
+          padding:"11px 0", borderBottom:`1px solid ${t.border}`, gap:12}}>
+          <div style={{display:"flex", flexDirection:"column", gap:3, minWidth:0}}>
+            <div style={{display:"flex", alignItems:"center", gap:8}}>
+              <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text}}>{p.label}</span>
+              <InfoDot text={p.desc} t={t}/>
+              <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:4, fontSize:10,
+                fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase",
+                color: tag.kind==="sensor" ? t.accent : t.textMuted}}>
+                <span style={{fontSize:10}}>{tag.icon}</span>{tag.word}
+              </span>
+            </div>
+            <span style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{p.name}</span>
+          </div>
+          <div style={{display:"flex", gap:5}}>
+            {SOURCE_OPTIONS.map(o => {
+              const on = cur === o.kind;
+              return (
+                <button key={o.kind} onClick={() => setSrc(p.key, o.kind)}
+                  style={{padding:"5px 12px", borderRadius:6, cursor:"pointer",
+                    fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:600, letterSpacing:0.5,
+                    border:`${on ? 2 : 1}px solid ${on ? t.accent : t.border}`,
+                    background: on ? `${t.accent}18` : t.surface2,
+                    color: on ? t.accent : t.textSec}}>
+                  {dataSourceTag(o.kind).icon} {o.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+    const groupHd = { fontSize:12, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1.5,
+      color:t.textMuted, textTransform:"uppercase", margin:"22px 0 6px" };
     return (
       <div>
         <TabBar padded />
         <div style={{padding:"20px 24px 40px", maxWidth:680}}>
-          <div style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5, marginBottom:18}}>
-            Definisci, per ogni parametro di <b>qualità in uscita</b>, come viene ottenuto il dato in impianto.
-            L'etichetta scelta compare accanto al valore nel cruscotto, nello storico e nei dettagli.
+          <div style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5, marginBottom:8}}>
+            Definisci, per ogni segnale, come viene ottenuto il dato in impianto.
+            L'etichetta scelta compare accanto al valore nel cruscotto, nello storico e nei dettagli di stadio.
             <div style={{display:"flex", gap:16, marginTop:10, flexWrap:"wrap", fontFamily:"'Share Tech Mono',monospace", fontSize:11}}>
               {SOURCE_OPTIONS.map(o => {
                 const tag = dataSourceTag(o.kind);
@@ -167,42 +205,10 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
               })}
             </div>
           </div>
-          {QUALITY_PARAMS.map(p => {
-            const cur = qualitySources[p.key] ?? "calc";
-            const tag = dataSourceTag(cur);
-            return (
-              <div key={p.key} style={{display:"flex", alignItems:"center", justifyContent:"space-between",
-                padding:"11px 0", borderBottom:`1px solid ${t.border}`, gap:12}}>
-                <div style={{display:"flex", flexDirection:"column", gap:3, minWidth:0}}>
-                  <div style={{display:"flex", alignItems:"center", gap:8}}>
-                    <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text}}>{p.label}</span>
-                    <InfoDot text={p.desc} t={t}/>
-                    <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:4, fontSize:10,
-                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase",
-                      color: tag.kind==="sensor" ? t.accent : t.textMuted}}>
-                      <span style={{fontSize:10}}>{tag.icon}</span>{tag.word}
-                    </span>
-                  </div>
-                  <span style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{p.name}</span>
-                </div>
-                <div style={{display:"flex", gap:5}}>
-                  {SOURCE_OPTIONS.map(o => {
-                    const on = cur === o.kind;
-                    return (
-                      <button key={o.kind} onClick={() => setSrc(p.key, o.kind)}
-                        style={{padding:"5px 12px", borderRadius:6, cursor:"pointer",
-                          fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:600, letterSpacing:0.5,
-                          border:`${on ? 2 : 1}px solid ${on ? t.accent : t.border}`,
-                          background: on ? `${t.accent}18` : t.surface2,
-                          color: on ? t.accent : t.textSec}}>
-                        {dataSourceTag(o.kind).icon} {o.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+          <div style={groupHd}>▸ Parametri di qualità in uscita</div>
+          {QUALITY_PARAMS.map(SrcRow)}
+          <div style={groupHd}>▸ Segnali di stadio</div>
+          {STAGE_SIGNALS.map(SrcRow)}
         </div>
       </div>
     );

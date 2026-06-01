@@ -81,6 +81,21 @@ export const QUALITY_PARAMS = [
     desc: "Concentrazione di ossigeno disciolto nell'acqua. Essenziale per i processi aerobici: valori bassi compromettono la nitrificazione e la rimozione del COD/BOD." },
 ];
 
+// Segnali di stadio (non parametri dell'effluente): sonde/strumenti installati nei
+// singoli comparti. Configurabili come i parametri di qualità.
+export const STAGE_SIGNALS = [
+  { key: "REDOX", label: "Redox / ORP", name: "Potenziale di ossido-riduzione (ORP)",
+    desc: "Potenziale redox del liquame (mV): indica condizioni ossidanti o riducenti. Utile a distinguere zone aerobiche, anossiche e anaerobiche (es. controllo della denitrificazione)." },
+  { key: "FLOW",  label: "Portata", name: "Portata volumetrica",
+    desc: "Portata del refluo (m³/h). Base per i bilanci di massa, il calcolo dei carichi e il dimensionamento idraulico." },
+  { key: "LEVEL", label: "Livello / ΔH", name: "Livello / battente",
+    desc: "Livello del liquido o battente differenziale (m). Usato per il controllo delle vasche, la grigliatura (ΔH) e le sicurezze di tracimazione." },
+  { key: "DIFFP", label: "Pressione diff.", name: "Pressione differenziale",
+    desc: "Differenza di pressione (es. attraverso filtri o griglie). Indica l'intasamento e la necessità di controlavaggio/pulizia." },
+  { key: "SBL",   label: "Interfaccia fanghi", name: "Livello interfaccia fanghi (blanket)",
+    desc: "Altezza del manto di fanghi nel sedimentatore secondario. Indica la capacità di sedimentazione e il rischio di trascinamento dei solidi in uscita." },
+];
+
 export const QUALITY_SOURCE_DEFAULTS = {
   COD: "analyzer",  // analizzatore COD online (a umido) o laboratorio
   BOD5: "calc",     // test di laboratorio 5 gg / stima da COD
@@ -91,7 +106,30 @@ export const QUALITY_SOURCE_DEFAULTS = {
   pH: "sensor",
   T: "sensor",
   O2: "sensor",
+  // segnali di stadio
+  REDOX: "sensor",
+  FLOW: "sensor",
+  LEVEL: "sensor",
+  DIFFP: "sensor",
+  SBL: "sensor",
 };
+
+// Mappa l'id-sensore (SENSOR_TYPES / PARAM_SENSOR_MAP) alla chiave di provenienza,
+// così la scelta in configurazione si applica anche ai dettagli di stadio.
+export const SENSOR_ID_TO_SOURCE_KEY = {
+  cod: "COD", tss: "TSS", nh4: "NH4", ph: "pH", temp: "T", o2: "O2",
+  redox: "REDOX", flow: "FLOW", level: "LEVEL", diff_p: "DIFFP", sbl: "SBL",
+};
+
+// Risolve il tipo di fonte per un parametro: usa la provenienza configurata se il
+// parametro è associato a un sensore noto, altrimenti il classificatore automatico.
+export function resolveSource(sourceCfg, { sensorId, label = "", unit = "" } = {}) {
+  if (sensorId && sourceCfg) {
+    const k = SENSOR_ID_TO_SOURCE_KEY[sensorId];
+    if (k && sourceCfg[k]) return sourceCfg[k];
+  }
+  return dataSource(label, unit);
+}
 
 // Opzioni selezionabili in configurazione (ordine = ordine nel menu).
 export const SOURCE_OPTIONS = [

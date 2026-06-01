@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Gauge from "./Gauge";
 import MechanicalWidget from "./MechanicalWidget";
-import { dataSource, dataSourceTag } from "../constants/dataSource";
+import { dataSourceTag, resolveSource } from "../constants/dataSource";
 
 const HOLD_MS = 2200;
 
@@ -157,7 +157,7 @@ function ClassifierMini({ state, t }) {
   );
 }
 
-export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, classifierState, grigliaturaState, onGrigliaturaReset, onClick }) {
+export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, classifierState, grigliaturaState, onGrigliaturaReset, referenceSensor, qualitySources, onClick }) {
   const IDLE = [
     "Nessuna correzione attiva — stadio stabile",
     "Nessuna correzione attiva — stadio stabile",
@@ -272,7 +272,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
       {/* Fonte del valore principale (sensore / stimato) — solo per i gauge scalari */}
       {so && !grState && clsState?.mode !== "continuous" && (() => {
-        const tag = dataSourceTag(dataSource(so.label, so.unit));
+        const tag = dataSourceTag(resolveSource(qualitySources, { sensorId: referenceSensor, label: so.label, unit: so.unit }));
         const isSensor = tag.kind === "sensor";
         return (
           <div title={tag.note} style={{display:"flex", justifyContent:"center", alignItems:"center", gap:3, marginTop:-2,

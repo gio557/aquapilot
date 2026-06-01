@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import Tag from "./ui/Tag";
 import { PARAM_SENSOR_MAP, SENSOR_TYPES } from "../constants/stageConfig";
-import { dataSource, dataSourceTag } from "../constants/dataSource";
+import { dataSourceTag, resolveSource } from "../constants/dataSource";
 
 const HOLD_MS = 2200;
 const ALPHA = 0.10;
@@ -50,8 +50,8 @@ function useSmoothedControls(controls) {
   return smooth;
 }
 
-function SourceTag({ label, unit, t }) {
-  const tag = dataSourceTag(dataSource(label, unit));
+function SourceTag({ label, unit, sensorId, sourceCfg, t }) {
+  const tag = dataSourceTag(resolveSource(sourceCfg, { sensorId, label, unit }));
   const isSensor = tag.kind === "sensor";
   const color = isSensor ? t.accent : t.textMuted;
   return (
@@ -61,17 +61,18 @@ function SourceTag({ label, unit, t }) {
   );
 }
 
-function ParamRow({ label, value, unit, note, t }) {
+function ParamRow({ label, value, unit, note, stageName, sourceCfg, t }) {
   const isNum = typeof value === "number";
   const display = isNum
     ? (Math.abs(value) < 10 ? (Math.round(value * 100) / 100).toFixed(2) : Math.round(value * 10) / 10)
     : value;
+  const sensorId = PARAM_SENSOR_MAP[stageName]?.[label];
   return (
     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
       <div style={{display:"flex", flexDirection:"column"}}>
         <div style={{display:"flex", alignItems:"center", gap:8}}>
           <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
-          <SourceTag label={label} unit={unit} t={t}/>
+          <SourceTag label={label} unit={unit} sensorId={sensorId} sourceCfg={sourceCfg} t={t}/>
         </div>
         {note && <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{note}</div>}
       </div>
@@ -83,7 +84,7 @@ function ParamRow({ label, value, unit, note, t }) {
   );
 }
 
-export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, stageConfig, t, onClose }) {
+export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, stageConfig, qualitySources, t, onClose }) {
   const [stableAction, setStableAction] = useState(action);
   const pendingPopup = useRef(null);
 
@@ -151,7 +152,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
                   <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
                     <span style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{smoothOutput.label}</span>
-                    <SourceTag label={smoothOutput.label} unit={smoothOutput.unit} t={t}/>
+                    <SourceTag label={smoothOutput.label} unit={smoothOutput.unit} sensorId={stageConfig?.referenceSensor} sourceCfg={qualitySources} t={t}/>
                   </span>
                   <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:scoreColor}}>
                     {hib
@@ -206,7 +207,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
             {(smoothParams || stageDetail.params).map((p, i) => {
               const sensorId = PARAM_SENSOR_MAP[stage?.name]?.[p.label];
               if (sensorId != null && stageConfig?.sensors?.[sensorId]?.enabled !== true) return null;
-              return <ParamRow key={i} {...p} t={t}/>;
+              return <ParamRow key={i} {...p} stageName={stage?.name} sourceCfg={qualitySources} t={t}/>;
             })}
           </div>
 

@@ -439,6 +439,7 @@ export default function App() {
               <StageCard key={s.id} stage={s} index={i}
                 stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
                 eff={sim.stageEff?.[i]}
+                referenceSensor={stageConfig[i]?.referenceSensor} qualitySources={qualitySources}
                 autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}
                 classifierState={i === dissIdx ? sim.sandClassifier : null}
                 grigliaturaState={i === grIdx ? sim.grigliaturaState : null}
@@ -819,6 +820,7 @@ export default function App() {
           {...selectedStageData}
           autoEnabled={autoOn}
           stageConfig={stageConfig[selectedStage] ?? null}
+          qualitySources={qualitySources}
           t={t}
           onClose={() => setSelectedStage(null)}
         />

@@ -73,6 +73,25 @@ modo incrementale senza stravolgere l'architettura del motore
 
 ---
 
+## Promemoria per la versione reale (collegamento PLC)
+
+> **DA RICORDARE AL COMMITTENTE quando si svilupperà la versione reale connessa a un PLC.**
+
+Nella configurazione della **provenienza dato** (Configurazione → PROVENIENZA DATI),
+oggi ogni parametro di qualità è classificato come *sensore*, *analizzatore* o
+*stimato*. Nella versione reale collegata al PLC, per i segnali dichiarati come
+**sensore** o **analizzatore** dovrà essere aggiunto un **campo di configurazione**
+che indichi se l'informazione di quell'oggetto **proviene dal PLC** (e con quale
+riferimento: tag/indirizzo del segnale, es. nodo OPC-UA / registro Modbus / DB-DBX
+Siemens). In pratica, per ogni oggetto "sensore"/"analizzatore":
+- flag "origine dato": PLC ↔ inserimento manuale/simulato;
+- riferimento del segnale sul PLC (tag/indirizzo) quando l'origine è PLC;
+- eventuale scala/ingegnerizzazione e stato di qualità del segnale (valido/guasto).
+
+Questo dettaglio si integra con il documento `docs/architettura-server-plc.md`.
+
+---
+
 ## Riferimenti bibliografici
 - Henze, Gujer, Mino, van Loosdrecht — *Activated Sludge Models ASM1, ASM2, ASM2d, ASM3* (IWA)
 - Copp (ed.) — *The COST Simulation Benchmark BSM1 / BSM2*

@@ -77,6 +77,22 @@ function generateAIOffline(sim, autoOn) {
       if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return msg;
     }
+    // Warning-level (MEDIO) exceedances with no critical alarm and no active
+    // correction: don't claim "ottimali" — the effluent is over a regulatory
+    // limit even if no actuator lever is currently moving.
+    if (alarms.length > 0) {
+      const valOf = { "COD":out.COD, "BOD₅":out.BOD5, "TSS":out.TSS, "NH₄":out.NH4, "O₂":out.O2, "pH":out.pH };
+      let msg = "Parametri oltre soglia (" + ts + ")\n\n";
+      alarms.forEach(([p, sev]) => {
+        const v = valOf[p];
+        const vs = v != null ? " (" + v.toFixed(p === "pH" ? 2 : 1) + " mg/L)" : "";
+        msg += "• " + p + vs + " — " + (sev === "ALTO" ? "CRITICO" : "oltre il limite") + "\n";
+      });
+      msg += "\nL'auto-correzione agisce sulle leve disponibili (aerazione, dosaggi); "
+           + "se il superamento persiste verificare il carico in ingresso o i limiti di processo.";
+      if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
+      return msg;
+    }
     const optActions = Object.values(sim.stageActions || {}).filter(a => a && a.sev === "OK");
     if (optActions.length > 0) {
       let msg = "Ottimizzazione energetica in corso (" + ts + "):\n\n";

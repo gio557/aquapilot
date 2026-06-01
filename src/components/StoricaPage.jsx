@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { loadHistory, loadInterventions } from "../simulation/learning";
 import { STAGE_META } from "../constants/stages";
-import { STAGE_TREND_DEFS, stageAvailableMetrics } from "../constants/stageTrend";
+import { STAGE_TREND_DEFS } from "../constants/stageTrend";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,

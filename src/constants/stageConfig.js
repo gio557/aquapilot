@@ -88,103 +88,14 @@ export const PARAM_SENSOR_MAP = {
 const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>
   ({ id, name, enabled: true, power_kw, flow_m3h, head_m, rpm, vfd });
 
-export const DEFAULT_STAGE_CONFIG = [
-  {
-    stageIndex: 0,
-    referenceSensor: null,
-    sensors: {
-      flow:   { enabled: true  },
-      level:  { enabled: true  },
-      diff_p: { enabled: true  },
-      temp:   { enabled: false },
-      tss:    { enabled: false },
-    },
-    pumps: [],
-    grigliatura: {
-      DH_AVVIO_PULIZIA:        0.15,
-      DH_STOP_PULIZIA:         0.05,
-      DH_GUARDIA_ALTA:         0.35,
-      TIMER_BACKUP_INTERVALLO: 1800,
-      DURATA_MINIMA_CICLO:     120,
-      CORRENTE_NOMINALE:       4.5,
-      CORRENTE_SOVRACCARICO:   8.0,
-      BYPASS_AUTO:             true,
-    },
-  },
-  {
-    stageIndex: 1,
-    referenceSensor: null,
-    sensors: {
-      flow:  { enabled: true  },
-      tss:   { enabled: true  },
-      level: { enabled: true  },
-      temp:  { enabled: false },
-    },
-    pumps: [
-      pump("p1", "Pompa classificatore sabbie", 2.2, 45, 5, 1450),
-    ],
-    classifier: {
-      mode: "timed",    // "timed" | "continuous"
-      timeOn: 10,       // minutes
-      timeOff: 20,      // minutes
-      speed: 60,        // % for continuous mode
-      thresholdWarn: 3.0,     // A — green → yellow
-      thresholdAlarm: 4.2,    // A — yellow → red
-    },
-  },
-  {
-    stageIndex: 2,
-    referenceSensor: "cod",
-    sensors: {
-      o2:    { enabled: true  },
-      ph:    { enabled: true  },
-      temp:  { enabled: true  },
-      tss:   { enabled: true  },
-      nh4:   { enabled: true  },
-      redox: { enabled: false },
-      cod:   { enabled: false },
-    },
-    pumps: [
-      pump("p1", "Soffianti aria",            15.0,   0,  0, 2900, true),
-      pump("p2", "Pompa ricircolo fanghi",     5.5, 200,  6, 1450, true),
-    ],
-  },
-  {
-    stageIndex: 3,
-    referenceSensor: "tss",
-    sensors: {
-      tss:  { enabled: true  },
-      sbl:  { enabled: true  },
-      ph:   { enabled: false },
-      flow: { enabled: false },
-      cod:  { enabled: false },
-    },
-    pumps: [
-      pump("p1", "Pompa fanghi di ricircolo", 4.0, 120, 7, 1450),
-    ],
-  },
-  {
-    stageIndex: 4,
-    referenceSensor: "nh4",
-    sensors: {
-      ph:   { enabled: true  },
-      flow: { enabled: true  },
-      tss:  { enabled: true  },
-      temp: { enabled: false },
-      o2:   { enabled: false },
-      cod:  { enabled: false },
-      nh4:  { enabled: false },
-    },
-    pumps: [
-      pump("p1", "Pompa dosaggio disinfettante", 0.37, 0.5, 20, 1450),
-    ],
-  },
-];
-
+// Per-stage-type sensor/referenceSensor defaults. Single source of truth for
+// the sensor layout of a stage type — consumed both by makeDefaultStageConfig
+// (newly added stages) and by DEFAULT_STAGE_CONFIG below (initial plant), so
+// the two can never drift apart.
 const STAGE_SENSOR_PRESETS = {
   "Grigliatura": {
     referenceSensor: null,
-    sensors: { flow:{enabled:true}, level:{enabled:true}, diff_p:{enabled:true}, tss:{enabled:false}, temp:{enabled:false} },
+    sensors: { flow:{enabled:true}, level:{enabled:true}, diff_p:{enabled:true}, temp:{enabled:false}, tss:{enabled:false} },
   },
   "Dissabbiatura": {
     referenceSensor: null,
@@ -239,6 +150,80 @@ const STAGE_SENSOR_PRESETS = {
     sensors: { flow:{enabled:true}, cod:{enabled:true}, tss:{enabled:true}, ph:{enabled:false}, temp:{enabled:false} },
   },
 };
+
+// Sensor layout per default stage is derived from STAGE_SENSOR_PRESETS so it can
+// never drift from what add-stage produces. Each entry then adds the stage's
+// process detail (pumps, sub-config) that presets don't carry.
+const fromPreset = (name) => ({
+  referenceSensor: STAGE_SENSOR_PRESETS[name].referenceSensor,
+  sensors: { ...STAGE_SENSOR_PRESETS[name].sensors },
+});
+
+export const DEFAULT_STAGE_CONFIG = [
+  {
+    stageIndex: 0,
+    ...fromPreset("Grigliatura"),
+    pumps: [],
+    grigliatura: {
+      DH_AVVIO_PULIZIA:        0.15,
+      DH_STOP_PULIZIA:         0.05,
+      DH_GUARDIA_ALTA:         0.35,
+      TIMER_BACKUP_INTERVALLO: 1800,
+      DURATA_MINIMA_CICLO:     120,
+      CORRENTE_NOMINALE:       4.5,
+      CORRENTE_SOVRACCARICO:   8.0,
+      BYPASS_AUTO:             true,
+    },
+  },
+  {
+    stageIndex: 1,
+    ...fromPreset("Dissabbiatura"),
+    pumps: [
+      pump("p1", "Pompa classificatore sabbie", 2.2, 45, 5, 1450),
+    ],
+    classifier: {
+      mode: "timed",    // "timed" | "continuous"
+      timeOn: 10,       // minutes
+      timeOff: 20,      // minutes
+      speed: 60,        // % for continuous mode
+      thresholdWarn: 3.0,     // A — green → yellow
+      thresholdAlarm: 4.2,    // A — yellow → red
+    },
+  },
+  {
+    stageIndex: 2,
+    ...fromPreset("Biologico"),
+    pumps: [
+      pump("p1", "Soffianti aria",            15.0,   0,  0, 2900, true),
+      pump("p2", "Pompa ricircolo fanghi",     5.5, 200,  6, 1450, true),
+    ],
+  },
+  {
+    stageIndex: 3,
+    ...fromPreset("Sedimentazione"),
+    pumps: [
+      pump("p1", "Pompa fanghi di ricircolo", 4.0, 120, 7, 1450),
+    ],
+  },
+  {
+    // "Disinfezione" is a legacy initial-stage name with no add-stage preset
+    // (the catalogue offers "Disinfezione UV" / "Disinfezione Cloro").
+    stageIndex: 4,
+    referenceSensor: "nh4",
+    sensors: {
+      ph:   { enabled: true  },
+      flow: { enabled: true  },
+      tss:  { enabled: true  },
+      temp: { enabled: false },
+      o2:   { enabled: false },
+      cod:  { enabled: false },
+      nh4:  { enabled: false },
+    },
+    pumps: [
+      pump("p1", "Pompa dosaggio disinfettante", 0.37, 0.5, 20, 1450),
+    ],
+  },
+];
 
 export function makeDefaultStageConfig(stageIndex, stageName) {
   const preset = stageName && STAGE_SENSOR_PRESETS[stageName];

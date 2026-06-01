@@ -1,3 +1,5 @@
+import { QUALITY_LIMITS as QL } from "../constants/limits";
+
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
@@ -16,13 +18,24 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
 
   // ── SOFFIANTI — controllo O2 e qualità biologica ─────────────
   if (ac.blower && ac.blower.on) {
-    const O2sp_nh4 = Math.max(0, Math.min(1, (out.NH4  - 5.0) / 7.0)) * 2.8;
-    const O2sp_cod = Math.max(0, Math.min(1, (out.COD  - 80)  / 80))  * 1.2;
-    const O2sp_bod = Math.max(0, Math.min(1, (out.BOD5 - 20)  / 20))  * 1.0;
+    // O2 demand is referenced to the *regulatory* limits, not arbitrary
+    // setpoints. Each term ramps from an anchor (below the warn limit, so the
+    // controller reacts with margin to spare) up to full demand near the
+    // critical limit. The previous gentle terms produced a steady-state offset:
+    // the setpoint was satisfied at ~4 mg/L while NH4/BOD5 stayed over limit, so
+    // the blower stopped climbing and the exceedance never cleared.
+    // Each term ramps to (near) full demand as the parameter crosses its *warn*
+    // limit, so the moment effluent goes over a regulatory threshold the blower
+    // is driven toward saturation. Ramping only to the crit limit (as before)
+    // left a steady-state offset: the controller settled at ~5.9 mg/L O2 while
+    // NH4/BOD5 stayed just over limit and never cleared.
+    const ramp = (v, lo, hi, gain) => clamp((v - lo) / (hi - lo), 0, 1) * gain;
+    const O2sp_nh4 = ramp(out.NH4,  QL.NH4.warn  - 3,  QL.NH4.warn  + 2,  5.0);
+    const O2sp_bod = ramp(out.BOD5, QL.BOD5.warn - 8,  QL.BOD5.warn + 5,  3.5);
+    const O2sp_cod = ramp(out.COD,  QL.COD.warn  - 35, QL.COD.warn + 20,  2.0);
     // Baseline aligned with the stated O2 target (2.0 mg/L); load-driven terms
-    // raise it as needed. A 3.5 baseline pinned O2 above target and made the
-    // energy-optimization branch (delta<0) unreachable for clean effluent.
-    const O2sp = Math.min(7.0, 2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod);
+    // raise it toward saturation (8 mg/L) as needed.
+    const O2sp = Math.min(8.0, 2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod);
     const errO2 = O2sp - O2;
     const Kp = 6 * gBlower;
     const delta = clamp(Math.round(errO2 * Kp), -8, 15);

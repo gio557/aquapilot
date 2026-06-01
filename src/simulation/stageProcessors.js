@@ -479,12 +479,15 @@ function processNitrificazione(water, cfg, prevState, g) {
 function processDenitrificazione(water, cfg, prevState, g) {
   const { round1, round2, tgt } = g;
   const no3In  = water.NO3 ?? 0;
-  // Denitrification rate is limited both by available carbon (COD donor) and by
-  // temperature (θ≈1.07): cold anoxic basins remove markedly less nitrate.
+  // Removal efficiency is set by operation (carbon availability via MLE recycle /
+  // dosed carbon) and curtailed by temperature (θ≈1.07): a cold anoxic basin
+  // removes markedly less nitrate. Carbon donor is drawn from the influent COD up
+  // to COD_MAX_FRAC; the balance is external (dosed) carbon, so effluent COD is
+  // reduced but not driven to zero — matching post-denitrification practice.
   const fT_d   = Math.pow(PC.DEN.THETA, water.T - PC.DEN.T_REF);
-  const denE   = Math.max(0, Math.min(PC.DEN.NO3_REM_MAX, (0.40 + 0.45 * (water.COD / 200)) * fT_d));
+  const denE   = Math.max(0, Math.min(PC.DEN.NO3_REM_MAX, PC.DEN.NO3_REM_BASE * fT_d));
   const no3Rem = no3In * denE;
-  const codConsumed = no3Rem * PC.DEN.COD_PER_NO3;
+  const codConsumed = Math.min(no3Rem * PC.DEN.COD_PER_NO3, water.COD * PC.DEN.COD_MAX_FRAC);
 
   const waterOut = {
     ...water,

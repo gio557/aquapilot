@@ -200,6 +200,14 @@ export const DEFAULT_STAGE_CONFIG = [
   },
   {
     stageIndex: 3,
+    ...fromPreset("Denitrificazione"),
+    pumps: [
+      pump("p1", "Pompa ricircolo miscela (MLR)", 5.5, 300, 5, 1450, true),
+      pump("p2", "Pompa dosaggio carbonio",       0.37, 0.4, 15, 1450),
+    ],
+  },
+  {
+    stageIndex: 4,
     ...fromPreset("Sedimentazione"),
     pumps: [
       pump("p1", "Pompa fanghi di ricircolo", 4.0, 120, 7, 1450),
@@ -208,7 +216,7 @@ export const DEFAULT_STAGE_CONFIG = [
   {
     // "Disinfezione" is a legacy initial-stage name with no add-stage preset
     // (the catalogue offers "Disinfezione UV" / "Disinfezione Cloro").
-    stageIndex: 4,
+    stageIndex: 5,
     referenceSensor: "nh4",
     sensors: {
       ph:   { enabled: true  },

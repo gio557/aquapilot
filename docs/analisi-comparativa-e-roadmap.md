@@ -30,15 +30,23 @@ Le proposte non sono alternative: sono strati complementari, implementabili in
 modo incrementale senza stravolgere l'architettura del motore
 (`simTick` → `STAGE_PROCESSORS` → `applyAutoCorrect`).
 
-### Fase 1 — Realismo normativo *(in corso)*
-- **A — Denitrificazione anossica**: lo stadio `Denitrificazione` esiste già
-  (`processDenitrificazione`, `PC.DEN`). Resa T-dipendente; NO₃ e N-tot esposti
-  in uscita così che la rimozione abbia un effetto misurabile e l'impianto possa
-  rientrare nei limiti di azoto totale (D.Lgs. 152/2006).
+### Fase 1 — Realismo normativo *(completata)*
+- **A — Denitrificazione anossica**: lo stadio `Denitrificazione` (post-denit, dopo
+  il Biologico) è ora **incluso nell'impianto di default** (6 stadi). Modello MLE:
+  rimozione NO₃ governata da operazione (ricircolo nitrati/carbonio donatore) e
+  temperatura; il carbonio è in parte influente (cap `COD_MAX_FRAC`) e in parte
+  dosato. NO₃ e N-tot esposti in uscita e nel pannello QUALITÀ USCITA. A 20 °C
+  l'N-tot rientra in zona verde (~9-10 mg/L, limite 15 — D.Lgs. 152/2006).
+  *Verifica:* default N-tot≈9.5 ✓ ; ondata di freddo ~9 °C → N-tot≈27 (nitrif.
+  crollata). NO₃/N-tot sono informativi nel pannello (NON collegati ai popup).
 - **B — Effetto temperatura (Arrhenius)**: correzione `θ^(T−20)` sulle cinetiche
   di Biologico, Nitrificazione e Denitrificazione. La nitrificazione è molto
-  sensibile (θ≈1.10): a 10 °C crolla del ~55%, generando allarmi NH₄ realistici
-  in inverno. Aggiunto evento "ondata di freddo" (`cold_weather`, `T_delta`).
+  sensibile (θ≈1.10): a ~9 °C crolla, generando allarmi NH₄ realistici in inverno.
+  Aggiunto evento "❄️ Ondata di freddo" (`cold_weather`, `inlet.T_delta`).
+- **AI Advisor**: reso consapevole di NO₃/N-tot. L'azoto totale non è correggibile
+  con le leve automatiche (aerazione/dosaggi) — richiede la denitrificazione — quindi
+  l'advisor lo segnala onestamente come "oltre soglia" invece di dichiarare
+  "tutti i parametri nei target".
 
 ### Fase 2 — Controllo avanzato *(da proporre)*
 - **C — Controllo a cascata aerazione**: loop lento NH₄→setpoint DO + loop

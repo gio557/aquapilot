@@ -83,8 +83,12 @@ export const PC = {
 
   // ── DENITRIFICAZIONE ──────────────────────────────────────────────────────
   DEN: {
-    NO3_REM_MAX:   0.85,
+    NO3_REM_BASE:  0.82,     // well-operated anoxic zone (MLE recycle + carbon) at T_REF
+    NO3_REM_MAX:   0.90,
     COD_PER_NO3:   4.0,      // mg COD consumed per mg NO3-N removed
+    COD_MAX_FRAC:  0.45,     // max share of influent COD used as donor; the rest of
+                             // the demand is met by dosed/external carbon, so the
+                             // effluent COD isn't driven to zero (post-denit reality)
     TSS_FACTOR:    0.98,
     PH_RISE_N:     0.30,     // pH slight rise due to alkalinity produced
     T_REF:         20,

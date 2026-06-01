@@ -54,6 +54,15 @@ function generateAIOffline(sim, autoOn) {
   const intMsg   = interventionLine(intsumm);
   const learnFooter = [trendMsg, gainsMsg, intMsg].filter(Boolean).join("\n");
 
+  // Total nitrogen / nitrate are NOT correctable by the dosing/aeration levers:
+  // removing nitrate needs anoxic denitrification (a process stage), so the
+  // advisor must surface an N-tot exceedance honestly rather than claim full
+  // compliance — the same "don't say ottimali while a value is out" rule.
+  const ntotOver = out.NTOT != null && out.NTOT >= QL.NTOT.warn;
+  const nNoteCore = "L'azoto totale non è correggibile con le leve automatiche (aerazione/dosaggi): "
+    + "la nitrificazione converte NH₄ in NO₃ ma non lo elimina. Serve la denitrificazione anossica — "
+    + "verificare/attivare lo stadio di denitrificazione (comparto anossico + ricircolo nitrati).";
+
   if (autoOn) {
     if (crits.length > 0) {
       let msg = "INTERVENTO D'EMERGENZA ATTIVO (" + ts + ")\n";
@@ -93,11 +102,21 @@ function generateAIOffline(sim, autoOn) {
       if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return msg;
     }
+    // N-tot over the legal limit with no other alarm/action: report it as an
+    // exceedance ("oltre soglia") instead of "ottimali", and explain it needs a
+    // denitrification stage rather than a lever the auto-correction can move.
+    if (ntotOver && alarms.length === 0) {
+      let msg = "Azoto totale oltre soglia (" + ts + ")\n\n";
+      msg += "• N-tot " + out.NTOT.toFixed(1) + " mg/L (limite " + QL.NTOT.warn + ") · NO₃ " + (out.NO3 ?? 0).toFixed(1) + " mg/L\n";
+      msg += "\n" + nNoteCore;
+      if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
+      return msg;
+    }
     const optActions = Object.values(sim.stageActions || {}).filter(a => a && a.sev === "OK");
     if (optActions.length > 0) {
       let msg = "Ottimizzazione energetica in corso (" + ts + "):\n\n";
       optActions.forEach(a => { msg += "• " + a.text + "\n"; });
-      let m = msg + "\nTutti i parametri nei target. Il sistema riduce i consumi mantenendo i margini di sicurezza.";
+      let m = msg + "\nParametri di processo nei target. Il sistema riduce i consumi mantenendo i margini di sicurezza.";
       if (learnFooter) m += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return m;
     }
@@ -128,6 +147,7 @@ function generateAIOffline(sim, autoOn) {
     else if (out.pH > QL.pH.high_w) sugg.push("pH alto (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 10-15%.");
     if (sim.MLSS > MLSS_LIMITS.hi_crit)    sugg.push("MLSS elevato (" + sim.MLSS + " mg/L). Ridurre ricircolo fanghi al " + Math.max(20,sim.sludgeRecycle-15) + "%.");
     else if (sim.MLSS<MLSS_LIMITS.lo_crit) sugg.push("MLSS basso (" + sim.MLSS + " mg/L). Aumentare ricircolo fanghi al " + Math.min(100,sim.sludgeRecycle+15) + "%.");
+    if (ntotOver) sugg.push("Azoto totale " + out.NTOT.toFixed(1) + " mg/L oltre il limite (" + QL.NTOT.warn + " mg/L). " + nNoteCore);
 
     if (sugg.length === 0)
       return "Parametri nella norma — monitoraggio manuale attivo (" + ts + ")\n\n"
@@ -161,7 +181,8 @@ async function generateAIOnline(sim, autoOn) {
       messages:[{ role:"user", content:
         "Stato impianto (" + new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}) + "):\n"
         +"COD: "+out.COD.toFixed(1)+" mg/L | BOD5: "+out.BOD5.toFixed(1)+" mg/L | TSS: "+out.TSS.toFixed(1)+" mg/L\n"
-        +"NH4: "+out.NH4.toFixed(2)+" mg/L | pH: "+out.pH.toFixed(2)+" | O2: "+out.O2.toFixed(1)+" mg/L\n"
+        +"NH4: "+out.NH4.toFixed(2)+" mg/L | NO3: "+(out.NO3??0).toFixed(1)+" mg/L | N-tot: "+(out.NTOT??0).toFixed(1)+" mg/L\n"
+        +"pH: "+out.pH.toFixed(2)+" | O2: "+out.O2.toFixed(1)+" mg/L\n"
         +"MLSS: "+sim.MLSS+" mg/L | Soffianti: "+sim.blower+"% | Coagulante: "+sim.coagulant+"% | RAS: "+sim.sludgeRecycle+"%\n"
         +"Allarmi: "+alarmList+"\nAzioni automatiche: "+actions+"\n\n"+modeInstr
       }]

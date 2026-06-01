@@ -112,11 +112,12 @@ export const INIT_SIM = {
     h2so4:         60,
     sludgeRecycle: 800,
   },
-  stageEff: [100, 98, 96, 95, 93],
+  stageEff: [100, 98, 96, 82, 95, 93],
   stageOutputs: [
     { param:"EFF", value:24,  target:24,  unit:"%",    label:"Rendimento rimozione solidi", higherIsBetter:true },
     { param:"EFF", value:37,  target:37,  unit:"%",    label:"Rendimento rimozione sabbie",  higherIsBetter:true },
     { param:"COD", value:72,  target:125, unit:"mg/L", label:"COD biologico" },
+    { param:"NO3", value:4,   target:10,  unit:"mg/L", label:"NO₃ denitrificazione" },
     { param:"TSS", value:22,  target:35,  unit:"mg/L", label:"SST sediment." },
     { param:"NH4", value:7.9, target:8,   unit:"mg/L", label:"NH4 uscita" },
   ],
@@ -127,7 +128,7 @@ export const INIT_SIM = {
   qHistory: [],
   events: [],   // scenari/eventi attivi (vedi constants/events.js)
   output: { Q: 1245, COD: 22.4, BOD5: 8.1, TSS: 7.3, NH4: 0.80, pH: 7.2, T: 18.4, O2: 4.5 },
-  stageEnergy: [0.35, 0.55, 13.5, 0.65, 0.32],
+  stageEnergy: [0.35, 0.55, 13.5, 0.42, 0.65, 0.32],
   energy: { kw: 15.4, kwh: 128 },
   trend: initTrend(),
   alarms: [],

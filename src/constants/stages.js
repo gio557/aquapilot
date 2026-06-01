@@ -1,9 +1,10 @@
 export const STAGE_META = [
-  {id:1, name:"Grigliatura",    sub:"Rimozione solidi grossolani"},
-  {id:2, name:"Dissabbiatura",  sub:"Rimozione sabbie e inerti"},
-  {id:3, name:"Biologico",      sub:"Trattamento a fanghi attivi"},
-  {id:4, name:"Sedimentazione", sub:"Separazione fanghi"},
-  {id:5, name:"Disinfezione",   sub:"Acqua trattata"},
+  {id:1, name:"Grigliatura",      sub:"Rimozione solidi grossolani"},
+  {id:2, name:"Dissabbiatura",    sub:"Rimozione sabbie e inerti"},
+  {id:3, name:"Biologico",        sub:"Trattamento a fanghi attivi"},
+  {id:4, name:"Denitrificazione", sub:"Rimozione azoto nitrico"},
+  {id:5, name:"Sedimentazione",   sub:"Separazione fanghi"},
+  {id:6, name:"Disinfezione",     sub:"Acqua trattata"},
 ];
 
 export const STAGE_TYPES = [

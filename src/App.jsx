@@ -495,11 +495,10 @@ export default function App() {
                     <button key={r} onClick={() => setTimeRange(r)}
                       style={{padding:"2px 9px", borderRadius:4, cursor:"pointer",
                         fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
-                        fontWeight: timeRange===r ? 700 : 400,
+                        fontWeight: 400,
                         border:`1px solid ${timeRange===r ? t.accent : t.border}`,
-                        background: timeRange===r ? `${t.accent}30` : "transparent",
-                        color: timeRange===r ? t.accent : t.textMuted,
-                        boxShadow: timeRange===r ? `0 0 0 1px ${t.accent}55, inset 0 -2px 0 ${t.accent}88` : "none",
+                        background: "transparent",
+                        color: timeRange===r ? t.text : t.textMuted,
                         opacity: timeRange===r ? 1 : 0.65}}>
                       {r}
                     </button>
@@ -518,12 +517,11 @@ export default function App() {
                       title={hasMetrics ? st.name : `${st.name} — nessuna metrica trend definita`}
                       style={{padding:"3px 10px", borderRadius:5, cursor: hasMetrics ? "pointer" : "not-allowed",
                         fontFamily:"'Rajdhani',sans-serif", fontSize:12, letterSpacing:1,
-                        fontWeight: active ? 800 : 500,
+                        fontWeight: 500,
                         opacity: !hasMetrics ? 0.35 : active ? 1 : 0.6,
                         border:`1px solid ${active ? t.accent : t.border}`,
-                        background: active ? `${t.accent}28` : "transparent",
-                        color: active ? t.accent : t.textMuted,
-                        boxShadow: active ? `0 0 0 1px ${t.accent}44, inset 0 -2px 0 ${t.accent}99` : "none"}}>
+                        background: "transparent",
+                        color: active ? t.text : t.textMuted}}>
                       {st.name}
                     </button>
                   );
@@ -531,12 +529,11 @@ export default function App() {
                 <button onClick={() => setTrendNode("plant")}
                   style={{padding:"3px 11px", borderRadius:5, cursor:"pointer",
                     fontFamily:"'Rajdhani',sans-serif", fontSize:12, letterSpacing:1,
-                    fontWeight: trendNode==="plant" ? 800 : 500,
+                    fontWeight: 500,
                     opacity: trendNode==="plant" ? 1 : 0.6,
                     border:`1px solid ${trendNode==="plant" ? t.green : t.border}`,
-                    background: trendNode==="plant" ? `${t.green}28` : "transparent",
-                    color: trendNode==="plant" ? t.green : t.textMuted,
-                    boxShadow: trendNode==="plant" ? `0 0 0 1px ${t.green}44, inset 0 -2px 0 ${t.green}99` : "none"}}>
+                    background: "transparent",
+                    color: trendNode==="plant" ? t.text : t.textMuted}}>
                   GEN. IMPIANTO
                 </button>
               </div>
@@ -552,12 +549,11 @@ export default function App() {
                   )}
                     style={{padding:"3px 11px", borderRadius:5, cursor:"pointer",
                       fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
-                      fontWeight: activeTrends.includes(md.key) ? 700 : 400,
+                      fontWeight: 400,
                       opacity: activeTrends.includes(md.key) ? 1 : 0.5,
                       border:`1px solid ${activeTrends.includes(md.key) ? md.color : t.border}`,
-                      background: activeTrends.includes(md.key) ? `${md.color}28` : "transparent",
-                      color: activeTrends.includes(md.key) ? md.color : t.textMuted,
-                      boxShadow: activeTrends.includes(md.key) ? `0 0 0 1px ${md.color}44, inset 0 -2px 0 ${md.color}aa` : "none"}}>
+                      background: "transparent",
+                      color: activeTrends.includes(md.key) ? t.text : t.textMuted}}>
                     {md.label}
                   </button>
                 ))}

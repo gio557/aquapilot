@@ -223,7 +223,10 @@ export function simTick(s) {
   const sandClassifier   = dissIdx >= 0 ? newStageStates[dissIdx] : s.sandClassifier;
 
   // ── Apply sensorGauge overrides where referenceSensor is set ─────────────────
-  const s3TSS = stageWaterArr[2]?.TSS ?? 0;
+  // TSS feeding the sludge-blanket (SBL) gauge comes from the sedimentation
+  // stage; locate it by name rather than assuming a fixed pipeline index.
+  const sedTSSIdx = stageIndexMap.sed ?? 2;
+  const s3TSS = stageWaterArr[sedTSSIdx]?.TSS ?? 0;
   for (let si = 0; si < stageCfgs.length; si++) {
     const ref = stageCfgs[si]?.referenceSensor;
     if (ref) {

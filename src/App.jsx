@@ -123,6 +123,11 @@ export default function App() {
     if (trendNode !== "plant" && trendNode >= stages.length) setTrendNode("plant");
   }, [stages.length, trendNode]);
 
+  // Close the detail popup if its stage was removed (avoid showing a shifted stage)
+  useEffect(() => {
+    if (selectedStage != null && selectedStage >= stages.length) setSelectedStage(null);
+  }, [stages.length, selectedStage]);
+
   // Show the plant-wide trend (GEN. IMPIANTO) whenever the dashboard is opened
   useEffect(() => {
     if (page === "dashboard") setTrendNode("plant");
@@ -134,11 +139,16 @@ export default function App() {
     : stageAvailableMetrics(stages[trendNode]?.name, stageConfig[trendNode]);
   const nodeMetrics = nodeMetricDefs.map(d => d.key);
 
-  // Auto-select all available metrics when switching node
+  // Auto-select all available metrics when the selected node's identity or its
+  // metric set changes. Keyed on node name + metric keys (not the bare index),
+  // so a reorder/removal that shifts which stage sits at this index re-selects.
+  const nodeKey = trendNode === "plant"
+    ? "plant"
+    : `${stages[trendNode]?.name ?? "?"}|${nodeMetrics.join(",")}`;
   useEffect(() => {
     setActiveTrends(nodeMetrics);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trendNode]);
+  }, [nodeKey]);
 
   const trendData = (() => {
     const pts = { "15m":15, "1h":60, "6h":72, "24h":96 }[timeRange] || 60;
@@ -170,15 +180,20 @@ export default function App() {
   const autoOn = sim.autoCorrect?.enabled ?? false;
   const card = { background:t.surface, border:`2px solid ${t.border}`, borderRadius:12, boxShadow:t.cardShadow };
 
-  const classifierCfgJson = JSON.stringify(stageConfig[1]?.classifier);
+  // Locate special stages by NAME (matches engine.js), not by fixed index —
+  // the stage list can be reordered, added to, or have earlier stages removed.
+  const dissIdx = stages.findIndex(s => s.name === "Dissabbiatura");
+  const grIdx   = stages.findIndex(s => s.name === "Grigliatura");
+
+  const classifierCfgJson = JSON.stringify(stageConfig[dissIdx]?.classifier);
   useEffect(() => {
-    const cfg = stageConfig[1]?.classifier;
+    const cfg = stageConfig[dissIdx]?.classifier;
     if (cfg) setSim(prev => ({ ...prev, classifierConfig: { ...prev.classifierConfig, ...cfg } }));
   }, [classifierCfgJson]);
 
-  const grCfgJson = JSON.stringify(stageConfig[0]?.grigliatura);
+  const grCfgJson = JSON.stringify(stageConfig[grIdx]?.grigliatura);
   useEffect(() => {
-    const cfg = stageConfig[0]?.grigliatura;
+    const cfg = stageConfig[grIdx]?.grigliatura;
     if (cfg) setSim(prev => ({ ...prev, grigliaturaConfig: { ...prev.grigliaturaConfig, ...cfg } }));
   }, [grCfgJson]);
 
@@ -375,9 +390,9 @@ export default function App() {
                 stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
                 eff={sim.stageEff?.[i]}
                 autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}
-                classifierState={i === 1 ? sim.sandClassifier : null}
-                grigliaturaState={i === 0 ? sim.grigliaturaState : null}
-                onGrigliaturaReset={i === 0 ? handleGrigliaturaReset : undefined}/>
+                classifierState={i === dissIdx ? sim.sandClassifier : null}
+                grigliaturaState={i === grIdx ? sim.grigliaturaState : null}
+                onGrigliaturaReset={i === grIdx ? handleGrigliaturaReset : undefined}/>
             ))}
           </div>
 

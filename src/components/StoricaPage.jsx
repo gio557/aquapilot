@@ -519,7 +519,7 @@ export default function StoricaPage({ t }) {
                   )} style={{
                     padding:"4px 11px", borderRadius:5, cursor:"pointer", fontSize:13,
                     fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
-                    border:`1px solid ${activeParams.includes(md.key) ? md.color : t.border}`,
+                    border:`${activeParams.includes(md.key) ? 2 : 1}px solid ${activeParams.includes(md.key) ? md.color : t.border}`,
                     background:activeParams.includes(md.key) ? `${md.color}22` : t.surface2,
                     color:activeParams.includes(md.key) ? md.color : t.textSec,
                   }}>{md.label}</button>
@@ -654,7 +654,7 @@ export default function StoricaPage({ t }) {
                     style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
                       fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:600, letterSpacing:1,
                       opacity: hasDefs ? 1 : 0.5,
-                      border:`1px solid ${active?t.accent:t.border}`,
+                      border:`${active ? 2 : 1}px solid ${active?t.accent:t.border}`,
                       background:active?`${t.accent}22`:t.surface2,
                       color:active?t.accent:t.textSec}}>
                     {node.name}
@@ -664,7 +664,7 @@ export default function StoricaPage({ t }) {
               <button onClick={() => setHistNode("plant")}
                 style={{padding:"4px 12px", borderRadius:5, cursor:"pointer",
                   fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:700, letterSpacing:1,
-                  border:`1px solid ${histNode==="plant"?t.green:t.border}`,
+                  border:`${histNode==="plant" ? 2 : 1}px solid ${histNode==="plant"?t.green:t.border}`,
                   background:histNode==="plant"?`${t.green}22`:t.surface2,
                   color:histNode==="plant"?t.green:t.textSec}}>
                 GEN. IMPIANTO

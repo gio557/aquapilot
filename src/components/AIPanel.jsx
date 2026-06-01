@@ -118,6 +118,8 @@ function generateAIOffline(sim, autoOn) {
     else if (out.COD > QL.COD.warn) sugg.push("COD oltre target (" + out.COD.toFixed(1) + " mg/L). Aumentare aerazione o ridurre COD in ingresso.");
     if (out.TSS > QL.TSS.crit)      sugg.push("TSS critico (" + out.TSS.toFixed(1) + " mg/L). Portare coagulante all'80-90%.");
     else if (out.TSS > QL.TSS.warn) sugg.push("TSS oltre target (" + out.TSS.toFixed(1) + " mg/L). Aumentare coagulante al " + Math.min(100,sim.coagulant+15) + "%.");
+    if (out.BOD5 > QL.BOD5.crit)      sugg.push("BOD5 critico (" + out.BOD5.toFixed(1) + " mg/L > limite " + QL.BOD5.crit + "). Carico organico elevato — aumentare aerazione e verificare l'ingresso.");
+    else if (out.BOD5 > QL.BOD5.warn) sugg.push("BOD5 oltre target (" + out.BOD5.toFixed(1) + " mg/L). Aumentare aerazione nel comparto biologico.");
     if (out.NH4 > QL.NH4.crit)      sugg.push("NH4 critico (" + out.NH4.toFixed(1) + " mg/L). Aerazione insufficiente per nitrificazione.");
     else if (out.NH4 > QL.NH4.warn) sugg.push("NH4 elevato (" + out.NH4.toFixed(1) + " mg/L). Aumentare aerazione.");
     if (out.pH < QL.pH.low_c)       sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 30-40% immediatamente.");

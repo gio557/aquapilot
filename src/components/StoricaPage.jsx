@@ -401,6 +401,9 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
     return best;
   }, [highlightTs, nearby]);
 
+  // punto del grafico attualmente sotto il cursore (aggiornato da onMouseMove);
+  // usato dal click sul contenitore per sapere quale snapshot selezionare.
+  const activePtRef = useRef(null);
   const hlIntervRef = useRef(null);
   useEffect(() => {
     if (highlightTs != null) hlIntervRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -729,16 +732,19 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
               </div>
             </div>
           ) : (
-          <div style={{height:260, cursor:"pointer"}}>
+          <div style={{height:260, cursor:"pointer"}}
+            onClick={() => { if (activePtRef.current) pickAnomaly(activePtRef.current); }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{top:6, right:8, bottom:0, left:-14}}
-                onClick={(state) => {
-                  if (!state) return;
-                  const i = state.activeTooltipIndex;
-                  const p = (typeof i === "number" && chartData[i]) ? chartData[i]
-                          : state.activePayload?.[0]?.payload;
-                  if (p) pickAnomaly(p);
-                }}>
+                onMouseMove={(state) => {
+                  const i = state?.activeTooltipIndex;
+                  activePtRef.current =
+                    state?.activePayload?.[0]?.payload
+                    ?? (typeof i === "number" ? chartData[i] : null)
+                    ?? (state?.activeLabel != null ? chartData.find(d => d.t === state.activeLabel) : null)
+                    ?? null;
+                }}
+                onMouseLeave={() => { activePtRef.current = null; }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
                 <XAxis dataKey="t"
                   interval={Math.max(0, Math.ceil(chartData.length / 10) - 1)}

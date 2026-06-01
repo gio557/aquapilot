@@ -492,11 +492,14 @@ export default function App() {
                 <div style={{display:"flex", gap:4}}>
                   {TIME_RANGES.map(r => (
                     <button key={r} onClick={() => setTimeRange(r)}
-                      style={{padding:"2px 7px", borderRadius:4, cursor:"pointer",
+                      style={{padding:"2px 9px", borderRadius:4, cursor:"pointer",
                         fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
-                        border:`1px solid ${timeRange===r?t.accent:t.border}`,
-                        background:timeRange===r?`${t.accent}18`:t.surface2,
-                        color:timeRange===r?t.accent:t.textSec}}>
+                        fontWeight: timeRange===r ? 700 : 400,
+                        border:`1px solid ${timeRange===r ? t.accent : t.border}`,
+                        background: timeRange===r ? `${t.accent}30` : "transparent",
+                        color: timeRange===r ? t.accent : t.textMuted,
+                        boxShadow: timeRange===r ? `0 0 0 1px ${t.accent}55, inset 0 -2px 0 ${t.accent}88` : "none",
+                        opacity: timeRange===r ? 1 : 0.65}}>
                       {r}
                     </button>
                   ))}
@@ -512,22 +515,27 @@ export default function App() {
                   return (
                     <button key={st.id ?? i} onClick={() => setTrendNode(i)}
                       title={hasMetrics ? st.name : `${st.name} — nessuna metrica trend definita`}
-                      style={{padding:"3px 10px", borderRadius:4, cursor:"pointer",
-                        fontFamily:"'Rajdhani',sans-serif", fontSize:12, fontWeight:600, letterSpacing:1,
-                        opacity: hasMetrics ? 1 : 0.5,
-                        border:`1px solid ${active?t.accent:t.border}`,
-                        background:active?`${t.accent}18`:t.surface2,
-                        color:active?t.accent:t.textSec}}>
+                      style={{padding:"3px 10px", borderRadius:5, cursor: hasMetrics ? "pointer" : "not-allowed",
+                        fontFamily:"'Rajdhani',sans-serif", fontSize:12, letterSpacing:1,
+                        fontWeight: active ? 800 : 500,
+                        opacity: !hasMetrics ? 0.35 : active ? 1 : 0.6,
+                        border:`1px solid ${active ? t.accent : t.border}`,
+                        background: active ? `${t.accent}28` : "transparent",
+                        color: active ? t.accent : t.textMuted,
+                        boxShadow: active ? `0 0 0 1px ${t.accent}44, inset 0 -2px 0 ${t.accent}99` : "none"}}>
                       {st.name}
                     </button>
                   );
                 })}
                 <button onClick={() => setTrendNode("plant")}
-                  style={{padding:"3px 11px", borderRadius:4, cursor:"pointer",
-                    fontFamily:"'Rajdhani',sans-serif", fontSize:12, fontWeight:700, letterSpacing:1,
-                    border:`1px solid ${trendNode==="plant"?t.green:t.border}`,
-                    background:trendNode==="plant"?`${t.green}18`:t.surface2,
-                    color:trendNode==="plant"?t.green:t.textSec}}>
+                  style={{padding:"3px 11px", borderRadius:5, cursor:"pointer",
+                    fontFamily:"'Rajdhani',sans-serif", fontSize:12, letterSpacing:1,
+                    fontWeight: trendNode==="plant" ? 800 : 500,
+                    opacity: trendNode==="plant" ? 1 : 0.6,
+                    border:`1px solid ${trendNode==="plant" ? t.green : t.border}`,
+                    background: trendNode==="plant" ? `${t.green}28` : "transparent",
+                    color: trendNode==="plant" ? t.green : t.textMuted,
+                    boxShadow: trendNode==="plant" ? `0 0 0 1px ${t.green}44, inset 0 -2px 0 ${t.green}99` : "none"}}>
                   GEN. IMPIANTO
                 </button>
               </div>
@@ -541,11 +549,14 @@ export default function App() {
                   <button key={md.key} onClick={() => setActiveTrends(prev =>
                     prev.includes(md.key) ? prev.filter(k=>k!==md.key) : [...prev, md.key]
                   )}
-                    style={{padding:"3px 9px", borderRadius:4, cursor:"pointer",
+                    style={{padding:"3px 11px", borderRadius:5, cursor:"pointer",
                       fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
-                      border:`1px solid ${activeTrends.includes(md.key)?md.color:t.border}`,
-                      background:activeTrends.includes(md.key)?`${md.color}18`:t.surface2,
-                      color:activeTrends.includes(md.key)?md.color:t.textSec}}>
+                      fontWeight: activeTrends.includes(md.key) ? 700 : 400,
+                      opacity: activeTrends.includes(md.key) ? 1 : 0.5,
+                      border:`1px solid ${activeTrends.includes(md.key) ? md.color : t.border}`,
+                      background: activeTrends.includes(md.key) ? `${md.color}28` : "transparent",
+                      color: activeTrends.includes(md.key) ? md.color : t.textMuted,
+                      boxShadow: activeTrends.includes(md.key) ? `0 0 0 1px ${md.color}44, inset 0 -2px 0 ${md.color}aa` : "none"}}>
                     {md.label}
                   </button>
                 ))}

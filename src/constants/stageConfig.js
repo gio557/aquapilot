@@ -138,6 +138,7 @@ export const DEFAULT_STAGE_CONFIG = [
       sbl:  { enabled: true  },
       ph:   { enabled: false },
       flow: { enabled: false },
+      cod:  { enabled: false },
     },
     pumps: [
       pump("p1", "Pompa fanghi di ricircolo", 4.0, 120, 7, 1450),
@@ -152,6 +153,8 @@ export const DEFAULT_STAGE_CONFIG = [
       tss:  { enabled: true  },
       temp: { enabled: false },
       o2:   { enabled: false },
+      cod:  { enabled: false },
+      nh4:  { enabled: false },
     },
     pumps: [
       pump("p1", "Pompa dosaggio disinfettante", 0.37, 0.5, 20, 1450),
@@ -159,7 +162,70 @@ export const DEFAULT_STAGE_CONFIG = [
   },
 ];
 
-export function makeDefaultStageConfig(stageIndex) {
+const STAGE_SENSOR_PRESETS = {
+  "Grigliatura": {
+    referenceSensor: null,
+    sensors: { flow:{enabled:true}, level:{enabled:true}, diff_p:{enabled:true}, tss:{enabled:false}, temp:{enabled:false} },
+  },
+  "Dissabbiatura": {
+    referenceSensor: null,
+    sensors: { flow:{enabled:true}, tss:{enabled:true}, level:{enabled:true}, temp:{enabled:false} },
+  },
+  "Degrassatore": {
+    referenceSensor: null,
+    sensors: { flow:{enabled:true}, level:{enabled:true}, tss:{enabled:false}, ph:{enabled:false}, temp:{enabled:false} },
+  },
+  "Equalizzazione": {
+    referenceSensor: null,
+    sensors: { flow:{enabled:true}, level:{enabled:true}, tss:{enabled:false}, ph:{enabled:false}, temp:{enabled:false} },
+  },
+  "Biologico": {
+    referenceSensor: "cod",
+    sensors: { o2:{enabled:true}, ph:{enabled:true}, temp:{enabled:true}, tss:{enabled:true}, nh4:{enabled:true}, redox:{enabled:false}, cod:{enabled:false} },
+  },
+  "Nitrificazione": {
+    referenceSensor: "nh4",
+    sensors: { flow:{enabled:true}, o2:{enabled:true}, nh4:{enabled:true}, ph:{enabled:true}, temp:{enabled:true}, tss:{enabled:false} },
+  },
+  "Denitrificazione": {
+    referenceSensor: "nh4",
+    sensors: { flow:{enabled:true}, nh4:{enabled:true}, redox:{enabled:true}, ph:{enabled:true}, temp:{enabled:true}, tss:{enabled:false} },
+  },
+  "Sedimentazione": {
+    referenceSensor: "tss",
+    sensors: { tss:{enabled:true}, sbl:{enabled:true}, ph:{enabled:false}, flow:{enabled:false}, cod:{enabled:false} },
+  },
+  "Flottazione DAF": {
+    referenceSensor: "tss",
+    sensors: { flow:{enabled:true}, tss:{enabled:true}, diff_p:{enabled:true}, ph:{enabled:false}, temp:{enabled:false}, level:{enabled:false} },
+  },
+  "Filtrazione": {
+    referenceSensor: "tss",
+    sensors: { flow:{enabled:true}, tss:{enabled:true}, diff_p:{enabled:true}, cod:{enabled:true}, ph:{enabled:false}, temp:{enabled:false}, level:{enabled:false} },
+  },
+  "Osmosi Inversa": {
+    referenceSensor: "cod",
+    sensors: { flow:{enabled:true}, diff_p:{enabled:true}, cod:{enabled:true}, nh4:{enabled:true}, tss:{enabled:true}, ph:{enabled:false}, temp:{enabled:false} },
+  },
+  "Disinfezione UV": {
+    referenceSensor: null,
+    sensors: { flow:{enabled:true}, tss:{enabled:true}, ph:{enabled:false}, temp:{enabled:false} },
+  },
+  "Disinfezione Cloro": {
+    referenceSensor: "nh4",
+    sensors: { ph:{enabled:true}, flow:{enabled:true}, tss:{enabled:true}, cod:{enabled:true}, nh4:{enabled:true}, temp:{enabled:false}, o2:{enabled:false} },
+  },
+  "Post-trattamento": {
+    referenceSensor: "cod",
+    sensors: { flow:{enabled:true}, cod:{enabled:true}, tss:{enabled:true}, ph:{enabled:false}, temp:{enabled:false} },
+  },
+};
+
+export function makeDefaultStageConfig(stageIndex, stageName) {
+  const preset = stageName && STAGE_SENSOR_PRESETS[stageName];
+  if (preset) {
+    return { stageIndex, referenceSensor: preset.referenceSensor, sensors: { ...preset.sensors }, pumps: [] };
+  }
   return {
     stageIndex,
     referenceSensor: "cod",

@@ -128,7 +128,7 @@ export default function App() {
       return idx === -1 ? stages.length : idx;
     })();
     const newStage  = { id: Date.now(), name: stageType.name, sub: stageType.sub };
-    const newConfig = makeDefaultStageConfig(insertIdx);
+    const newConfig = makeDefaultStageConfig(insertIdx, stageType.name);
     setStages(prev => { const a = [...prev]; a.splice(insertIdx, 0, newStage);  return a; });
     setStageConfig(prev => { const a = [...prev]; a.splice(insertIdx, 0, newConfig); return a; });
   };

@@ -250,7 +250,7 @@ function ChartTooltip({ active, payload, label, t }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────
-export default function StoricaPage({ t }) {
+export default function StoricaPage({ t, qualitySources = {} }) {
   const [history,       setHistory]       = useState([]);
   const [interventions, setInterventions] = useState([]);
   const [calMonth,      setCalMonth]      = useState(new Date());
@@ -538,12 +538,12 @@ export default function StoricaPage({ t }) {
           <div style={{...card, padding:"20px 22px"}}>
             <div style={{...secHd}}><span style={{color:t.green}}>▸</span>QUALITÀ USCITA</div>
             {[
-              { label:"COD",  v:snap.COD,  unit:"mg/L", lim:QL.COD.warn,  warn:QL.COD.pre  },
-              { label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre },
-              { label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre  },
-              { label:"NH4",  v:snap.NH4,  unit:"mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre, decimals:2 },
-              { label:"pH",   v:snap.pH,   unit:"",     phCheck:true,      decimals:2 },
-              { label:"O₂",   v:snap.O2,   unit:"mg/L", o2Check:true,      decimals:2 },
+              { key:"COD",  label:"COD",  v:snap.COD,  unit:"mg/L", lim:QL.COD.warn,  warn:QL.COD.pre  },
+              { key:"BOD5", label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre },
+              { key:"TSS",  label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre  },
+              { key:"NH4",  label:"NH4",  v:snap.NH4,  unit:"mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre, decimals:2 },
+              { key:"pH",   label:"pH",   v:snap.pH,   unit:"",     phCheck:true,      decimals:2 },
+              { key:"O2",   label:"O₂",   v:snap.O2,   unit:"mg/L", o2Check:true,      decimals:2 },
             ].map(q => (
               <div key={q.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center",
                 padding:"12px 0", borderBottom:`1px solid ${t.border}`}}>
@@ -552,7 +552,7 @@ export default function StoricaPage({ t }) {
                     {q.label}
                   </span>
                   {(() => {
-                    const tag = dataSourceTag(dataSource(q.label, q.unit));
+                    const tag = dataSourceTag(qualitySources[q.key] ?? dataSource(q.label, q.unit));
                     const isSensor = tag.kind === "sensor";
                     return (
                       <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9,

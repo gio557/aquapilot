@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { STAGE_META } from "../constants/stages";
+import { QUALITY_PARAMS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
+
+const CONFIG_TABS = [
+  { id: "stadi",       label: "CONFIGURAZIONE STADI" },
+  { id: "provenienza", label: "PROVENIENZA DATI" },
+  { id: "normativa",   label: "NORMATIVA" },
+];
 
 const STAGE_COLORS = ["#00CFFF","#00E599","#BB66FF","#FF9422","#FFD060"];
 
@@ -19,7 +26,7 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, ac, onAC }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, ac, onAC }) {
   const [activeTab, setActiveTab] = useState("stadi");
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
@@ -92,28 +99,86 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     ));
   };
 
+  const TabBar = ({ padded }) => (
+    <div style={padded
+      ? {padding:"14px 24px 0", borderBottom:`1px solid ${t.border}`, background:t.surface, display:"flex", gap:8}
+      : {display:"flex", gap:8, marginBottom:24, borderBottom:`1px solid ${t.border}`, paddingBottom:0}}>
+      {CONFIG_TABS.map(tab => (
+        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+          style={{padding:"9px 20px", borderRadius:"7px 7px 0 0", cursor:"pointer",
+            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
+            border:`1px solid ${activeTab===tab.id?t.accent:t.border}`,
+            borderBottom: activeTab===tab.id ? `1px solid ${t.surface}` : `1px solid ${t.border}`,
+            background: activeTab===tab.id ? t.surface : t.surface2,
+            color: activeTab===tab.id ? t.accent : t.textSec,
+            marginBottom: activeTab===tab.id ? -1 : 0,
+            transition:"all 0.15s"}}>
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+
   if (activeTab === "normativa") {
     return (
       <div>
-        <div style={{padding:"14px 24px 0", borderBottom:`1px solid ${t.border}`, background:t.surface, display:"flex", gap:8}}>
-          {[
-            { id:"stadi",     label:"CONFIGURAZIONE STADI" },
-            { id:"normativa", label:"NORMATIVA" },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              style={{padding:"9px 20px", borderRadius:"7px 7px 0 0", cursor:"pointer",
-                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
-                border:`1px solid ${activeTab===tab.id?t.accent:t.border}`,
-                borderBottom: activeTab===tab.id ? `1px solid ${t.surface}` : `1px solid ${t.border}`,
-                background: activeTab===tab.id ? t.surface : t.surface2,
-                color: activeTab===tab.id ? t.accent : t.textSec,
-                marginBottom: activeTab===tab.id ? -1 : 0,
-                transition:"all 0.15s"}}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <TabBar padded />
         <NormativaPage t={t} ac={ac} onAC={onAC} norms={norms} setNorms={setNorms} normativaSets={normativaSets} />
+      </div>
+    );
+  }
+
+  if (activeTab === "provenienza") {
+    const setSrc = (key, kind) => onQualitySources?.(prev => ({ ...prev, [key]: kind }));
+    return (
+      <div>
+        <TabBar padded />
+        <div style={{padding:"20px 24px 40px", maxWidth:680}}>
+          <div style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5, marginBottom:18}}>
+            Definisci, per ogni parametro di <b>qualità in uscita</b>, come viene ottenuto il dato in impianto.
+            L'etichetta scelta compare accanto al valore nel cruscotto, nello storico e nei dettagli.
+            <div style={{display:"flex", gap:16, marginTop:10, flexWrap:"wrap", fontFamily:"'Share Tech Mono',monospace", fontSize:11}}>
+              {SOURCE_OPTIONS.map(o => {
+                const tag = dataSourceTag(o.kind);
+                return <span key={o.kind} style={{display:"inline-flex", alignItems:"center", gap:4, color:t.textMuted}}>
+                  <span>{tag.icon}</span>{tag.word} — {o.kind==="sensor" ? "sonda diretta" : o.kind==="analyzer" ? "strumento analitico / laboratorio" : "stima o valore derivato"}
+                </span>;
+              })}
+            </div>
+          </div>
+          {QUALITY_PARAMS.map(p => {
+            const cur = qualitySources[p.key] ?? "calc";
+            const tag = dataSourceTag(cur);
+            return (
+              <div key={p.key} style={{display:"flex", alignItems:"center", justifyContent:"space-between",
+                padding:"11px 0", borderBottom:`1px solid ${t.border}`}}>
+                <div style={{display:"flex", alignItems:"center", gap:10}}>
+                  <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text, minWidth:64}}>{p.label}</span>
+                  <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:4, fontSize:10,
+                    fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase",
+                    color: tag.kind==="sensor" ? t.accent : t.textMuted}}>
+                    <span style={{fontSize:10}}>{tag.icon}</span>{tag.word}
+                  </span>
+                </div>
+                <div style={{display:"flex", gap:5}}>
+                  {SOURCE_OPTIONS.map(o => {
+                    const on = cur === o.kind;
+                    return (
+                      <button key={o.kind} onClick={() => setSrc(p.key, o.kind)}
+                        style={{padding:"5px 12px", borderRadius:6, cursor:"pointer",
+                          fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:600, letterSpacing:0.5,
+                          border:`${on ? 2 : 1}px solid ${on ? t.accent : t.border}`,
+                          background: on ? `${t.accent}18` : t.surface2,
+                          color: on ? t.accent : t.textSec}}>
+                        {dataSourceTag(o.kind).icon} {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -122,24 +187,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     <div style={{padding:"20px 24px 40px"}}>
 
       {/* ── TAB BAR ── */}
-      <div style={{display:"flex", gap:8, marginBottom:24, borderBottom:`1px solid ${t.border}`, paddingBottom:0}}>
-        {[
-          { id:"stadi",     label:"CONFIGURAZIONE STADI" },
-          { id:"normativa", label:"NORMATIVA" },
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            style={{padding:"9px 20px", borderRadius:"7px 7px 0 0", cursor:"pointer",
-              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
-              border:`1px solid ${activeTab===tab.id?t.accent:t.border}`,
-              borderBottom: activeTab===tab.id ? `1px solid ${t.surface}` : `1px solid ${t.border}`,
-              background: activeTab===tab.id ? t.surface : t.surface2,
-              color: activeTab===tab.id ? t.accent : t.textSec,
-              marginBottom: activeTab===tab.id ? -1 : 0,
-              transition:"all 0.15s"}}>
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <TabBar />
 
       {config.map((sc, si) => {
         const stage   = stages[si] || { name:`ST-0${si+1}`, sub:"" };

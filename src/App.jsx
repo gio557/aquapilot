@@ -5,7 +5,7 @@ import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageC
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
 import { QUALITY_LIMITS as QL } from "./constants/limits";
-import { dataSourceTag } from "./constants/dataSource";
+import { dataSourceTag, QUALITY_SOURCE_DEFAULTS } from "./constants/dataSource";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -108,6 +108,18 @@ export default function App() {
   useEffect(() => {
     try { localStorage.setItem("aquapilot.energyPrice.v1", String(energyPrice)); } catch {}
   }, [energyPrice]);
+
+  // Provenienza dati dei parametri di QUALITÀ USCITA (sensore/analizzatore/stimato),
+  // configurabile dall'utente. Merge col default per assorbire eventuali nuove chiavi.
+  const [qualitySources, setQualitySources] = useState(() => {
+    try {
+      const saved = localStorage.getItem("aquapilot.qualitySources.v1");
+      return saved ? { ...QUALITY_SOURCE_DEFAULTS, ...JSON.parse(saved) } : { ...QUALITY_SOURCE_DEFAULTS };
+    } catch { return { ...QUALITY_SOURCE_DEFAULTS }; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("aquapilot.qualitySources.v1", JSON.stringify(qualitySources)); } catch {}
+  }, [qualitySources]);
 
   // Sync normativa targets → sim.stageTargets whenever norms changes
   useEffect(() => {
@@ -405,11 +417,12 @@ export default function App() {
           stages={stages} stageTypes={STAGE_TYPES}
           onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}
           norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}
+          qualitySources={qualitySources} onQualitySources={setQualitySources}
           ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
       ) : page === "energia" ? (
         <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
       ) : page === "storica" ? (
-        <StoricaPage t={t} />
+        <StoricaPage t={t} qualitySources={qualitySources} />
       ) : (
         <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12}}>
 
@@ -601,18 +614,17 @@ export default function App() {
                   <span style={{fontSize:11, padding:"2px 8px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, border:`1px solid ${t.green}44`}}>LIVE</span>
                 </div>
                 {[
-                  // src: come arriverebbe il dato in un impianto reale —
-                  //  "sensor" = misura diretta online · "calc" = stima/calcolo
-                  //  (analizzatore a correlazione, test di laboratorio o valore derivato)
-                  {param:"COD",  v:d.COD,  unit:" mg/L", lim:QL.COD.warn,  warn:QL.COD.pre,  src:"calc",   srcNote:"analizzatore UV / correlazione"},
-                  {param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre, src:"calc",   srcNote:"test di laboratorio 5 gg / stima da COD"},
-                  {param:"TSS",  v:d.TSS,  unit:" mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre,  src:"sensor", srcNote:"sonda di torbidità"},
-                  {param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre,  src:"sensor", srcNote:"analizzatore NH₄ online"},
-                  {param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:QL.NO3.warn,  warn:QL.NO3.pre,  src:"sensor", srcNote:"analizzatore NO₃ online", requiresStage:"Denitrificazione"},
-                  {param:"N-tot",v:d.NTOT, unit:" mg/L", lim:QL.NTOT.warn, warn:QL.NTOT.pre, src:"calc",   srcNote:"calcolato: NH₄ + NO₃",          requiresStage:"Denitrificazione"},
-                  {param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true,   src:"sensor", srcNote:"sonda pH"},
-                  {param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28,    src:"sensor", srcNote:"sensore di temperatura"},
-                  {param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true,   src:"sensor", srcNote:"sonda O₂ disciolto"},
+                  // key = chiave provenienza (qualitySources); il tipo di fonte
+                  // (sensore/analizzatore/stimato) è configurabile in Configurazione.
+                  {key:"COD",  param:"COD",  v:d.COD,  unit:" mg/L", lim:QL.COD.warn,  warn:QL.COD.pre},
+                  {key:"BOD5", param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre},
+                  {key:"TSS",  param:"TSS",  v:d.TSS,  unit:" mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre},
+                  {key:"NH4",  param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre},
+                  {key:"NO3",  param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:QL.NO3.warn,  warn:QL.NO3.pre,  requiresStage:"Denitrificazione"},
+                  {key:"NTOT", param:"N-tot",v:d.NTOT, unit:" mg/L", lim:QL.NTOT.warn, warn:QL.NTOT.pre, requiresStage:"Denitrificazione"},
+                  {key:"pH",   param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true},
+                  {key:"T",    param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28},
+                  {key:"O2",   param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true},
                 ].filter(q => !q.requiresStage || stages.some(s => s.name === q.requiresStage))
                  .map(q => {
                   let ok, fuori;
@@ -621,14 +633,14 @@ export default function App() {
                   else { ok = q.v < (q.warn ?? q.lim); fuori = q.lim != null && q.v >= q.lim; }
                   const c = fuori ? t.red : ok ? t.green : t.orange;
                   const badge = fuori ? "✗ FUORI" : ok ? "✓ OK" : "⚠ PRE";
-                  const isSensor = q.src === "sensor";
-                  const srcColor = isSensor ? t.accent : t.textMuted;
+                  const srcTag = dataSourceTag(qualitySources[q.key] ?? "calc");
+                  const srcColor = srcTag.kind === "sensor" ? t.accent : t.textMuted;
                   return (
                     <div key={q.param} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom:`1px solid ${t.border}`}}>
                       <div style={{display:"flex", alignItems:"center", gap:8}}>
                         <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, color:t.text}}>{q.param}</span>
-                        <span title={q.srcNote} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color:srcColor, textTransform:"uppercase"}}>
-                          <span style={{fontSize:9}}>{isSensor ? "📡" : "🧮"}</span>{isSensor ? "sensore" : "stimato"}
+                        <span title={srcTag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color:srcColor, textTransform:"uppercase"}}>
+                          <span style={{fontSize:9}}>{srcTag.icon}</span>{srcTag.word}
                         </span>
                       </div>
                       <div style={{display:"flex", alignItems:"center", gap:8}}>

@@ -358,11 +358,19 @@ function processBiologico(water, cfg, prevState, g) {
   const dMLSS = (MLSSt - prevMLSS) / tauMLSS * dt;
   const MLSS  = clamp(prevMLSS + dMLSS, PC.BIO.MLSS_MIN, PC.BIO.MLSS_MAX);
 
-  const bioC = Math.min(0.97, PC.BIO.COD_REM_BASE + (O2/8) * PC.BIO.COD_REM_O2 + (MLSS/12000) * PC.BIO.COD_REM_MLSS);
-  const bioB = Math.min(0.98, PC.BIO.BOD_REM_BASE + (O2/8) * PC.BIO.BOD_REM_O2);
-  const bioN = O2 > PC.BIO.NH4_O2_MIN
-    ? Math.min(0.96, PC.BIO.NH4_REM_BASE + (O2 - PC.BIO.NH4_O2_MIN) / 6.5 * PC.BIO.NH4_REM_O2)
-    : (O2 / PC.BIO.NH4_O2_MIN) * 0.30;
+  // Arrhenius temperature factors: heterotrophic (COD/BOD) vs autotrophic (NH4).
+  // Removal efficiencies are scaled by θ^(T-T_REF), then clamped — so warm water
+  // keeps full efficiency while cold water (e.g. winter) sharply curtails
+  // nitrification before it touches carbon removal.
+  const fT_c = Math.pow(PC.BIO.THETA_COD, water.T - PC.BIO.T_REF);
+  const fT_b = Math.pow(PC.BIO.THETA_BOD, water.T - PC.BIO.T_REF);
+  const fT_n = Math.pow(PC.BIO.THETA_NH4, water.T - PC.BIO.T_REF);
+
+  const bioC = Math.min(0.97, (PC.BIO.COD_REM_BASE + (O2/8) * PC.BIO.COD_REM_O2 + (MLSS/12000) * PC.BIO.COD_REM_MLSS) * fT_c);
+  const bioB = Math.min(0.98, (PC.BIO.BOD_REM_BASE + (O2/8) * PC.BIO.BOD_REM_O2) * fT_b);
+  const bioN = Math.max(0, Math.min(0.96, (O2 > PC.BIO.NH4_O2_MIN
+    ? PC.BIO.NH4_REM_BASE + (O2 - PC.BIO.NH4_O2_MIN) / 6.5 * PC.BIO.NH4_REM_O2
+    : (O2 / PC.BIO.NH4_O2_MIN) * 0.30) * fT_n));
 
   const waterOut = {
     ...water,
@@ -393,7 +401,8 @@ function processBiologico(water, cfg, prevState, g) {
       { label:"O2 disciolto",  value:round2(O2),               unit:"mg/L", note:`setpoint calcolato: ${round2(blower/100*8)} mg/L` },
       { label:"MLSS",          value:Math.round(MLSS),         unit:"mg/L", note:`setpoint ${MLSSsp ?? 3200} mg/L` },
       { label:"Rimozione COD", value:Math.round(bioC*100),     unit:"%",    note:"efficienza biologica" },
-      { label:"Nitrificaz.",   value:Math.round(bioN*100),     unit:"%",    note:"NH4→NO3" },
+      { label:"Nitrificaz.",   value:Math.round(bioN*100),     unit:"%",    note:`NH4→NO3 · fattore T ${fT_n.toFixed(2)}×` },
+      { label:"Temperatura",   value:round1(water.T),          unit:"°C",   note:`rif. ${PC.BIO.T_REF}°C — incide su nitrificazione` },
     ],
     controls: [
       { label:"Soffianti",        value:blower,        unit:"%" },
@@ -420,9 +429,10 @@ function processNitrificazione(water, cfg, prevState, g) {
   const tauO2 = mode === "fast" ? PC.NIT.TAU_O2_FAST : PC.NIT.TAU_O2_SLOW;
   const O2t   = blower / 100 * PC.BIO.O2_SAT;
   const O2    = clamp(prevO2 + (O2t - prevO2) / tauO2 * dt, 0, PC.BIO.O2_SAT);
-  const nitE  = O2 > PC.BIO.NH4_O2_MIN
-    ? Math.min(PC.NIT.NH4_REM_MAX, 0.50 + (O2 / 8) * 0.40)
-    : (O2 / PC.BIO.NH4_O2_MIN) * 0.20;
+  const fT_n  = Math.pow(PC.NIT.THETA, water.T - PC.NIT.T_REF);
+  const nitE  = Math.max(0, Math.min(PC.NIT.NH4_REM_MAX, (O2 > PC.BIO.NH4_O2_MIN
+    ? 0.50 + (O2 / 8) * 0.40
+    : (O2 / PC.BIO.NH4_O2_MIN) * 0.20) * fT_n));
 
   const waterOut = {
     ...water,
@@ -447,7 +457,8 @@ function processNitrificazione(water, cfg, prevState, g) {
       { label:"NH4 uscita",    value:round2(waterOut.NH4),  unit:"mg/L", note:"dopo nitrificazione" },
       { label:"NO3 prodotto",  value:round2(waterOut.NO3),  unit:"mg/L" },
       { label:"O2 disciolto",  value:round2(O2),            unit:"mg/L", note:"setpoint 4 mg/L" },
-      { label:"Nitrificaz.",   value:Math.round(nitE*100),  unit:"%",    note:"NH4→NO3" },
+      { label:"Nitrificaz.",   value:Math.round(nitE*100),  unit:"%",    note:`NH4→NO3 · fattore T ${fT_n.toFixed(2)}×` },
+      { label:"Temperatura",   value:round1(water.T),       unit:"°C",   note:`rif. ${PC.NIT.T_REF}°C` },
       { label:"pH",            value:round2(waterOut.pH),   unit:"" },
     ],
     controls: [
@@ -468,7 +479,10 @@ function processNitrificazione(water, cfg, prevState, g) {
 function processDenitrificazione(water, cfg, prevState, g) {
   const { round1, round2, tgt } = g;
   const no3In  = water.NO3 ?? 0;
-  const denE   = Math.min(PC.DEN.NO3_REM_MAX, 0.40 + 0.45 * (water.COD / 200));
+  // Denitrification rate is limited both by available carbon (COD donor) and by
+  // temperature (θ≈1.07): cold anoxic basins remove markedly less nitrate.
+  const fT_d   = Math.pow(PC.DEN.THETA, water.T - PC.DEN.T_REF);
+  const denE   = Math.max(0, Math.min(PC.DEN.NO3_REM_MAX, (0.40 + 0.45 * (water.COD / 200)) * fT_d));
   const no3Rem = no3In * denE;
   const codConsumed = no3Rem * PC.DEN.COD_PER_NO3;
 
@@ -495,7 +509,8 @@ function processDenitrificazione(water, cfg, prevState, g) {
       { label:"NO3 uscita",      value:round2(waterOut.NO3),      unit:"mg/L", note:"dopo denitrificazione" },
       { label:"COD consumato",   value:round1(codConsumed),       unit:"mg/L", note:"usato come C-source" },
       { label:"COD residuo",     value:round1(waterOut.COD),      unit:"mg/L" },
-      { label:"Efficienza",      value:Math.round(denE*100),      unit:"%",    note:"NO3 rimosso" },
+      { label:"Efficienza",      value:Math.round(denE*100),      unit:"%",    note:`NO3 rimosso · fattore T ${fT_d.toFixed(2)}×` },
+      { label:"Temperatura",     value:round1(water.T),           unit:"°C",   note:`rif. ${PC.DEN.T_REF}°C` },
       { label:"pH",              value:round2(waterOut.pH),       unit:"" },
     ],
     controls: [],

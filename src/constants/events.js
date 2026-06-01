@@ -5,6 +5,7 @@
 // Modificatori:
 //   inlet.<param>    → fattore moltiplicativo su s.inlet (Q, COD, BOD5, TSS, NH4)
 //   inlet.pH_delta   → scostamento additivo sul pH d'ingresso
+//   inlet.T_delta    → scostamento additivo sulla temperatura d'ingresso (°C)
 //   actuator.blowerCap        → tetto massimo % soffianti (guasto)
 //   actuator.sludgeRecycleCap → tetto massimo % ricircolo fanghi (guasto)
 //   actuator.coagulantCap     → tetto massimo % dosaggio coagulante (serbatoio/pompa)
@@ -31,6 +32,15 @@ export const EVENT_TYPES = {
     defaultDuration: 180,
     desc: "Scarico non autorizzato: picco di carico organico e abbassamento del pH.",
     inlet: { COD: 2.6, BOD5: 2.4, TSS: 1.5, NH4: 1.4, pH_delta: -1.2 },
+  },
+  cold_weather: {
+    type: "cold_weather",
+    label: "Ondata di freddo",
+    icon: "❄️",
+    color: "#7FB2FF",
+    defaultDuration: 300,
+    desc: "Forte calo della temperatura del refluo: la nitrificazione rallenta drasticamente (cinetica di Arrhenius), NH₄ in uscita tende a salire.",
+    inlet: { T_delta: -11 },
   },
   blower_fail: {
     type: "blower_fail",

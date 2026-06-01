@@ -13,6 +13,12 @@ export const QUALITY_LIMITS = {
   BOD5: { pre: 20,  warn: 25,  crit: 40,  unit: "mg/L", causa: "Carico organico elevato" },
   TSS:  { pre: 28,  warn: 35,  crit: 80,  unit: "mg/L", causa: "Sedimentazione inefficiente" },
   NH4:  { pre: 6,   warn: 8,   crit: 15,  unit: "mg/L", causa: "Nitrificazione insufficiente" },
+  // NO3 / N-tot are informational (effluent panel colour only — NOT wired to the
+  // popup alarm engine). Limits from D.Lgs. 152/2006 Tab.3 (NO3 max 20, N-tot max
+  // 15 mg/L). Without an active denitrification stage NO3 accumulates and N-tot
+  // exceeds the limit: the realistic cue that motivates Proposal A.
+  NO3:  { pre: 12,  warn: 20,  crit: 30,  unit: "mg/L", causa: "Denitrificazione assente/insufficiente" },
+  NTOT: { pre: 10,  warn: 15,  crit: 25,  unit: "mg/L", causa: "Azoto totale: manca rimozione NO₃" },
   O2:   { warn: 2.0, crit: 1.5, unit: "mg/L", causa: "Aerazione insufficiente", inv: true },
   pH:   { low_w: 6.5, low_c: 5.5, high_w: 8.5, high_c: 9.5, unit: "", causa: "Dosaggio reagente" },
 };

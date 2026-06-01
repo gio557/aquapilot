@@ -200,7 +200,7 @@ export function simTick(s) {
 
   // ── Active events: aggregate modifiers ──────────────────────────────────────
   const events = Array.isArray(s.events) ? s.events : [];
-  const evMod = { Q:1, COD:1, BOD5:1, TSS:1, NH4:1, pH_delta:0 };
+  const evMod = { Q:1, COD:1, BOD5:1, TSS:1, NH4:1, pH_delta:0, T_delta:0 };
   let blowerCap = 100, sludgeRecycleCap = 100, coagulantCap = 100, naohCap = 100, h2so4Cap = 100;
   for (const ev of events) {
     const def = EVENT_TYPES[ev.type];
@@ -210,6 +210,7 @@ export function simTick(s) {
         if (def.inlet[k] != null) evMod[k] *= def.inlet[k];
       }
       if (def.inlet.pH_delta) evMod.pH_delta += def.inlet.pH_delta;
+      if (def.inlet.T_delta)  evMod.T_delta  += def.inlet.T_delta;
     }
     if (def.actuator) {
       if (def.actuator.blowerCap        != null) blowerCap        = Math.min(blowerCap,        def.actuator.blowerCap);
@@ -227,7 +228,7 @@ export function simTick(s) {
   const iTSS = Math.max(40,   s.inlet.TSS  * evMod.TSS  * (1 + noise(0.12)));
   const iNH4 = Math.max(3,    s.inlet.NH4  * evMod.NH4  * (1 + noise(0.08)));
   const ipH  = Math.max(5.0, Math.min(10, s.inlet.pH + evMod.pH_delta + (Math.random()-0.5)*0.02));
-  const iT   = Math.max(10,  Math.min(35, s.inlet.T  + (Math.random()-0.5)*0.05));
+  const iT   = Math.max(4,   Math.min(35, s.inlet.T  + evMod.T_delta + (Math.random()-0.5)*0.05));
 
   const waterInlet = { COD:iCOD, BOD5:iBOD, TSS:iTSS, NH4:iNH4, NO3:0, pH:ipH, T:iT, Q:iQ };
   const tgt = s.stageTargets || {};
@@ -318,12 +319,18 @@ export function simTick(s) {
 
   // ── Final output water ────────────────────────────────────────────────────────
   const finalWater = water;
+  const finalNO3 = finalWater.NO3 ?? 0;
   const output = {
     Q:    round1(iQ),
     COD:  round1(finalWater.COD),
     BOD5: round1(finalWater.BOD5),
     TSS:  round1(finalWater.TSS),
     NH4:  round2(finalWater.NH4),
+    NO3:  round2(finalNO3),
+    // Total nitrogen ≈ ammoniacal + nitric (organic N negligible at this stage).
+    // Without an active anoxic (denitrification) stage NO3 accumulates and N-tot
+    // exceeds the discharge limit — the realistic driver for enabling Proposal A.
+    NTOT: round1(finalWater.NH4 + finalNO3),
     pH:   round2(finalWater.pH),
     T:    round1(finalWater.T),
     O2:   round2(O2),

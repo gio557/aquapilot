@@ -59,6 +59,13 @@ export const PC = {
     TSS_FACTOR:     1.45,
     PH_DROP_N:      0.45,
     NO3_YIELD:      0.85,    // fraction of removed NH4 that becomes NO3
+    // Temperature correction (Arrhenius, θ^(T-T_REF)). Heterotrophs (COD/BOD)
+    // are mildly T-sensitive; autotrophic nitrifiers (NH4) are strongly so —
+    // θ≈1.10 ⇒ nitrification roughly halves from 20 °C to 10 °C.
+    T_REF:          20,
+    THETA_COD:      1.04,
+    THETA_BOD:      1.04,
+    THETA_NH4:      1.10,
   },
 
   // ── NITRIFICAZIONE ────────────────────────────────────────────────────────
@@ -70,6 +77,8 @@ export const PC = {
     NO3_YIELD:     0.95,
     TSS_FACTOR:    1.15,
     PH_DROP_N:     0.55,
+    T_REF:         20,
+    THETA:         1.10,     // nitrifiers very temperature-sensitive
   },
 
   // ── DENITRIFICAZIONE ──────────────────────────────────────────────────────
@@ -78,6 +87,8 @@ export const PC = {
     COD_PER_NO3:   4.0,      // mg COD consumed per mg NO3-N removed
     TSS_FACTOR:    0.98,
     PH_RISE_N:     0.30,     // pH slight rise due to alkalinity produced
+    T_REF:         20,
+    THETA:         1.07,     // denitrifiers moderately temperature-sensitive
   },
 
   // ── SEDIMENTAZIONE ────────────────────────────────────────────────────────

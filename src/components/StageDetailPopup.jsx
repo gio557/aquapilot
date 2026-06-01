@@ -55,7 +55,7 @@ function SourceTag({ label, unit, t }) {
   const isSensor = tag.kind === "sensor";
   const color = isSensor ? t.accent : t.textMuted;
   return (
-    <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color, textTransform:"uppercase", marginTop:2}}>
+    <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color, textTransform:"uppercase"}}>
       <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
     </span>
   );
@@ -69,8 +69,10 @@ function ParamRow({ label, value, unit, note, t }) {
   return (
     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
       <div style={{display:"flex", flexDirection:"column"}}>
-        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
-        <SourceTag label={label} unit={unit} t={t}/>
+        <div style={{display:"flex", alignItems:"center", gap:8}}>
+          <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
+          <SourceTag label={label} unit={unit} t={t}/>
+        </div>
         {note && <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{note}</div>}
       </div>
       <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
@@ -263,12 +265,12 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
                   return (
                     <div key={i} style={{flex:"1 1 140px", padding:"10px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`}}>
                       <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
-                        <div style={{display:"flex", flexDirection:"column"}}>
+                        <span style={{display:"inline-flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
                           <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14, color:t.text}}>{c.label}</span>
-                          <span title={cmdTag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:t.textMuted, marginTop:2}}>
+                          <span title={cmdTag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:t.textMuted}}>
                             <span style={{fontSize:9}}>{cmdTag.icon}</span>{cmdTag.word}
                           </span>
-                        </div>
+                        </span>
                         <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barColor, fontWeight:700}}>{Number.isInteger(pct) ? pct : pct.toFixed(1)}{c.unit}</span>
                       </div>
                       <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>

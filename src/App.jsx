@@ -624,9 +624,9 @@ export default function App() {
                   const srcColor = isSensor ? t.accent : t.textMuted;
                   return (
                     <div key={q.param} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom:`1px solid ${t.border}`}}>
-                      <div style={{display:"flex", flexDirection:"column", gap:2}}>
+                      <div style={{display:"flex", alignItems:"center", gap:8}}>
                         <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, color:t.text}}>{q.param}</span>
-                        <span title={q.srcNote} style={{display:"inline-flex", alignItems:"center", gap:4, fontSize:10, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color:srcColor, textTransform:"uppercase"}}>
+                        <span title={q.srcNote} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color:srcColor, textTransform:"uppercase"}}>
                           <span style={{fontSize:9}}>{isSensor ? "📡" : "🧮"}</span>{isSensor ? "sensore" : "stimato"}
                         </span>
                       </div>
@@ -744,11 +744,13 @@ export default function App() {
                   return (
                   <div key={x.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${t.border}`}}>
                     <div>
-                      <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>{x.label}</div>
+                      <div style={{display:"flex", alignItems:"center", gap:8}}>
+                        <span style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>{x.label}</span>
+                        <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:tagColor}}>
+                          <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
+                        </span>
+                      </div>
                       <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{x.ref}</div>
-                      <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:tagColor, marginTop:2}}>
-                        <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
-                      </span>
                     </div>
                     <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:16, fontWeight:700, color:x.color}}>{x.val}</span>
                   </div>

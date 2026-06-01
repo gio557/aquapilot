@@ -214,13 +214,13 @@ function ActBar({ label, value, unit="%", t, colorFn }) {
   const cmd = dataSourceTag("command");
   return (
     <div style={{marginBottom:14}}>
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:5}}>
-        <div style={{display:"flex", flexDirection:"column", gap:2}}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5}}>
+        <span style={{display:"inline-flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
           <span style={{fontSize:16, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{label}</span>
           <span title={cmd.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:t.textMuted}}>
             <span style={{fontSize:9}}>{cmd.icon}</span>{cmd.word}
           </span>
-        </div>
+        </span>
         <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:18, color:c, fontWeight:700}}>
           {value != null ? value + unit : "—"}
         </span>
@@ -547,7 +547,7 @@ export default function StoricaPage({ t }) {
             ].map(q => (
               <div key={q.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center",
                 padding:"12px 0", borderBottom:`1px solid ${t.border}`}}>
-                <div style={{display:"flex", flexDirection:"column", gap:2, minWidth:52}}>
+                <div style={{display:"flex", alignItems:"center", gap:8, minWidth:52}}>
                   <span style={{fontSize:17, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text}}>
                     {q.label}
                   </span>

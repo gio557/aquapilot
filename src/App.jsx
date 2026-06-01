@@ -3,7 +3,7 @@ import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
-import { NORMATIVA_DEFAULT, NORMATIVA_SETS } from "./constants/normativa";
+import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -79,8 +79,8 @@ export default function App() {
   const [norms, setNorms] = useState(() => {
     try {
       const saved = localStorage.getItem("aquapilot.norms.v1");
-      return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(NORMATIVA_DEFAULT));
-    } catch { return JSON.parse(JSON.stringify(NORMATIVA_DEFAULT)); }
+      return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(NORMATIVA_TAB4));
+    } catch { return JSON.parse(JSON.stringify(NORMATIVA_TAB4)); }
   });
   const [energyPrice, setEnergyPrice] = useState(() => {
     try {

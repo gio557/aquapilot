@@ -3,7 +3,7 @@ import EditableCell from "./ui/EditableCell";
 import Tag from "./ui/Tag";
 
 export default function NormativaPage({ t, ac, onAC, norms, setNorms, normativaSets }) {
-  const [tipoScarico, setTipoScarico] = useState("Tab. 3 – Acque superficiali");
+  const [tipoScarico, setTipoScarico] = useState("Tab. 4 – Fognatura");
   const [saved, setSaved] = useState(false);
   const [expandedCat, setExpandedCat] = useState(0);
 

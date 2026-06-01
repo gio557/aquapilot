@@ -138,6 +138,12 @@ export default function App() {
   const [timeRange, setTimeRange] = useState("1h");
   const [activeTrends, setActiveTrends] = useState(["COD","O2"]);
   const [trendNode, setTrendNode] = useState("plant"); // "plant" | stage index
+  // Mostra/nascondi i marker di anomalia su TUTTI i grafici (live + storico).
+  const [showMarkers, setShowMarkers] = useState(() => {
+    try { const s = localStorage.getItem("aquapilot.showMarkers.v1"); return s == null ? true : s === "true"; }
+    catch { return true; }
+  });
+  useEffect(() => { try { localStorage.setItem("aquapilot.showMarkers.v1", String(showMarkers)); } catch {} }, [showMarkers]);
   const [clock, setClock] = useState(new Date());
   const [dismissedDiag, setDismissedDiag] = useState([]); // diagnostic ids the operator closed
 
@@ -423,7 +429,7 @@ export default function App() {
       ) : page === "energia" ? (
         <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
       ) : page === "storica" ? (
-        <StoricaPage t={t} qualitySources={qualitySources} />
+        <StoricaPage t={t} qualitySources={qualitySources} showMarkers={showMarkers} onShowMarkers={setShowMarkers} />
       ) : (
         <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12}}>
 
@@ -566,6 +572,13 @@ export default function App() {
                     color: trendNode==="plant" ? t.text : t.textMuted}}>
                   GEN. IMPIANTO
                 </button>
+                <label title="Mostra/nascondi i marker di anomalia su tutti i grafici"
+                  style={{marginLeft:"auto", display:"inline-flex", alignItems:"center", gap:6, cursor:"pointer",
+                    fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted, letterSpacing:0.5, alignSelf:"center"}}>
+                  <input type="checkbox" checked={showMarkers} onChange={e => setShowMarkers(e.target.checked)}
+                    style={{accentColor:t.accent, cursor:"pointer", width:14, height:14}}/>
+                  marker anomalie
+                </label>
               </div>
               {/* metric toggles — all available metrics for the selected node */}
               <div style={{display:"flex", gap:4, flexWrap:"wrap", marginBottom:8}}>
@@ -598,12 +611,12 @@ export default function App() {
                     {nodeMetricDefs.filter(md => activeTrends.includes(md.key)).map(md => (
                       <Line key={md.key} type={md.step ? "stepAfter" : "monotone"}
                         dataKey={md.key} stroke={md.color}
-                        strokeWidth={1.5} dot={<AnomalyDot pkey={md.key} t={t}/>} isAnimationActive={false} connectNulls/>
+                        strokeWidth={1.5} dot={showMarkers ? <AnomalyDot pkey={md.key} t={t}/> : false} isAnimationActive={false} connectNulls/>
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <div style={{display:"flex", alignItems:"center", gap:14, marginTop:6, fontSize:10,
+              <div style={{display: showMarkers ? "flex" : "none", alignItems:"center", gap:14, marginTop:6, fontSize:10,
                 fontFamily:"'Share Tech Mono',monospace", color:t.textMuted, letterSpacing:0.5}}>
                 <span>MARKER:</span>
                 <span style={{display:"inline-flex", alignItems:"center", gap:5}}>

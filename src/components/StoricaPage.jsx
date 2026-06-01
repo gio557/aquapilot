@@ -251,7 +251,7 @@ function ChartTooltip({ active, payload, label, t }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────
-export default function StoricaPage({ t, qualitySources = {} }) {
+export default function StoricaPage({ t, qualitySources = {}, showMarkers = true, onShowMarkers }) {
   const [history,       setHistory]       = useState([]);
   const [interventions, setInterventions] = useState([]);
   const [calMonth,      setCalMonth]      = useState(new Date());
@@ -371,6 +371,30 @@ export default function StoricaPage({ t, qualitySources = {} }) {
   }), [daySnaps, windowStart, selectedIdx, histNode]);
 
   const snapTimeStr = snap ? fmtTime(new Date(snap.t)) : null;
+
+  // Click su un marker di anomalia nel grafico → riposiziona il cursore (snapshot)
+  // su quell'istante: i pannelli ALLARMI (ora dello snapshot) e INTERVENTI (±30 min)
+  // si ricentrano sull'evento, e la lista interventi scorre fino al più vicino.
+  const pickAnomaly = useCallback((p) => {
+    const ts = p?._ts;
+    if (ts == null) return;
+    const idx = daySnaps.findIndex(s => s.t === ts);
+    if (idx >= 0) setSelectedIdx(idx);
+    setHighlightTs(ts);
+  }, [daySnaps]);
+
+  // indice dell'intervento più vicino all'istante evidenziato (per highlight + scroll)
+  const hlIntervIdx = useMemo(() => {
+    if (highlightTs == null || nearby.length === 0) return -1;
+    let best = -1, bd = Infinity;
+    nearby.forEach((it, i) => { const d = Math.abs(it.t - highlightTs); if (d < bd) { bd = d; best = i; } });
+    return best;
+  }, [highlightTs, nearby]);
+
+  const hlIntervRef = useRef(null);
+  useEffect(() => {
+    if (highlightTs != null) hlIntervRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [highlightTs, hlIntervIdx]);
 
   // find closest chartData label for a given timestamp
   const highlightTimeStr = useMemo(() => {
@@ -670,6 +694,13 @@ export default function StoricaPage({ t, qualitySources = {} }) {
                   color:histNode==="plant"?t.green:t.textSec}}>
                 GEN. IMPIANTO
               </button>
+              <label title="Mostra/nascondi i marker di anomalia su tutti i grafici"
+                style={{marginLeft:"auto", display:"inline-flex", alignItems:"center", gap:6, cursor:"pointer",
+                  fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted, letterSpacing:0.5, alignSelf:"center"}}>
+                <input type="checkbox" checked={showMarkers} onChange={e => onShowMarkers?.(e.target.checked)}
+                  style={{accentColor:t.accent, cursor:"pointer", width:14, height:14}}/>
+                marker anomalie
+              </label>
             </div>
           )}
           {chartData.length < 2 ? (
@@ -713,11 +744,11 @@ export default function StoricaPage({ t, qualitySources = {} }) {
                 {nodeMetricDefs.filter(md => activeParams.includes(md.key)).map(md => (
                   <Line key={md.key} type={md.step ? "stepAfter" : "monotone"}
                     dataKey={md.key} stroke={md.color} strokeWidth={2}
-                    dot={<AnomalyDot pkey={md.key} t={t}/>} isAnimationActive={false} connectNulls />
+                    dot={showMarkers ? <AnomalyDot pkey={md.key} t={t} onPick={pickAnomaly}/> : false} isAnimationActive={false} connectNulls />
                 ))}
               </LineChart>
             </ResponsiveContainer>
-            <div style={{display:"flex", alignItems:"center", gap:14, marginTop:6, fontSize:10,
+            <div style={{display: showMarkers ? "flex" : "none", alignItems:"center", gap:14, marginTop:6, fontSize:10,
               fontFamily:"'Share Tech Mono',monospace", color:t.textMuted, letterSpacing:0.5}}>
               <span>MARKER:</span>
               <span style={{display:"inline-flex", alignItems:"center", gap:5}}>
@@ -754,9 +785,10 @@ export default function StoricaPage({ t, qualitySources = {} }) {
               {nearby.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";
-                const isHl = highlightTs === it.t;
+                const isHl = idx === hlIntervIdx;
                 return (
-                  <div key={idx} onClick={() => setHighlightTs(isHl ? null : it.t)}
+                  <div key={idx} ref={isHl ? hlIntervRef : null}
+                    onClick={() => setHighlightTs(highlightTs === it.t ? null : it.t)}
                     title="Clicca per evidenziare sul grafico"
                     style={{display:"grid", gridTemplateColumns:"auto 1fr auto auto", gap:16,
                       alignItems:"center", padding:"12px 16px", borderRadius:9, cursor:"pointer",

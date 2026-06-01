@@ -19,7 +19,10 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     const O2sp_nh4 = Math.max(0, Math.min(1, (out.NH4  - 5.0) / 7.0)) * 2.8;
     const O2sp_cod = Math.max(0, Math.min(1, (out.COD  - 80)  / 80))  * 1.2;
     const O2sp_bod = Math.max(0, Math.min(1, (out.BOD5 - 20)  / 20))  * 1.0;
-    const O2sp = Math.min(7.0, 3.5 + O2sp_nh4 + O2sp_cod + O2sp_bod);
+    // Baseline aligned with the stated O2 target (2.0 mg/L); load-driven terms
+    // raise it as needed. A 3.5 baseline pinned O2 above target and made the
+    // energy-optimization branch (delta<0) unreachable for clean effluent.
+    const O2sp = Math.min(7.0, 2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod);
     const errO2 = O2sp - O2;
     const Kp = 6 * gBlower;
     const delta = clamp(Math.round(errO2 * Kp), -8, 15);
@@ -73,7 +76,9 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
       if (prev) {
         actions[bioIdx] = { ...prev, text: prev.text + ` | ${rasMsg}` };
       } else {
-        actions[bioIdx] = { text: rasMsg, sev: Math.abs(errMLSS) > 1500 ? "MEDIO" : "OK" };
+        // A correction is being applied here, so don't report OK for a sizeable
+        // deviation; 600 mg/L roughly matches the band where delta saturates.
+        actions[bioIdx] = { text: rasMsg, sev: Math.abs(errMLSS) > 600 ? "MEDIO" : "OK" };
       }
     }
   }

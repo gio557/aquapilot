@@ -155,7 +155,12 @@ export function recordTick(sim, prevSim) {
     const metricNow = p.metricKey === "O2"   ? sim.O2
                     : p.metricKey === "MLSS" ? sim.MLSS
                     : sim.output?.[p.metricKey];
-    if (!Number.isFinite(metricNow) || !Number.isFinite(p.metricBefore)) return;
+    // Transient NaN/undefined this tick: retry next tick instead of discarding
+    // the sample (which would silently bias gain learning). Drop only if stale.
+    if (!Number.isFinite(metricNow) || !Number.isFinite(p.metricBefore)) {
+      if (tick - p.startTick < EVAL_AFTER_TICKS * 10) stillPending.push(p);
+      return;
+    }
     const errBefore = p.target - p.metricBefore;
     const errAfter  = p.target - metricNow;
     const improved  = Math.abs(errAfter) < Math.abs(errBefore) - 0.05;

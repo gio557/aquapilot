@@ -61,15 +61,24 @@ export function dataSourceTag(kind) {
 // Lista dei parametri dell'effluente e tipo di fonte predefinito. L'utente può
 // ridefinire il tipo di ciascuno dalla pagina Configurazione → PROVENIENZA DATI.
 export const QUALITY_PARAMS = [
-  { key: "COD",  label: "COD"   },
-  { key: "BOD5", label: "BOD₅"  },
-  { key: "TSS",  label: "TSS"   },
-  { key: "NH4",  label: "NH₄"   },
-  { key: "NO3",  label: "NO₃"   },
-  { key: "NTOT", label: "N-tot" },
-  { key: "pH",   label: "pH"    },
-  { key: "T",    label: "T°"    },
-  { key: "O2",   label: "O₂"    },
+  { key: "COD",  label: "COD",   name: "Domanda Chimica di Ossigeno",
+    desc: "Ossigeno necessario a ossidare chimicamente le sostanze organiche e inorganiche ossidabili presenti nell'acqua. Esprime il carico inquinante complessivo (anche la frazione non biodegradabile)." },
+  { key: "BOD5", label: "BOD₅",  name: "Domanda Biochimica di Ossigeno (5 gg)",
+    desc: "Ossigeno consumato dai microrganismi per degradare la sostanza organica biodegradabile in 5 giorni a 20 °C. Misura la frazione biodegradabile del carico organico." },
+  { key: "TSS",  label: "TSS",   name: "Solidi Sospesi Totali",
+    desc: "Massa di particelle solide in sospensione, trattenute per filtrazione. Indica torbidità ed efficacia della sedimentazione secondaria." },
+  { key: "NH4",  label: "NH₄",   name: "Azoto Ammoniacale (NH₄⁺)",
+    desc: "Azoto in forma ammoniacale. Tossico per la fauna acquatica e indice di una nitrificazione incompleta nel comparto biologico." },
+  { key: "NO3",  label: "NO₃",   name: "Azoto Nitrico (NO₃⁻)",
+    desc: "Azoto in forma di nitrato, prodotto dalla nitrificazione. Va rimosso per denitrificazione anossica per contenere l'azoto totale allo scarico." },
+  { key: "NTOT", label: "N-tot", name: "Azoto Totale",
+    desc: "Somma delle forme di azoto (ammoniacale, nitrico, nitroso e organico). Parametro normato per lo scarico in corpo idrico superficiale (D.Lgs. 152/2006)." },
+  { key: "pH",   label: "pH",    name: "Potenziale idrogeno (acidità/basicità)",
+    desc: "Misura di acidità/basicità su scala 0–14. Deve restare in genere tra 6,5 e 8,5: valori fuori range danneggiano i fanghi attivi e violano i limiti di scarico." },
+  { key: "T",    label: "T°",    name: "Temperatura",
+    desc: "Temperatura dell'effluente. Influenza fortemente la cinetica biologica (nitrificazione/denitrificazione) ed è normata allo scarico (≤ 30 °C)." },
+  { key: "O2",   label: "O₂",    name: "Ossigeno Disciolto",
+    desc: "Concentrazione di ossigeno disciolto nell'acqua. Essenziale per i processi aerobici: valori bassi compromettono la nitrificazione e la rimozione del COD/BOD." },
 ];
 
 export const QUALITY_SOURCE_DEFAULTS = {

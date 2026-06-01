@@ -12,6 +12,27 @@ const CONFIG_TABS = [
 
 const STAGE_COLORS = ["#00CFFF","#00E599","#BB66FF","#FF9422","#FFD060"];
 
+// Pallino "i" che al passaggio del mouse mostra un fumetto con la spiegazione estesa.
+function InfoDot({ text, t }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span style={{position:"relative", display:"inline-flex"}}
+      onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      <span style={{width:16, height:16, borderRadius:"50%", border:`1px solid ${t.accent}`,
+        color:t.accent, fontSize:10, fontFamily:"'Share Tech Mono',monospace", fontWeight:700,
+        display:"flex", alignItems:"center", justifyContent:"center", cursor:"help"}}>i</span>
+      {show && (
+        <span style={{position:"absolute", left:"50%", bottom:"calc(100% + 8px)", transform:"translateX(-50%)",
+          width:280, maxWidth:"70vw", background:t.surface, color:t.textSec, border:`1px solid ${t.accent}55`,
+          borderRadius:8, padding:"10px 12px", fontSize:12.5, fontFamily:"'Rajdhani',sans-serif",
+          fontWeight:500, lineHeight:1.45, boxShadow:t.cardShadow, zIndex:60, whiteSpace:"normal", textTransform:"none"}}>
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function NumField({ label, value, unit, onChange, t }) {
   return (
     <div style={{display:"flex", flexDirection:"column", gap:3}}>
@@ -151,14 +172,18 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
             const tag = dataSourceTag(cur);
             return (
               <div key={p.key} style={{display:"flex", alignItems:"center", justifyContent:"space-between",
-                padding:"11px 0", borderBottom:`1px solid ${t.border}`}}>
-                <div style={{display:"flex", alignItems:"center", gap:10}}>
-                  <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text, minWidth:64}}>{p.label}</span>
-                  <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:4, fontSize:10,
-                    fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase",
-                    color: tag.kind==="sensor" ? t.accent : t.textMuted}}>
-                    <span style={{fontSize:10}}>{tag.icon}</span>{tag.word}
-                  </span>
+                padding:"11px 0", borderBottom:`1px solid ${t.border}`, gap:12}}>
+                <div style={{display:"flex", flexDirection:"column", gap:3, minWidth:0}}>
+                  <div style={{display:"flex", alignItems:"center", gap:8}}>
+                    <span style={{fontSize:16, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, color:t.text}}>{p.label}</span>
+                    <InfoDot text={p.desc} t={t}/>
+                    <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:4, fontSize:10,
+                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase",
+                      color: tag.kind==="sensor" ? t.accent : t.textMuted}}>
+                      <span style={{fontSize:10}}>{tag.icon}</span>{tag.word}
+                    </span>
+                  </div>
+                  <span style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{p.name}</span>
                 </div>
                 <div style={{display:"flex", gap:5}}>
                   {SOURCE_OPTIONS.map(o => {

@@ -185,8 +185,12 @@ function AIMessage({ text, t, modeColor }) {
   const heading = headIdx >= 0 ? lines[headIdx].trim() : "";
   const bodyLines = headIdx >= 0 ? lines.slice(headIdx + 1) : [];
 
-  const isUrgent  = /URGENT|EMERGENZA|CRITIC/i.test(heading);
-  const headColor = isUrgent ? t.red : modeColor;
+  // Severity of the message drives the heading colour: red for critical/urgent,
+  // orange for warning-level exceedances ("oltre soglia"), else the mode colour.
+  const hasCritical = /URGENT|EMERGENZA|CRITIC/i.test(mainText);
+  const isWarning   = !hasCritical && /oltre soglia/i.test(heading);
+  const isUrgent    = /URGENT|EMERGENZA|CRITIC/i.test(heading);
+  const headColor   = hasCritical ? t.red : isWarning ? t.orange : modeColor;
   const tm = heading.match(/\((\d{1,2}:\d{2})\)/);
   const headText = heading.replace(/\s*\(\d{1,2}:\d{2}\)\s*:?\s*$/, "").replace(/:\s*$/, "");
 
@@ -228,7 +232,8 @@ function AIMessage({ text, t, modeColor }) {
       {heading && (
         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:9,
           paddingBottom:8, borderBottom:`1px solid ${t.border}` }}>
-          {isUrgent && <span style={{ fontSize:14, animation:"blink 0.7s infinite" }}>⚠</span>}
+          {(isUrgent || hasCritical) ? <span style={{ fontSize:14, color:t.red, animation:"blink 0.7s infinite" }}>⚠</span>
+            : isWarning ? <span style={{ fontSize:14, color:t.orange }}>⚠</span> : null}
           <span style={{ fontWeight:700, fontSize:14, color:headColor, letterSpacing:0.3, flex:1 }}>{headText}</span>
           {tm && (
             <span style={{ fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted,

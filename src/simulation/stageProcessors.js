@@ -13,6 +13,22 @@ import { PC } from "../constants/processConstants";
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+// Passive removal step shared by the simple physical/chemical stages. Scales
+// each listed species by (1 - removal), reports kw = base + random*jitter and
+// eff (defaults to TSS removal %, override where a stage reports a fixed value).
+// Single home for the water-transform contract these stages all share.
+function passiveStep(water, rem, kwBase, kwJitter, effOverride) {
+  const waterOut = { ...water };
+  if (rem.COD_REM != null) waterOut.COD  = water.COD  * (1 - rem.COD_REM);
+  if (rem.BOD_REM != null) waterOut.BOD5 = water.BOD5 * (1 - rem.BOD_REM);
+  if (rem.TSS_REM != null) waterOut.TSS  = water.TSS  * (1 - rem.TSS_REM);
+  if (rem.NH4_REM != null) waterOut.NH4  = water.NH4  * (1 - rem.NH4_REM);
+  if (rem.NO3_REM != null) waterOut.NO3  = (water.NO3 ?? 0) * (1 - rem.NO3_REM);
+  const eff = effOverride ?? Math.round((rem.TSS_REM ?? 0) * 100);
+  const kw  = +(kwBase + Math.random() * kwJitter).toFixed(2);
+  return { waterOut, eff, kw };
+}
+
 // ─── GRIGLIATURA ──────────────────────────────────────────────────────────────
 function processGrigliatura(water, cfg, prevState, g) {
   const { dt, noise, round1, round2 } = g;
@@ -267,14 +283,7 @@ function processDissabbiatura(water, cfg, prevState, g) {
 // ─── DEGRASSATORE ─────────────────────────────────────────────────────────────
 function processDegrassatore(water, cfg, prevState, g) {
   const { round1, round2 } = g;
-  const waterOut = {
-    ...water,
-    COD:  water.COD  * (1 - PC.DEG.COD_REM),
-    BOD5: water.BOD5 * (1 - PC.DEG.BOD_REM),
-    TSS:  water.TSS  * (1 - PC.DEG.TSS_REM),
-  };
-  const eff = Math.round(PC.DEG.TSS_REM * 100);
-  const kw = +(0.25 + Math.random()*0.05).toFixed(2);
+  const { waterOut, eff, kw } = passiveStep(water, PC.DEG, 0.25, 0.05);
   const stageOutput = {
     value: round1(waterOut.COD), target: 200, unit: "mg/L", label: "COD dopo degrassazione",
   };
@@ -549,14 +558,7 @@ function processSedimentazione(water, cfg, prevState, g) {
 // ─── FLOTTAZIONE DAF ──────────────────────────────────────────────────────────
 function processFlottazioneDAF(water, cfg, prevState, g) {
   const { round1, round2, tgt } = g;
-  const waterOut = {
-    ...water,
-    COD:  water.COD  * (1 - PC.DAF.COD_REM),
-    BOD5: water.BOD5 * (1 - PC.DAF.BOD_REM),
-    TSS:  water.TSS  * (1 - PC.DAF.TSS_REM),
-  };
-  const eff = Math.round(PC.DAF.TSS_REM * 100);
-  const kw  = +(1.2 + Math.random()*0.2).toFixed(2);
+  const { waterOut, eff, kw } = passiveStep(water, PC.DAF, 1.2, 0.2);
   const stageOutput = {
     value: round1(waterOut.TSS), target: tgt.SST ?? 35, unit: "mg/L", label: "SST flottazione DAF",
   };
@@ -585,14 +587,7 @@ function processFlottazioneDAF(water, cfg, prevState, g) {
 // ─── FILTRAZIONE ──────────────────────────────────────────────────────────────
 function processFiltrazione(water, cfg, prevState, g) {
   const { round1, round2, tgt } = g;
-  const waterOut = {
-    ...water,
-    COD:  water.COD  * (1 - PC.FIL.COD_REM),
-    BOD5: water.BOD5 * (1 - PC.FIL.BOD_REM),
-    TSS:  water.TSS  * (1 - PC.FIL.TSS_REM),
-  };
-  const eff = Math.round(PC.FIL.TSS_REM * 100);
-  const kw  = +(0.15 + Math.random()*0.05).toFixed(2);
+  const { waterOut, eff, kw } = passiveStep(water, PC.FIL, 0.15, 0.05);
   const stageOutput = {
     value: round1(waterOut.TSS), target: tgt.SST ?? 35, unit: "mg/L", label: "TSS filtrazione",
   };
@@ -620,16 +615,7 @@ function processFiltrazione(water, cfg, prevState, g) {
 // ─── OSMOSI INVERSA ───────────────────────────────────────────────────────────
 function processOsmosIInversa(water, cfg, prevState, g) {
   const { round1, round2, tgt } = g;
-  const waterOut = {
-    ...water,
-    COD:  water.COD  * (1 - PC.RO.COD_REM),
-    BOD5: water.BOD5 * (1 - PC.RO.BOD_REM),
-    TSS:  water.TSS  * (1 - PC.RO.TSS_REM),
-    NH4:  water.NH4  * (1 - PC.RO.NH4_REM),
-    NO3:  (water.NO3 ?? 0) * (1 - PC.RO.NO3_REM),
-  };
-  const eff = Math.round(PC.RO.TSS_REM * 100);
-  const kw  = +(3.5 + Math.random()*0.5).toFixed(2);
+  const { waterOut, eff, kw } = passiveStep(water, PC.RO, 3.5, 0.5);
   const stageOutput = {
     value: round1(waterOut.COD), target: 10, unit: "mg/L", label: "COD osmosi inversa",
   };
@@ -741,14 +727,7 @@ const processDisinfezione = processDisinfezioneCloro;
 // ─── POST-TRATTAMENTO ─────────────────────────────────────────────────────────
 function processPostTrattamento(water, cfg, prevState, g) {
   const { round1, round2, tgt } = g;
-  const waterOut = {
-    ...water,
-    COD:  water.COD  * (1 - PC.POST.COD_REM),
-    BOD5: water.BOD5 * (1 - PC.POST.BOD_REM),
-    TSS:  water.TSS  * (1 - PC.POST.TSS_REM),
-  };
-  const eff = 90;
-  const kw  = +(0.20 + Math.random()*0.03).toFixed(2);
+  const { waterOut, eff, kw } = passiveStep(water, PC.POST, 0.20, 0.03, 90);
   const stageOutput = {
     value: round1(waterOut.COD), target: tgt.COD ?? 125, unit: "mg/L", label: "COD post-trattamento",
   };

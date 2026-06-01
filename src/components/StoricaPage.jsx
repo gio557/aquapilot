@@ -720,7 +720,9 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
           ) : (
           <div style={{height:260}}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{top:6, right:8, bottom:0, left:-14}}>
+              <LineChart data={chartData} margin={{top:6, right:8, bottom:0, left:-14}}
+                onClick={(e) => { const p = e?.activePayload?.[0]?.payload; if (p) pickAnomaly(p); }}
+                style={{cursor:"pointer"}}>
                 <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
                 <XAxis dataKey="t"
                   interval={Math.max(0, Math.ceil(chartData.length / 10) - 1)}

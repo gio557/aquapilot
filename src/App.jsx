@@ -535,7 +535,7 @@ export default function App() {
                         fontFamily:"'Rajdhani',sans-serif", fontSize:12, letterSpacing:1,
                         fontWeight: 500,
                         opacity: !hasMetrics ? 0.35 : active ? 1 : 0.6,
-                        border:`1px solid ${active ? t.accent : t.border}`,
+                        border:`${active ? 2 : 1}px solid ${active ? t.accent : t.border}`,
                         background: "transparent",
                         color: active ? t.text : t.textMuted}}>
                       {st.name}
@@ -547,7 +547,7 @@ export default function App() {
                     fontFamily:"'Rajdhani',sans-serif", fontSize:12, letterSpacing:1,
                     fontWeight: 500,
                     opacity: trendNode==="plant" ? 1 : 0.6,
-                    border:`1px solid ${trendNode==="plant" ? t.green : t.border}`,
+                    border:`${trendNode==="plant" ? 2 : 1}px solid ${trendNode==="plant" ? t.green : t.border}`,
                     background: "transparent",
                     color: trendNode==="plant" ? t.text : t.textMuted}}>
                   GEN. IMPIANTO
@@ -567,7 +567,7 @@ export default function App() {
                       fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1,
                       fontWeight: 400,
                       opacity: activeTrends.includes(md.key) ? 1 : 0.5,
-                      border:`1px solid ${activeTrends.includes(md.key) ? md.color : t.border}`,
+                      border:`${activeTrends.includes(md.key) ? 2 : 1}px solid ${activeTrends.includes(md.key) ? md.color : t.border}`,
                       background: "transparent",
                       color: activeTrends.includes(md.key) ? t.text : t.textMuted}}>
                     {md.label}

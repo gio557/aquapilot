@@ -25,7 +25,7 @@ export function initTrend() {
 }
 
 export const INIT_SIM = {
-  running: true, speed: 5, mode: "fast", tick: 0,
+  running: true, speed: 1, mode: "realistic", tick: 0,
   blower: 75, coagulant: 60, sludgeRecycle: 70, naoh: 0, h2so4: 0,
   inlet: { Q: 1245, COD: 380, BOD5: 160, TSS: 240, NH4: 32, pH: 7.0, T: 20 },
   O2: 4.5, MLSS: 3500, MLSSsp: 3200,

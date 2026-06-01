@@ -123,6 +123,11 @@ export default function App() {
     if (trendNode !== "plant" && trendNode >= stages.length) setTrendNode("plant");
   }, [stages.length, trendNode]);
 
+  // Show the plant-wide trend (GEN. IMPIANTO) whenever the dashboard is opened
+  useEffect(() => {
+    if (page === "dashboard") setTrendNode("plant");
+  }, [page]);
+
   // Available metric definitions for the selected node
   const nodeMetricDefs = trendNode === "plant"
     ? TREND_KEYS

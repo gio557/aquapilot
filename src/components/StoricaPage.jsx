@@ -531,10 +531,10 @@ export default function StoricaPage({ t }) {
           <div style={{...card, padding:"20px 22px"}}>
             <div style={{...secHd}}><span style={{color:t.green}}>▸</span>QUALITÀ USCITA</div>
             {[
-              { label:"COD",  v:snap.COD,  unit:"mg/L", lim:QL.COD.warn,  warn:100 },
-              { label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:QL.BOD5.warn, warn:20  },
-              { label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:QL.TSS.warn,  warn:28  },
-              { label:"NH4",  v:snap.NH4,  unit:"mg/L", lim:8,   warn:6,  decimals:2 },
+              { label:"COD",  v:snap.COD,  unit:"mg/L", lim:QL.COD.warn,  warn:QL.COD.pre  },
+              { label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre },
+              { label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre  },
+              { label:"NH4",  v:snap.NH4,  unit:"mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre, decimals:2 },
               { label:"pH",   v:snap.pH,   unit:"",     phCheck:true,      decimals:2 },
               { label:"O₂",   v:snap.O2,   unit:"mg/L", o2Check:true,      decimals:2 },
             ].map(q => (

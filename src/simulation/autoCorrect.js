@@ -32,18 +32,19 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     const O2sp_cod = ramp(out.COD,  QL.COD.warn  - 35, QL.COD.warn + 20,  1.5);
     // Integral action: a proportional-only setpoint leaves a steady-state offset
     // (effluent parks just over limit while O2 sits at a "satisfied" target). We
-    // integrate the worst error against a target held ~10% *below* each warn
-    // limit, so the setpoint keeps climbing until the blower maxes out —
+    // integrate the worst error against a target inside the *green* zone — held
+    // ~8% below each pre-alarm threshold — so correction doesn't stop at "just
+    // under the regulatory limit" (PRE band) but pushes parameters fully into
+    // the green. The setpoint keeps climbing until the blower maxes out:
     // clearing recoverable breaches and, when even 100% can't recover, exposing
     // a true "at capacity" condition for diagnostics. The error goes negative
     // once effluent is comfortably under target, so the integral bleeds smoothly
-    // (no limit-cycle around the threshold) and clean influent relaxes the
-    // blower for energy savings.
-    const tgtFrac = 0.90;
+    // (no limit-cycle) and clean influent relaxes the blower for energy savings.
+    const greenTgt = 0.92;
     const err = Math.max(
-      (out.NH4  - QL.NH4.warn  * tgtFrac) / QL.NH4.warn,
-      (out.BOD5 - QL.BOD5.warn * tgtFrac) / QL.BOD5.warn,
-      (out.COD  - QL.COD.warn  * tgtFrac) / QL.COD.warn);
+      (out.NH4  - QL.NH4.pre  * greenTgt) / QL.NH4.warn,
+      (out.BOD5 - QL.BOD5.pre * greenTgt) / QL.BOD5.warn,
+      (out.COD  - QL.COD.pre  * greenTgt) / QL.COD.warn);
     const O2I = clamp((s.acO2I ?? 0) + err * 0.4, 0, 6);
     ch.acO2I = O2I;
     const O2sp = clamp(2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod + O2I, 2.0, 8.0);

@@ -4,6 +4,7 @@ import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
+import { QUALITY_LIMITS as QL } from "./constants/limits";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -588,10 +589,10 @@ export default function App() {
                   <span style={{fontSize:11, padding:"2px 8px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, border:`1px solid ${t.green}44`}}>LIVE</span>
                 </div>
                 {[
-                  {param:"COD",  v:d.COD,  unit:" mg/L", lim:125, warn:100},
-                  {param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:25,  warn:20},
-                  {param:"TSS",  v:d.TSS,  unit:" mg/L", lim:35,  warn:28},
-                  {param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:8,   warn:6},
+                  {param:"COD",  v:d.COD,  unit:" mg/L", lim:QL.COD.warn,  warn:QL.COD.pre},
+                  {param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre},
+                  {param:"TSS",  v:d.TSS,  unit:" mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre},
+                  {param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre},
                   {param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true},
                   {param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28},
                   {param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true},

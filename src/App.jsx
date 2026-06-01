@@ -109,6 +109,7 @@ export default function App() {
   const [activeTrends, setActiveTrends] = useState(["COD","O2"]);
   const [trendNode, setTrendNode] = useState("plant"); // "plant" | stage index
   const [clock, setClock] = useState(new Date());
+  const [dismissedDiag, setDismissedDiag] = useState([]); // diagnostic ids the operator closed
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 1000);
@@ -117,6 +118,18 @@ export default function App() {
 
   const activeAlarms = Object.entries(sim.alarmState || {}).filter(([,v]) => v !== "OK");
   const critAlarms   = activeAlarms.filter(([,v]) => v === "ALTO");
+
+  // Probable-cause diagnostics: fire when auto-correction can't recover a
+  // parameter (actuator saturated/faulted). Show those the operator hasn't
+  // dismissed; once a diagnostic clears, drop it from the dismissed list so it
+  // can re-surface if the fault recurs.
+  const diagnostics = sim.diagnostics || [];
+  const diagIds = diagnostics.map(d => d.id).join(",");
+  useEffect(() => {
+    const ids = diagnostics.map(d => d.id);
+    setDismissedDiag(prev => prev.filter(id => ids.includes(id)));
+  }, [diagIds]);
+  const activeDiag = diagnostics.filter(d => !dismissedDiag.includes(d.id));
 
   // Reset to plant view if the selected stage node no longer exists
   useEffect(() => {
@@ -752,6 +765,57 @@ export default function App() {
                 return <AlarmRow key={param} alarm={alarm} t={t}/>;
               })
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── DIAGNOSTICA: pop-up causa probabile (auto-correzione inefficace) ── */}
+      {activeDiag.length > 0 && (
+        <div style={{position:"fixed", inset:0, zIndex:300, background:"rgba(0,0,0,0.55)", backdropFilter:"blur(4px)",
+          display:"flex", alignItems:"center", justifyContent:"center", padding:20}}>
+          <div style={{background:t.surface, border:`2px solid ${t.red}`, borderRadius:14, padding:0,
+            width:460, maxWidth:"95vw", maxHeight:"80vh", overflowY:"auto",
+            boxShadow:`0 16px 70px rgba(0,0,0,0.45), 0 0 0 1px ${t.red}33`}}>
+            <div style={{display:"flex", alignItems:"center", gap:10, padding:"16px 20px",
+              borderBottom:`1px solid ${t.border}`, background:`${t.red}12`}}>
+              <span style={{fontSize:20, color:t.red, animation:"blink 0.8s infinite"}}>⚠</span>
+              <div style={{flex:1, fontFamily:"'Orbitron',sans-serif", fontSize:14, color:t.red, letterSpacing:1.5}}>
+                DIAGNOSTICA — CAUSA PROBABILE
+              </div>
+              <button onClick={() => setDismissedDiag(diagnostics.map(d => d.id))}
+                style={{background:t.surface2, border:`1px solid ${t.border}`, color:t.text,
+                  width:28, height:28, borderRadius:6, cursor:"pointer", fontSize:12, flexShrink:0}}>✕</button>
+            </div>
+            <div style={{padding:"6px 20px 18px"}}>
+              <div style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13, color:t.textMuted, margin:"10px 0 14px"}}>
+                L'auto-correzione non riesce a riportare uno o più parametri entro i limiti.
+                Probabile guasto o anomalia di impianto:
+              </div>
+              {activeDiag.map(d => (
+                <div key={d.id} style={{marginBottom:12, padding:"12px 14px", background:t.surface2,
+                  border:`1px solid ${t.red}55`, borderRadius:10}}>
+                  <div style={{display:"flex", alignItems:"center", gap:9, marginBottom:6}}>
+                    <span style={{fontSize:20}}>{d.icon}</span>
+                    <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15.5, color:t.red, flex:1}}>{d.title}</span>
+                    {d.since && <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.textMuted,
+                      background:t.surface3, padding:"2px 7px", borderRadius:4}}>dalle {d.since}</span>}
+                  </div>
+                  <div style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13.5, color:t.text, lineHeight:1.5, marginBottom:8}}>{d.msg}</div>
+                  {d.action && (
+                    <div style={{display:"flex", gap:7, alignItems:"flex-start", paddingTop:8, borderTop:`1px dashed ${t.border}`}}>
+                      <span style={{color:t.accent, fontSize:13, flexShrink:0}}>▸</span>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13, color:t.textSec, lineHeight:1.45}}>{d.action}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button onClick={() => setDismissedDiag(diagnostics.map(d => d.id))}
+                style={{width:"100%", marginTop:4, padding:"9px", background:`${t.red}1a`, border:`1px solid ${t.red}66`,
+                  color:t.red, borderRadius:8, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13.5,
+                  cursor:"pointer", letterSpacing:1}}>
+                HO PRESO VISIONE
+              </button>
+            </div>
           </div>
         </div>
       )}

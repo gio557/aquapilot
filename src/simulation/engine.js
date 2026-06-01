@@ -3,7 +3,82 @@ import { STAGE_PROCESSORS, initStageState } from "./stageProcessors";
 import { STAGE_META } from "../constants/stages";
 import { DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { EVENT_TYPES } from "../constants/events";
-import { QUALITY_LIMITS } from "../constants/limits";
+import { QUALITY_LIMITS, MLSS_LIMITS } from "../constants/limits";
+
+// When a parameter stays out of limit this many consecutive ticks *while its
+// corrective actuator is already saturated* (maxed out, at its floor, or capped
+// by a fault), we stop blaming the controller and raise a probable-cause
+// diagnostic. ~40 ticks ≈ 20 s of real time, enough to rule out a normal ramp.
+const DIAG_PERSIST_TICKS = 40;
+
+// Builds the list of active probable-cause diagnostics and the per-actuator
+// persistence counters. A diagnostic fires only when correction is clearly
+// unable to recover a parameter — i.e. the relevant actuator can give no more.
+function computeDiagnostics(prevTrack, prevDiag, ctx, hhmm) {
+  const { newAS, MLSS, blower, sludge, coag, naoh, h2so4, pH,
+          blowerCap, sludgeCap, coagCap, naohCap, h2so4Cap } = ctx;
+  const airBad  = ["O₂","NH₄","BOD₅","COD"].some(p => newAS[p] && newAS[p] !== "OK");
+  const tssBad  = newAS["TSS"] && newAS["TSS"] !== "OK";
+  const phLow   = pH < QUALITY_LIMITS.pH.low_w;
+  const phHigh  = pH > QUALITY_LIMITS.pH.high_w;
+  const mlssLow = MLSS < MLSS_LIMITS.lo_warn;
+  const mlssHi  = MLSS > MLSS_LIMITS.hi_warn;
+
+  const defs = {
+    blower: {
+      active: airBad && (blower >= 98 || blowerCap < 100),
+      icon: "💨",
+      title: blowerCap < 100 ? "Probabile guasto soffianti" : "Aerazione insufficiente",
+      msg: blowerCap < 100
+        ? "Le soffianti non raggiungono la portata d'aria richiesta (limitazione attiva sull'attuatore). Probabile guasto meccanico del gruppo soffianti o blocco dei diffusori: O₂ in calo, NH₄/BOD₅/COD fuori limite."
+        : "Soffianti al 100% ma O₂/NH₄/BOD₅ restano fuori limite. Probabile calo di rendimento delle soffianti, intasamento dei diffusori a bolle o sovraccarico organico in ingresso oltre la capacità dell'impianto.",
+      action: "Verificare gruppo soffianti, valvole e diffusori; controllare il carico organico in ingresso.",
+    },
+    coagulant: {
+      active: tssBad && (coag >= 98 || coagCap < 100),
+      icon: "🧪",
+      title: "Probabile esaurimento coagulante",
+      msg: "Dosaggio coagulante al 100% ma il TSS resta fuori limite. Probabile serbatoio del coagulante esaurito, pompa dosatrice guasta/in cavitazione o flocculazione inefficiente.",
+      action: "Verificare livello serbatoio coagulante, pompa dosatrice e condizioni di flocculazione/sedimentazione.",
+    },
+    ras: {
+      active: (mlssLow && (sludge >= 98 || sludgeCap < 100)) || (mlssHi && sludge <= 20),
+      icon: "⚙️",
+      title: mlssHi ? "MLSS elevato non correggibile" : "Probabile guasto ricircolo fanghi",
+      msg: mlssHi
+        ? "Ricircolo fanghi (RAS) al minimo ma il MLSS resta elevato. Probabile eccesso di biomassa: necessario spurgo fanghi di supero (WAS) — il solo RAS non basta."
+        : "Ricircolo fanghi (RAS) al massimo (o limitato da un guasto) ma il MLSS continua a calare. Probabile avaria della pompa RAS o perdita di fanghi dal sedimentatore.",
+      action: mlssHi ? "Avviare/aumentare lo spurgo fanghi di supero." : "Verificare pompa RAS, linea di ricircolo e tenuta del sedimentatore secondario.",
+    },
+    naoh: {
+      active: phLow && (naoh >= 98 || naohCap < 100),
+      icon: "⚗️",
+      title: "Probabile esaurimento reagente NaOH",
+      msg: "Dosaggio NaOH al 100% ma il pH resta acido sotto il limite. Probabile serbatoio NaOH (soda) esaurito o pompa dosatrice guasta.",
+      action: "Verificare livello serbatoio NaOH e pompa dosatrice di correzione pH.",
+    },
+    h2so4: {
+      active: phHigh && (h2so4 >= 98 || h2so4Cap < 100),
+      icon: "⚗️",
+      title: "Probabile esaurimento reagente H₂SO₄",
+      msg: "Dosaggio H₂SO₄ al 100% ma il pH resta basico sopra il limite. Probabile serbatoio H₂SO₄ (acido) esaurito o pompa dosatrice guasta.",
+      action: "Verificare livello serbatoio H₂SO₄ e pompa dosatrice di correzione pH.",
+    },
+  };
+
+  const track = {};
+  const diagnostics = [];
+  for (const [key, d] of Object.entries(defs)) {
+    const n = d.active ? (prevTrack[key] || 0) + 1 : 0;
+    track[key] = n;
+    if (n >= DIAG_PERSIST_TICKS) {
+      const existing = (prevDiag || []).find(x => x.id === key);
+      diagnostics.push({ id: key, icon: d.icon, title: d.title, msg: d.msg, action: d.action,
+        since: existing?.since || hhmm });
+    }
+  }
+  return { diagnostics, diagTrack: track };
+}
 
 export function initTrend() {
   const pts = [];
@@ -59,6 +134,8 @@ export const INIT_SIM = {
   alarmState: {},
   imhoff: "",
   stageActions: {},
+  diagnostics: [],   // active probable-cause diagnostics (see computeDiagnostics)
+  diagTrack: {},     // per-actuator persistence counters
   classifierConfig: {
     mode: "timed", timeOn: 10, timeOff: 20, speed: 60, thresholdWarn: 3.0, thresholdAlarm: 4.2,
   },
@@ -124,7 +201,7 @@ export function simTick(s) {
   // ── Active events: aggregate modifiers ──────────────────────────────────────
   const events = Array.isArray(s.events) ? s.events : [];
   const evMod = { Q:1, COD:1, BOD5:1, TSS:1, NH4:1, pH_delta:0 };
-  let blowerCap = 100, sludgeRecycleCap = 100;
+  let blowerCap = 100, sludgeRecycleCap = 100, coagulantCap = 100, naohCap = 100, h2so4Cap = 100;
   for (const ev of events) {
     const def = EVENT_TYPES[ev.type];
     if (!def) continue;
@@ -137,6 +214,9 @@ export function simTick(s) {
     if (def.actuator) {
       if (def.actuator.blowerCap        != null) blowerCap        = Math.min(blowerCap,        def.actuator.blowerCap);
       if (def.actuator.sludgeRecycleCap != null) sludgeRecycleCap = Math.min(sludgeRecycleCap, def.actuator.sludgeRecycleCap);
+      if (def.actuator.coagulantCap     != null) coagulantCap     = Math.min(coagulantCap,     def.actuator.coagulantCap);
+      if (def.actuator.naohCap          != null) naohCap          = Math.min(naohCap,          def.actuator.naohCap);
+      if (def.actuator.h2so4Cap         != null) h2so4Cap         = Math.min(h2so4Cap,         def.actuator.h2so4Cap);
     }
   }
 
@@ -167,9 +247,9 @@ export function simTick(s) {
     iQ, inlet: s.inlet,
     blower:        effBlower,
     sludgeRecycle: effSludgeRecycle,
-    coagulant:     s.coagulant,
-    naoh:          s.naoh,
-    h2so4:         s.h2so4,
+    coagulant:     Math.min(s.coagulant, coagulantCap),
+    naoh:          Math.min(s.naoh,      naohCap),
+    h2so4:         Math.min(s.h2so4,     h2so4Cap),
     MLSSsp:        s.MLSSsp,
     mode:          s.mode,
     autoCorrect:   s.autoCorrect,
@@ -347,6 +427,18 @@ export function simTick(s) {
   // by the operator slider or by auto-correction until the event ends.
   const persistedBlower = Math.min(acChanges.blower        ?? s.blower,        blowerCap);
   const persistedSludge = Math.min(acChanges.sludgeRecycle ?? s.sludgeRecycle, sludgeRecycleCap);
+  const persistedCoag   = Math.min(acChanges.coagulant     ?? s.coagulant,     coagulantCap);
+  const persistedNaoh   = Math.min(acChanges.naoh          ?? s.naoh,          naohCap);
+  const persistedH2so4  = Math.min(acChanges.h2so4         ?? s.h2so4,         h2so4Cap);
+
+  // ── Diagnostics: probable cause when correction can't recover a parameter ────
+  const { diagnostics, diagTrack } = computeDiagnostics(s.diagTrack || {}, s.diagnostics, {
+    newAS, MLSS,
+    blower: persistedBlower, sludge: persistedSludge,
+    coag: persistedCoag, naoh: persistedNaoh, h2so4: persistedH2so4,
+    pH: output.pH,
+    blowerCap, sludgeCap: sludgeRecycleCap, coagCap: coagulantCap, naohCap, h2so4Cap,
+  }, hhmm);
 
   // ── Advance event countdowns, drop the expired ones ─────────────────────────
   const updatedEvents = events
@@ -356,6 +448,7 @@ export function simTick(s) {
   return {
     ...s, ...acChanges,
     blower: persistedBlower, sludgeRecycle: persistedSludge,
+    coagulant: persistedCoag, naoh: persistedNaoh, h2so4: persistedH2so4,
     tick: newTick, O2, MLSS: Math.round(MLSS),
     stageEff: stageEffArr, output, stageOutputs: stageOutputsArr, stageDetails: stageDetailsArr,
     stageWater, stageEnergy: stageEnergyArr, energy: { kw, kwh },
@@ -364,5 +457,6 @@ export function simTick(s) {
     stageActions, sandClassifier, grigliaturaState,
     stageStates: newStageStates,
     events: updatedEvents,
+    diagnostics, diagTrack,
   };
 }

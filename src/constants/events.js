@@ -7,6 +7,9 @@
 //   inlet.pH_delta   → scostamento additivo sul pH d'ingresso
 //   actuator.blowerCap        → tetto massimo % soffianti (guasto)
 //   actuator.sludgeRecycleCap → tetto massimo % ricircolo fanghi (guasto)
+//   actuator.coagulantCap     → tetto massimo % dosaggio coagulante (serbatoio/pompa)
+//   actuator.naohCap          → tetto massimo % dosaggio NaOH (serbatoio/pompa)
+//   actuator.h2so4Cap         → tetto massimo % dosaggio H2SO4 (serbatoio/pompa)
 //
 // defaultDuration: durata in tick del motore (~2 tick/secondo reale).
 
@@ -46,6 +49,36 @@ export const EVENT_TYPES = {
     defaultDuration: 150,
     desc: "Avaria pompa ricircolo fanghi: progressivo crollo del MLSS nel biologico.",
     actuator: { sludgeRecycleCap: 15 },
+  },
+  coag_empty: {
+    type: "coag_empty",
+    label: "Serbatoio coagulante esaurito",
+    icon: "🧪",
+    color: "#FF9422",
+    defaultDuration: 180,
+    desc: "Coagulante esaurito + aumento solidi in ingresso: il dosaggio non riesce a contenere il TSS.",
+    inlet: { TSS: 2.2 },
+    actuator: { coagulantCap: 8 },
+  },
+  naoh_empty: {
+    type: "naoh_empty",
+    label: "Serbatoio NaOH esaurito",
+    icon: "⚗️",
+    color: "#00CFFF",
+    defaultDuration: 180,
+    desc: "Soda (NaOH) esaurita con scarico acido: il pH resta sotto il limite, correzione impossibile.",
+    inlet: { pH_delta: -2.2 },
+    actuator: { naohCap: 5 },
+  },
+  h2so4_empty: {
+    type: "h2so4_empty",
+    label: "Serbatoio H₂SO₄ esaurito",
+    icon: "⚗️",
+    color: "#FFD060",
+    defaultDuration: 180,
+    desc: "Acido (H₂SO₄) esaurito con scarico basico: il pH resta sopra il limite, correzione impossibile.",
+    inlet: { pH_delta: 2.6 },
+    actuator: { h2so4Cap: 5 },
   },
 };
 

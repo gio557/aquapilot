@@ -24,18 +24,29 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     // critical limit. The previous gentle terms produced a steady-state offset:
     // the setpoint was satisfied at ~4 mg/L while NH4/BOD5 stayed over limit, so
     // the blower stopped climbing and the exceedance never cleared.
-    // Each term ramps to (near) full demand as the parameter crosses its *warn*
-    // limit, so the moment effluent goes over a regulatory threshold the blower
-    // is driven toward saturation. Ramping only to the crit limit (as before)
-    // left a steady-state offset: the controller settled at ~5.9 mg/L O2 while
-    // NH4/BOD5 stayed just over limit and never cleared.
+    // Proportional demand: gentle ramps referenced to the warn limits keep
+    // normal operation energy-efficient (effluent under limit → low O2 target).
     const ramp = (v, lo, hi, gain) => clamp((v - lo) / (hi - lo), 0, 1) * gain;
-    const O2sp_nh4 = ramp(out.NH4,  QL.NH4.warn  - 3,  QL.NH4.warn  + 2,  5.0);
-    const O2sp_bod = ramp(out.BOD5, QL.BOD5.warn - 8,  QL.BOD5.warn + 5,  3.5);
-    const O2sp_cod = ramp(out.COD,  QL.COD.warn  - 35, QL.COD.warn + 20,  2.0);
-    // Baseline aligned with the stated O2 target (2.0 mg/L); load-driven terms
-    // raise it toward saturation (8 mg/L) as needed.
-    const O2sp = Math.min(8.0, 2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod);
+    const O2sp_nh4 = ramp(out.NH4,  QL.NH4.warn  - 3,  QL.NH4.warn  + 2,  4.5);
+    const O2sp_bod = ramp(out.BOD5, QL.BOD5.warn - 8,  QL.BOD5.warn + 5,  2.5);
+    const O2sp_cod = ramp(out.COD,  QL.COD.warn  - 35, QL.COD.warn + 20,  1.5);
+    // Integral action: a proportional-only setpoint leaves a steady-state offset
+    // (effluent parks just over limit while O2 sits at a "satisfied" target). We
+    // integrate the worst error against a target held ~10% *below* each warn
+    // limit, so the setpoint keeps climbing until the blower maxes out —
+    // clearing recoverable breaches and, when even 100% can't recover, exposing
+    // a true "at capacity" condition for diagnostics. The error goes negative
+    // once effluent is comfortably under target, so the integral bleeds smoothly
+    // (no limit-cycle around the threshold) and clean influent relaxes the
+    // blower for energy savings.
+    const tgtFrac = 0.90;
+    const err = Math.max(
+      (out.NH4  - QL.NH4.warn  * tgtFrac) / QL.NH4.warn,
+      (out.BOD5 - QL.BOD5.warn * tgtFrac) / QL.BOD5.warn,
+      (out.COD  - QL.COD.warn  * tgtFrac) / QL.COD.warn);
+    const O2I = clamp((s.acO2I ?? 0) + err * 0.4, 0, 6);
+    ch.acO2I = O2I;
+    const O2sp = clamp(2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod + O2I, 2.0, 8.0);
     const errO2 = O2sp - O2;
     const Kp = 6 * gBlower;
     const delta = clamp(Math.round(errO2 * Kp), -8, 15);

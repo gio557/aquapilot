@@ -608,12 +608,13 @@ export default function App() {
                   {param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre, src:"calc",   srcNote:"test di laboratorio 5 gg / stima da COD"},
                   {param:"TSS",  v:d.TSS,  unit:" mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre,  src:"sensor", srcNote:"sonda di torbidità"},
                   {param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre,  src:"sensor", srcNote:"analizzatore NH₄ online"},
-                  {param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:QL.NO3.warn,  warn:QL.NO3.pre,  src:"sensor", srcNote:"analizzatore NO₃ online"},
-                  {param:"N-tot",v:d.NTOT, unit:" mg/L", lim:QL.NTOT.warn, warn:QL.NTOT.pre, src:"calc",   srcNote:"calcolato: NH₄ + NO₃"},
+                  {param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:QL.NO3.warn,  warn:QL.NO3.pre,  src:"sensor", srcNote:"analizzatore NO₃ online", requiresStage:"Denitrificazione"},
+                  {param:"N-tot",v:d.NTOT, unit:" mg/L", lim:QL.NTOT.warn, warn:QL.NTOT.pre, src:"calc",   srcNote:"calcolato: NH₄ + NO₃",          requiresStage:"Denitrificazione"},
                   {param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true,   src:"sensor", srcNote:"sonda pH"},
                   {param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28,    src:"sensor", srcNote:"sensore di temperatura"},
                   {param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true,   src:"sensor", srcNote:"sonda O₂ disciolto"},
-                ].map(q => {
+                ].filter(q => !q.requiresStage || stages.some(s => s.name === q.requiresStage))
+                 .map(q => {
                   let ok, fuori;
                   if (q.phCheck) { ok = q.v >= 6.5 && q.v <= 8.5; fuori = q.v < 5.5 || q.v > 9.5; }
                   else if (q.o2Check) { ok = q.v >= 2; fuori = q.v < 1.5; }

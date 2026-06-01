@@ -58,7 +58,11 @@ function generateAIOffline(sim, autoOn) {
   // removing nitrate needs anoxic denitrification (a process stage), so the
   // advisor must surface an N-tot exceedance honestly rather than claim full
   // compliance — the same "don't say ottimali while a value is out" rule.
-  const ntotOver = out.NTOT != null && out.NTOT >= QL.NTOT.warn;
+  // Gated on the plant actually having a Denitrificazione stage: if it doesn't,
+  // N-tot isn't part of the plant's monitoring scope (the effluent panel hides
+  // it too), so the advisor stays silent on it instead of contradicting the UI.
+  const hasDenit = Array.isArray(sim.stages) && sim.stages.some(s => s.name === "Denitrificazione");
+  const ntotOver = hasDenit && out.NTOT != null && out.NTOT >= QL.NTOT.warn;
   const nNoteCore = "L'azoto totale non è correggibile con le leve automatiche (aerazione/dosaggi): "
     + "la nitrificazione converte NH₄ in NO₃ ma non lo elimina. Serve la denitrificazione anossica — "
     + "verificare/attivare lo stadio di denitrificazione (comparto anossico + ricircolo nitrati).";

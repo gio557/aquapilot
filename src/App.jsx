@@ -4,7 +4,7 @@ import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
-import { QUALITY_LIMITS as QL } from "./constants/limits";
+import { QUALITY_LIMITS as QL, qualitySeverity } from "./constants/limits";
 import { dataSourceTag, QUALITY_SOURCE_DEFAULTS } from "./constants/dataSource";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
@@ -20,6 +20,7 @@ import KpiNum from "./components/ui/KpiNum";
 import AlarmRow from "./components/ui/AlarmRow";
 import QualRow from "./components/ui/QualRow";
 import CustomTooltip from "./components/ui/CustomTooltip";
+import AnomalyDot from "./components/ui/AnomalyDot";
 import Tag from "./components/ui/Tag";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -597,10 +598,22 @@ export default function App() {
                     {nodeMetricDefs.filter(md => activeTrends.includes(md.key)).map(md => (
                       <Line key={md.key} type={md.step ? "stepAfter" : "monotone"}
                         dataKey={md.key} stroke={md.color}
-                        strokeWidth={1.5} dot={false} isAnimationActive={false} connectNulls/>
+                        strokeWidth={1.5} dot={<AnomalyDot pkey={md.key} t={t}/>} isAnimationActive={false} connectNulls/>
                     ))}
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+              <div style={{display:"flex", alignItems:"center", gap:14, marginTop:6, fontSize:10,
+                fontFamily:"'Share Tech Mono',monospace", color:t.textMuted, letterSpacing:0.5}}>
+                <span>MARKER:</span>
+                <span style={{display:"inline-flex", alignItems:"center", gap:5}}>
+                  <span style={{width:9, height:9, borderRadius:"50%", background:t.orange, display:"inline-block"}}/>
+                  oltre limite (MEDIO)
+                </span>
+                <span style={{display:"inline-flex", alignItems:"center", gap:5}}>
+                  <span style={{width:9, height:9, borderRadius:"50%", background:t.red, display:"inline-block"}}/>
+                  critico (ALTO)
+                </span>
               </div>
             </div>
 

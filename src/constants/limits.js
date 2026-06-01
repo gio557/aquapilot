@@ -25,3 +25,25 @@ export const QUALITY_LIMITS = {
 
 // MLSS operating band for the biological stage (mg/L).
 export const MLSS_LIMITS = { lo_crit: 1800, lo_warn: 2500, hi_warn: 4000, hi_crit: 5500 };
+
+// True if a quality parameter value is out of its regulatory limit (an anomaly),
+// honouring inverse params (O₂: lower is worse) and band params (pH). Used to mark
+// anomaly points on the trend charts. Returns the severity or null.
+//   key  = QUALITY_LIMITS key (COD, BOD5, TSS, NH4, NO3, NTOT, O2, pH)
+export function qualitySeverity(key, v) {
+  const L = QUALITY_LIMITS[key];
+  if (!L || v == null || !Number.isFinite(v)) return null;
+  if (L.low_w !== undefined) {           // pH band
+    if (v < L.low_c || v > L.high_c) return "ALTO";
+    if (v < L.low_w || v > L.high_w) return "MEDIO";
+    return null;
+  }
+  if (L.inv) {                            // O₂: floors (lower is worse)
+    if (v < L.crit) return "ALTO";
+    if (v < L.warn) return "MEDIO";
+    return null;
+  }
+  if (v >= L.crit) return "ALTO";         // ceilings
+  if (v >= L.warn) return "MEDIO";
+  return null;
+}

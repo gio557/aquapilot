@@ -4,6 +4,7 @@ import { STAGE_META } from "../constants/stages";
 import { STAGE_TREND_DEFS } from "../constants/stageTrend";
 import { QUALITY_LIMITS as QL, MLSS_LIMITS } from "../constants/limits";
 import { dataSource, dataSourceTag } from "../constants/dataSource";
+import AnomalyDot from "./ui/AnomalyDot";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
@@ -712,10 +713,22 @@ export default function StoricaPage({ t, qualitySources = {} }) {
                 {nodeMetricDefs.filter(md => activeParams.includes(md.key)).map(md => (
                   <Line key={md.key} type={md.step ? "stepAfter" : "monotone"}
                     dataKey={md.key} stroke={md.color} strokeWidth={2}
-                    dot={false} isAnimationActive={false} connectNulls />
+                    dot={<AnomalyDot pkey={md.key} t={t}/>} isAnimationActive={false} connectNulls />
                 ))}
               </LineChart>
             </ResponsiveContainer>
+            <div style={{display:"flex", alignItems:"center", gap:14, marginTop:6, fontSize:10,
+              fontFamily:"'Share Tech Mono',monospace", color:t.textMuted, letterSpacing:0.5}}>
+              <span>MARKER:</span>
+              <span style={{display:"inline-flex", alignItems:"center", gap:5}}>
+                <span style={{width:9, height:9, borderRadius:"50%", background:t.orange, display:"inline-block"}}/>
+                oltre limite (MEDIO)
+              </span>
+              <span style={{display:"inline-flex", alignItems:"center", gap:5}}>
+                <span style={{width:9, height:9, borderRadius:"50%", background:t.red, display:"inline-block"}}/>
+                critico (ALTO)
+              </span>
+            </div>
           </div>
           )}
         </div>

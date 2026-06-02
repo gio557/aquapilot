@@ -327,16 +327,26 @@ export default function App() {
   }, [norms]);
 
   const handleGrigliaturaReset = () => {
-    setSim(prev => ({
-      ...prev,
-      grigliaturaState: {
-        ...prev.grigliaturaState,
+    setSim(prev => {
+      // The engine reads grigliatura state from stageStates[grIdx]; updating only
+      // the legacy grigliaturaState alias is ignored and overwritten next tick.
+      const src = (Array.isArray(prev.stageStates) ? prev.stageStates[grIdx] : null)
+        ?? prev.grigliaturaState ?? {};
+      const reset = {
+        ...src,
         fase: "STANDBY", sovraccarico: false, ostacolo_presente: false,
         timer_fase: 0, corrente_motore: 0,
+        // Drop screen clogging below the cleaning-start threshold so the motor
+        // doesn't immediately re-trip on the next tick.
+        intasamento: Math.min(src.intasamento ?? 0, 0.25),
         finecorsa_ritorno: true, finecorsa_partenza: false,
-        allarmi: (prev.grigliaturaState?.allarmi || []).filter(a => a !== "ALM-02"),
-      }
-    }));
+        allarmi: (src.allarmi || []).filter(a => a !== "ALM-02"),
+      };
+      const stageStates = Array.isArray(prev.stageStates)
+        ? prev.stageStates.map((st, i) => i === grIdx ? reset : st)
+        : prev.stageStates;
+      return { ...prev, stageStates, grigliaturaState: reset };
+    });
   };
 
   const selectedStageData = selectedStage != null ? {

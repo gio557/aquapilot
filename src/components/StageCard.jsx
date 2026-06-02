@@ -225,7 +225,20 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
     : 0;
   const rank = Math.max(sevRank(stable.sev), gaugeRank, clsRank, grRank);
   const bColor = rank === 2 ? t.red : rank === 1 ? t.orange : t.green;
-  const bIcon  = stable.sev === "ALTO" ? "🔴" : stable.sev === "MEDIO" ? "🟡" : "🟢";
+
+  // Status message: a mechanical/process condition (grigliatura motor alarm or
+  // bypass) takes priority over the auto-correction status — otherwise the card
+  // would show "stadio stabile" while the screen is actually in motor alarm.
+  let statusText = stable.text;
+  let statusSev  = stable.sev;
+  if (grigliaturaState?.fase === "ALLARME_MOTORE") {
+    statusText = "⛔ Motore in sovraccarico — stadio bloccato. Premere RESET dopo aver rimosso l'ostruzione.";
+    statusSev  = "ALTO";
+  } else if (grigliaturaState?.bypass_aperto) {
+    statusText = "⚠ ΔH elevato — bypass aperto. Griglia intasata, ciclo di pulizia in corso.";
+    statusSev  = "MEDIO";
+  }
+  const bIcon = statusSev === "ALTO" ? "🔴" : statusSev === "MEDIO" ? "🟡" : "🟢";
 
   const isEfficiency = so?.higherIsBetter;
 
@@ -287,13 +300,13 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
       <div style={{
         padding:"7px 10px", borderRadius:7,
-        background:stable.sev==="ALTO"?t.redDim:stable.sev==="MEDIO"?t.orangeDim:t.greenDim,
+        background:statusSev==="ALTO"?t.redDim:statusSev==="MEDIO"?t.orangeDim:t.greenDim,
         border:`1px solid ${bColor}33`, borderLeft:`3px solid ${bColor}`,
         transition:"background 0.6s,border-color 0.6s",
       }}>
         <div style={{display:"flex", gap:5, alignItems:"flex-start"}}>
           <span style={{fontSize:11, flexShrink:0}}>{bIcon}</span>
-          <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:bColor, lineHeight:1.4, display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden", transition:"color 0.6s"}}>{stable.text}</span>
+          <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:bColor, lineHeight:1.4, display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical", overflow:"hidden", transition:"color 0.6s"}}>{statusText}</span>
         </div>
       </div>
       <div style={{textAlign:"center", marginTop:6, fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", opacity:0.65}}>↗ dettagli stadio</div>

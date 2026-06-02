@@ -49,9 +49,12 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     // process has a long lag, so aggressive gains caused integral-windup hunting
     // (blower swinging 57↔92% in a slow limit-cycle). Softer gains track the
     // slow effluent dynamics smoothly without oscillating.
+    // Minimum setpoint is 2.5 (not 2.0 = warn) so there is always a margin above
+    // the regulatory floor. With sp=2.0 and O2=1.92 the error rounds to 0 and the
+    // blower never responds; sp=2.5 guarantees delta≥1 whenever O2≤2.33.
     const O2I = clamp((s.acO2I ?? 0) + err * 0.12, 0, 6);
     ch.acO2I = O2I;
-    const O2sp = clamp(2.0 + O2sp_nh4 + O2sp_cod + O2sp_bod + O2I, 2.0, 8.0);
+    const O2sp = clamp(2.5 + O2sp_nh4 + O2sp_cod + O2sp_bod + O2I, 2.5, 8.0);
     const errO2 = O2sp - O2;
     const Kp = 3 * gBlower;
     const delta = clamp(Math.round(errO2 * Kp), -4, 6);

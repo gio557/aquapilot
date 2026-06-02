@@ -21,6 +21,7 @@ import AlarmRow from "./components/ui/AlarmRow";
 import QualRow from "./components/ui/QualRow";
 import CustomTooltip from "./components/ui/CustomTooltip";
 import AnomalyDot from "./components/ui/AnomalyDot";
+import BlockingAlarmPopup from "./components/ui/BlockingAlarmPopup";
 import Tag from "./components/ui/Tag";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -145,7 +146,8 @@ export default function App() {
   });
   useEffect(() => { try { localStorage.setItem("aquapilot.showMarkers.v1", String(showMarkers)); } catch {} }, [showMarkers]);
   const [clock, setClock] = useState(new Date());
-  const [dismissedDiag, setDismissedDiag] = useState([]); // diagnostic ids the operator closed
+  const [dismissedDiag, setDismissedDiag] = useState([]);
+  const [dismissedBlocking, setDismissedBlocking] = useState([]);
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 1000);
@@ -166,6 +168,68 @@ export default function App() {
     setDismissedDiag(prev => prev.filter(id => ids.includes(id)));
   }, [diagIds]);
   const activeDiag = diagnostics.filter(d => !dismissedDiag.includes(d.id));
+
+  // ── Blocking / critical alarms ──────────────────────────────────────────────
+  // Covers: motor overload (ALLARME_MOTORE) + ALTO quality parameters.
+  // Each entry: { id, kind, icon, col, title, stageName?, msg, causa, action }
+  const QUAL_BLOCKING = {
+    COD:  { icon:"🧪", title:"COD critico",
+      msg:"Il COD in uscita supera la soglia critica di scarico.",
+      causa:"Efficienza biologica ridotta: probabile sovraccarico organico, carenza di O₂ nel reattore, o biomassa in stress.",
+      action:"Verificare O₂ disciolto e percentuale soffianti. Controllare il carico in ingresso (portata e concentrazione). Ridurre la portata se possibile." },
+    BOD5: { icon:"🧪", title:"BOD₅ critico",
+      msg:"Il BOD₅ in uscita supera la soglia critica di scarico.",
+      causa:"Degradazione biologica incompleta: aerazione insufficiente o biomassa in fase di declino.",
+      action:"Aumentare il setpoint delle soffianti. Verificare MLSS e portata di ricircolo fanghi (RAS)." },
+    TSS:  { icon:"🌊", title:"TSS critico",
+      msg:"I solidi sospesi totali in uscita superano la soglia critica.",
+      causa:"Sedimentazione inefficiente, rigonfiamento del fango (bulking filamentoso) o esaurimento coagulante.",
+      action:"Aumentare il dosaggio coagulante. Verificare la blanket del sedimentatore e la portata RAS. Controllare SVI se disponibile." },
+    NH4:  { icon:"⚗️", title:"NH₄ critico",
+      msg:"L'ammoniaca in uscita supera la soglia critica di scarico.",
+      causa:"Nitrificazione insufficiente: temperatura effluente bassa, carenza di O₂, pH fuori range ottimale (7.0–8.0) o biomassa nitrificante carente.",
+      action:"Aumentare l'aerazione. Verificare temperatura e pH in ingresso al biologico. Controllare l'età del fango (SRT)." },
+    O2:   { icon:"💨", title:"O₂ disciolto critico",
+      msg:"Il livello di O₂ disciolto nel reattore biologico è sceso sotto la soglia critica.",
+      causa:"Capacità di aerazione insufficiente rispetto al carico organico. Possibile guasto soffianti, diffusori intasati o membrana forata.",
+      action:"Verificare stato e percentuale apertura soffianti. Ispezionare i diffusori. Ridurre il carico in ingresso se possibile." },
+    pH:   { icon:"⚗️", title:"pH fuori range critico",
+      msg:"Il pH dell'effluente è uscito dal range critico di accettabilità.",
+      causa:"Mancato dosaggio del reagente correttivo (NaOH o H₂SO₄) o serbatoio esaurito. Possibile guasto pompa dosaggio.",
+      action:"Verificare i livelli dei serbatoi di NaOH e H₂SO₄. Controllare le pompe di dosaggio reagenti. Eseguire calibrazione sonde pH." },
+  };
+  const blockingAlarms = (() => {
+    const result = [];
+    // 1. Motor overload (ALLARME_MOTORE) — per ogni stadio Grigliatura
+    stages.forEach((st, si) => {
+      if (st.name !== "Grigliatura") return;
+      const state = Array.isArray(sim.stageStates) ? sim.stageStates[si] : sim.grigliaturaState;
+      if (state?.fase === "ALLARME_MOTORE") {
+        result.push({ id:`motor_${si}`, kind:"motor", col:t.red,
+          icon:"⚙️", title:"ALLARME MOTORE — Grigliatura", stageName:`ST-${String(si+1).padStart(2,"0")}`,
+          msg:"Il motore della grigliatura è andato in protezione per sovraccarico di corrente. Lo stadio è bloccato e non filtra il liquame fino a reset manuale.",
+          causa:"Griglia intasata da materiale grossolano o corpo estraneo incastrato nel gruppo pressa. Possibile guasto meccanico del motore o della trasmissione.",
+          action:"1. Ispezionare visivamente la griglia e il gruppo pressa. 2. Rimuovere eventuali ostruzioni in sicurezza (impianto fermo). 3. Premere RESET sul pannello Grigliatura per riavviare. 4. Monitorare la corrente nei primi minuti dopo il riavvio.",
+        });
+      }
+    });
+    // 2. ALTO quality parameters
+    Object.entries(sim.alarmState || {}).forEach(([key, sev]) => {
+      if (sev !== "ALTO") return;
+      const def = QUAL_BLOCKING[key];
+      if (!def) return;
+      result.push({ id:`quality_${key}`, kind:"quality", col:t.orange, ...def });
+    });
+    return result;
+  })();
+  const blockingIds = blockingAlarms.map(a => a.id).join(",");
+  useEffect(() => {
+    const ids = blockingAlarms.map(a => a.id);
+    setDismissedBlocking(prev => prev.filter(id => ids.includes(id)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockingIds]);
+  const activeBlocking = blockingAlarms.filter(a => !dismissedBlocking.includes(a.id));
+  // ─────────────────────────────────────────────────────────────────────────────
 
   // Reset to plant view if the selected stage node no longer exists
   useEffect(() => {
@@ -858,6 +922,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ── ALLARMI BLOCCANTI / GRAVI: popup immediato ── */}
+      <BlockingAlarmPopup
+        alarms={activeBlocking}
+        t={t}
+        onDismiss={() => setDismissedBlocking(blockingAlarms.map(a => a.id))}
+      />
 
       {/* ── DIAGNOSTICA: pop-up causa probabile (auto-correzione inefficace) ── */}
       {activeDiag.length > 0 && (

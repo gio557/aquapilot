@@ -3,7 +3,7 @@ import { useControlMirror } from "../hooks/useControlChannel";
 import SimSlider from "./ui/SimSlider";
 import Tag from "./ui/Tag";
 import { INIT_SIM } from "../simulation/engine";
-import { EVENT_LIST, makeEvent } from "../constants/events";
+import { SCENARIO_LIST, FAULT_LIST, makeEvent } from "../constants/events";
 
 // Reusable card wrapper for the control-room grid.
 function Panel({ title, icon, t, children, span }) {
@@ -72,6 +72,56 @@ export default function ControlRoomPage() {
   const stopEvent = (id)  => onSim(p => ({ ...p, events: (p.events || []).filter(e => e.id !== id) }));
   const stopAllEvents = () => onSim(p => ({ ...p, events: [] }));
   const activeAlarms = Object.values(sim.alarmState || {}).filter(v => v !== "OK").length;
+
+  // Renders a list of event/fault cards — shared between Scenari and Guasti panels.
+  const EventCards = ({ list, activeEvents, triggerEvent, stopEvent, activeBtnLabel }) =>
+    list.map(def => {
+      const active = activeEvents.find(e => e.type === def.type);
+      const pct  = active && active.duration ? Math.max(0, Math.round(active.remaining / active.duration * 100)) : 0;
+      const secs = active && active.remaining != null ? Math.ceil(active.remaining * 0.5) : null;
+      return (
+        <div key={def.type} style={{padding:"12px 14px", background:active?`${def.color}14`:t.surface2,
+          border:`1px solid ${active?def.color:t.border}`, borderRadius:10, transition:"all 0.15s"}}>
+          <div style={{display:"flex", alignItems:"flex-start", gap:10}}>
+            <span style={{fontSize:20, lineHeight:1, marginTop:2}}>{def.icon}</span>
+            <div style={{flex:1, minWidth:0}}>
+              <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:3}}>
+                <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, color:active?def.color:t.text}}>{def.label}</span>
+                {active && <Tag color={def.color}>ATTIVO</Tag>}
+              </div>
+              <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>{def.desc}</div>
+            </div>
+          </div>
+          {active ? (
+            <div style={{marginTop:10}}>
+              <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>tempo residuo</span>
+                <span style={{fontSize:12, color:def.color, fontFamily:"'Share Tech Mono',monospace", fontWeight:700}}>~{secs}s</span>
+              </div>
+              <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden", marginBottom:8}}>
+                <div style={{height:"100%", width:`${pct}%`, background:def.color, borderRadius:3, transition:"width 0.4s linear"}}/>
+              </div>
+              <div style={{display:"flex", gap:8}}>
+                <button onClick={() => triggerEvent(def.type)}
+                  style={{flex:1, padding:"6px", background:t.surface3, border:`1px solid ${t.border}`, color:t.textSec, borderRadius:6, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:12, cursor:"pointer"}}>
+                  ↻ Riavvia
+                </button>
+                <button onClick={() => stopEvent(active.id)}
+                  style={{flex:1, padding:"6px", background:t.redDim, border:`1px solid ${t.red}66`, color:t.red, borderRadius:6, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12, cursor:"pointer"}}>
+                  ⏹ Interrompi
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => triggerEvent(def.type)}
+              style={{width:"100%", marginTop:10, padding:"7px", background:`${def.color}1a`, border:`1px solid ${def.color}66`,
+                color:def.color, borderRadius:7, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, cursor:"pointer", letterSpacing:1}}>
+              {activeBtnLabel}
+            </button>
+          )}
+        </div>
+      );
+    });
 
   const kpis = [
     {l:"O₂",      v:`${sim.O2.toFixed(1)}`, u:"mg/L", c:sim.O2<1.5?t.red:sim.O2<2?t.orange:t.green},
@@ -193,65 +243,26 @@ export default function ControlRoomPage() {
           </button>
         </Panel>
 
-        {/* SCENARI / EVENTI */}
-        <Panel title="SCENARI / EVENTI" icon="🎬" t={t}>
+        {/* SCENARI */}
+        <Panel title="SCENARI" icon="🎬" t={t}>
           <div style={{padding:"8px 12px", background:t.accentDim, border:`1px solid ${t.accent}44`, borderRadius:8, fontSize:12, color:t.accent, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>
-            🎬 Attiva uno scenario per testare la reazione dell'impianto. Allarmi e auto-correzione rispondono in tempo reale.
+            Condizioni esterne e eventi di processo. Testa la reazione dell'impianto.
           </div>
+          {EventCards({ list: SCENARIO_LIST, activeEvents, triggerEvent, stopEvent, activeBtnLabel:"▶ ATTIVA SCENARIO", t })}
+        </Panel>
 
-          {activeEvents.length > 0 && (
-            <button onClick={stopAllEvents}
+        {/* GUASTI */}
+        <Panel title="GUASTI" icon="🔴" t={t}>
+          <div style={{padding:"8px 12px", background:`${t.red}12`, border:`1px solid ${t.red}33`, borderRadius:8, fontSize:12, color:t.red, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>
+            Simula avarie hardware: motori, inverter, sonde, serbatoi. L'auto-correzione risponde, la diagnostica segnala la causa.
+          </div>
+          {activeEvents.filter(e => FAULT_LIST.some(f => f.type === e.type)).length > 0 && (
+            <button onClick={() => onSim(p => ({ ...p, events: (p.events||[]).filter(e => !FAULT_LIST.some(f => f.type === e.type)) }))}
               style={{width:"100%", padding:"9px", background:t.redDim, border:`1px solid ${t.red}66`, color:t.red, borderRadius:8, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, cursor:"pointer", letterSpacing:1}}>
-              ⏹ INTERROMPI TUTTI ({activeEvents.length})
+              ⏹ INTERROMPI TUTTI I GUASTI
             </button>
           )}
-
-          {EVENT_LIST.map(def => {
-            const active = activeEvents.find(e => e.type === def.type);
-            const pct = active && active.duration ? Math.max(0, Math.round(active.remaining / active.duration * 100)) : 0;
-            const secs = active && active.remaining != null ? Math.ceil(active.remaining * 0.5) : null;
-            return (
-              <div key={def.type} style={{padding:"12px 14px", background:active?`${def.color}14`:t.surface2, border:`1px solid ${active?def.color:t.border}`, borderRadius:10, transition:"all 0.15s"}}>
-                <div style={{display:"flex", alignItems:"flex-start", gap:10}}>
-                  <span style={{fontSize:22, lineHeight:1, marginTop:1}}>{def.icon}</span>
-                  <div style={{flex:1, minWidth:0}}>
-                    <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:3}}>
-                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, color:active?def.color:t.text}}>{def.label}</span>
-                      {active && <Tag color={def.color}>ATTIVO</Tag>}
-                    </div>
-                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>{def.desc}</div>
-                  </div>
-                </div>
-
-                {active ? (
-                  <div style={{marginTop:10}}>
-                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                      <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>tempo residuo</span>
-                      <span style={{fontSize:12, color:def.color, fontFamily:"'Share Tech Mono',monospace", fontWeight:700}}>~{secs}s</span>
-                    </div>
-                    <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden", marginBottom:8}}>
-                      <div style={{height:"100%", width:`${pct}%`, background:def.color, borderRadius:3, transition:"width 0.4s linear"}}/>
-                    </div>
-                    <div style={{display:"flex", gap:8}}>
-                      <button onClick={() => triggerEvent(def.type)}
-                        style={{flex:1, padding:"6px", background:t.surface3, border:`1px solid ${t.border}`, color:t.textSec, borderRadius:6, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:12, cursor:"pointer"}}>
-                        ↻ Riavvia
-                      </button>
-                      <button onClick={() => stopEvent(active.id)}
-                        style={{flex:1, padding:"6px", background:t.redDim, border:`1px solid ${t.red}66`, color:t.red, borderRadius:6, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12, cursor:"pointer"}}>
-                        ⏹ Interrompi
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={() => triggerEvent(def.type)}
-                    style={{width:"100%", marginTop:10, padding:"7px", background:`${def.color}1a`, border:`1px solid ${def.color}66`, color:def.color, borderRadius:7, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, cursor:"pointer", letterSpacing:1}}>
-                    ▶ ATTIVA SCENARIO
-                  </button>
-                )}
-              </div>
-            );
-          })}
+          {EventCards({ list: FAULT_LIST, activeEvents, triggerEvent, stopEvent, activeBtnLabel:"⚡ SIMULA GUASTO", t })}
         </Panel>
 
         {/* SIMULAZIONE & MOTORE */}

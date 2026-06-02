@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, Component } from "react";
 import { loadHistory, loadInterventions } from "../simulation/learning";
 import { STAGE_META } from "../constants/stages";
 import { STAGE_TREND_DEFS } from "../constants/stageTrend";
@@ -250,8 +250,39 @@ function ChartTooltip({ active, payload, label, t }) {
   );
 }
 
+// ── Error boundary — catches rendering crashes and shows a recoverable message ──
+class StoricaErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const t = this.props.t || {};
+    return (
+      <div style={{padding:"40px 32px", textAlign:"center"}}>
+        <div style={{fontSize:48, marginBottom:16}}>⚠️</div>
+        <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:18,
+          color: t.red || "#FF3B5C", letterSpacing:2, marginBottom:12}}>
+          ERRORE DI RENDERING
+        </div>
+        <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13,
+          color: t.textMuted || "#888", marginBottom:8, maxWidth:560, margin:"0 auto 16px"}}>
+          {String(this.state.error?.message || this.state.error)}
+        </div>
+        <button onClick={() => this.setState({ error: null })}
+          style={{padding:"9px 22px", borderRadius:8, cursor:"pointer",
+            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14,
+            border:`1px solid ${t.accent || "#00CFFF"}`,
+            background:`${t.accent || "#00CFFF"}18`,
+            color: t.accent || "#00CFFF"}}>
+          RIPROVA
+        </button>
+      </div>
+    );
+  }
+}
+
 // ── Main page ─────────────────────────────────────────────────
-export default function StoricaPage({ t, qualitySources = {}, showMarkers = true, onShowMarkers }) {
+function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMarkers }) {
   const [history,       setHistory]       = useState([]);
   const [interventions, setInterventions] = useState([]);
   const [calMonth,      setCalMonth]      = useState(new Date());
@@ -1043,5 +1074,13 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
       )}
 
     </div>
+  );
+}
+
+export default function StoricaPage(props) {
+  return (
+    <StoricaErrorBoundary t={props.t}>
+      <StoricaPageInner {...props} />
+    </StoricaErrorBoundary>
   );
 }

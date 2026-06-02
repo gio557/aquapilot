@@ -428,9 +428,9 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
     const itemTop    = item.offsetTop;
     const itemBottom = itemTop + item.offsetHeight;
     if (itemTop < list.scrollTop)
-      list.scrollTop = itemTop - 8;
+      list.scrollTo({ top: itemTop - 8, behavior: "smooth" });
     else if (itemBottom > list.scrollTop + list.clientHeight)
-      list.scrollTop = itemBottom - list.clientHeight + 8;
+      list.scrollTo({ top: itemBottom - list.clientHeight + 8, behavior: "smooth" });
   }, [highlightTs, hlIntervIdx]);
 
   // find closest chartData label for a given timestamp
@@ -836,7 +836,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
               Nessun intervento di auto-correzione registrato.
             </div>
           ) : (
-            <div ref={intervListRef} style={{display:"flex", flexDirection:"column", gap:8, flex:1, minHeight:0, overflowY:"auto", paddingRight:6}}>
+            <div ref={intervListRef} style={{display:"flex", flexDirection:"column", gap:8, maxHeight:970, overflowY:"auto", paddingRight:6}}>
               {shownInterv.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";

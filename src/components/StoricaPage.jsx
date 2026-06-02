@@ -333,7 +333,10 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
 
   const handleSelectDate = useCallback(k => {
     setSelectedKey(k);
-    setCalMonth(new Date(k));
+    // Parse YYYY-MM-DD as local midnight — new Date("YYYY-MM-DD") is UTC on iOS Safari
+    // which can roll to the previous month in UTC+ timezones.
+    const [y, mo, d] = k.split("-").map(Number);
+    setCalMonth(new Date(y, mo - 1, d));
   }, []);
 
   // keyboard navigation
@@ -922,7 +925,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
                   </div>
                 ) : (
                   <div style={{display:"flex", flexDirection:"column", gap:7,
-                    flex:1, minHeight:0, overflowY:"auto", paddingRight:4}}>
+                    maxHeight:480, overflowY:"auto", paddingRight:4}}>
                     {active.sort(([,a],[,b]) => (a==="ALTO"?0:1) - (b==="ALTO"?0:1)).map(([param, sev]) => {
                       const c = sev === "ALTO" ? t.red : t.orange;
                       const icon = sev === "ALTO" ? "🔴" : "🟡";

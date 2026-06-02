@@ -196,13 +196,8 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
           </div>
 
           <div>
-            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8, gap:8, flexWrap:"wrap"}}>
+            <div style={{marginBottom:8}}>
               <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>PARAMETRI DI PROCESSO</span>
-              <span style={{display:"inline-flex", gap:10, fontSize:9, fontFamily:"'Share Tech Mono',monospace", color:t.textMuted, textTransform:"uppercase"}}>
-                <span style={{display:"inline-flex", alignItems:"center", gap:3, color:t.accent}}>📡 sensore</span>
-                <span style={{display:"inline-flex", alignItems:"center", gap:3}}>🧮 stimato</span>
-                <span style={{display:"inline-flex", alignItems:"center", gap:3}}>⚙️ comando</span>
-              </span>
             </div>
             {(smoothParams || stageDetail.params).map((p, i) => {
               const sensorId = PARAM_SENSOR_MAP[stage?.name]?.[p.label];

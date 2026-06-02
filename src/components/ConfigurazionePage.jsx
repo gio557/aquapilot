@@ -182,7 +182,10 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     fontFamily:"'Rajdhani',sans-serif", fontSize:13, fontWeight:600, letterSpacing:0.5,
                     border:`${on ? 2 : 1}px solid ${on ? t.accent : t.border}`,
                     background: on ? `${t.accent}18` : t.surface2,
-                    color: on ? t.accent : t.textSec}}>
+                    color: on ? t.accent : t.textSec,
+                    boxShadow: on ? `0 0 10px ${t.accent}55, 0 0 22px ${t.accent}28, 0 -2px 8px ${t.accent}22, 0 4px 8px #00000055` : "none",
+                    transform: on ? "translateY(-2px)" : "none",
+                    transition:"all 0.18s"}}>
                   {dataSourceTag(o.kind).icon} {o.label}
                 </button>
               );

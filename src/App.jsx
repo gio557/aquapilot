@@ -11,7 +11,7 @@ import { useSimulation } from "./hooks/useSimulation";
 import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
-import ControlRoom from "./components/ControlRoom";
+import { useControlBroadcast } from "./hooks/useControlChannel";
 import ConfigurazionePage from "./components/ConfigurazionePage";
 import AIPanel from "./components/AIPanel";
 import StoricaPage from "./components/StoricaPage";
@@ -39,6 +39,9 @@ export default function App() {
   const t = darkMode ? DARK : LIGHT;
 
   const { sim, setSim } = useSimulation();
+
+  // Mirror sim state to the Control Room tab and accept its control commands.
+  useControlBroadcast(sim, setSim, darkMode);
 
   // Smoothed display values — EMA with alpha=0.10 so numbers drift gradually
   const ALPHA = 0.10;
@@ -133,8 +136,15 @@ export default function App() {
   }, [norms]);
 
   const [page, setPage] = useState("dashboard");
-  const [showControlRoom, setShowControlRoom] = useState(false);
   const [showAlarms, setShowAlarms] = useState(false);
+
+  // Open the Control Room in a dedicated browser tab. The simulation engine keeps
+  // running here (main tab); the Control Room mirrors state and sends control
+  // commands back over a BroadcastChannel.
+  const openControlRoom = () => {
+    const url = `${window.location.pathname}?view=controlroom`;
+    window.open(url, "aquapilot-controlroom", "noopener");
+  };
   const [selectedStage, setSelectedStage] = useState(null);
   const [timeRange, setTimeRange] = useState("1h");
   const [activeTrends, setActiveTrends] = useState(["COD","O2"]);
@@ -441,11 +451,12 @@ export default function App() {
             🔔 {activeAlarms.length}
           </button>
 
-          <button onClick={() => setShowControlRoom(p => !p)}
+          <button onClick={openControlRoom} title="Apri la Control Room in una nuova scheda"
             style={{padding:"6px 16px", borderRadius:7, cursor:"pointer",
               fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
-              border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
-            🎛️ CONTROL ROOM
+              border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent,
+              display:"inline-flex", alignItems:"center", gap:6}}>
+            🎛️ CONTROL ROOM <span style={{fontSize:11, opacity:0.7}}>↗</span>
           </button>
 
           <button onClick={() => setDarkMode(p => !p)}
@@ -485,11 +496,11 @@ export default function App() {
               </span>
             );
           })}
-          <button onClick={() => setShowControlRoom(true)}
+          <button onClick={openControlRoom}
             style={{marginLeft:"auto", padding:"3px 10px", borderRadius:5, cursor:"pointer",
               background:t.surface3, border:`1px solid ${t.border}`, color:t.textSec,
               fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:12}}>
-            Gestisci →
+            Gestisci ↗
           </button>
         </div>
       )}
@@ -888,10 +899,6 @@ export default function App() {
       )}
 
       {/* ── OVERLAYS ── */}
-
-      {showControlRoom && (
-        <ControlRoom sim={sim} onSim={setSim} t={t} onClose={() => setShowControlRoom(false)}/>
-      )}
 
       {selectedStageData && (
         <StageDetailPopup

@@ -32,6 +32,9 @@ export default function ControlRoomPage() {
   const { sim, darkMode, onSim, connected } = useControlMirror();
   const t = darkMode ? DARK : LIGHT;
 
+  // Set tab title for the Control Room window only
+  document.title = "AquaPilot - Control Room";
+
   const fontImport = (
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@700;900&display=swap');

@@ -320,7 +320,11 @@ export default function App() {
                 border:`1px solid ${page===p.id?t.accent:t.border}`,
                 background:page===p.id?`${t.accent}18`:t.surface2,
                 color:page===p.id?t.accent:t.textSec,
-                transition:"all 0.15s"}}>
+                boxShadow:page===p.id
+                  ?`0 0 10px ${t.accent}55, 0 0 22px ${t.accent}28, 0 -2px 8px ${t.accent}22, 0 4px 8px #00000055`
+                  :"none",
+                transform:page===p.id?"translateY(-2px)":"none",
+                transition:"all 0.18s"}}>
               {p.label}
             </button>
           ))}

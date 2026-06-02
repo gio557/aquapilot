@@ -214,22 +214,9 @@ export const DEFAULT_STAGE_CONFIG = [
     ],
   },
   {
-    // "Disinfezione" is a legacy initial-stage name with no add-stage preset
-    // (the catalogue offers "Disinfezione UV" / "Disinfezione Cloro").
     stageIndex: 5,
-    referenceSensor: "nh4",
-    sensors: {
-      ph:   { enabled: true  },
-      flow: { enabled: true  },
-      tss:  { enabled: true  },
-      temp: { enabled: false },
-      o2:   { enabled: false },
-      cod:  { enabled: false },
-      nh4:  { enabled: false },
-    },
-    pumps: [
-      pump("p1", "Pompa dosaggio disinfettante", 0.37, 0.5, 20, 1450),
-    ],
+    ...fromPreset("Osmosi Inversa"),
+    pumps: [],
   },
 ];
 

@@ -4,7 +4,7 @@ export const STAGE_META = [
   {id:3, name:"Biologico",        sub:"Trattamento a fanghi attivi"},
   {id:4, name:"Denitrificazione", sub:"Rimozione azoto nitrico"},
   {id:5, name:"Sedimentazione",   sub:"Separazione fanghi"},
-  {id:6, name:"Disinfezione",     sub:"Acqua trattata"},
+  {id:6, name:"Osmosi Inversa",    sub:"Separazione per membrana"},
 ];
 
 export const STAGE_TYPES = [

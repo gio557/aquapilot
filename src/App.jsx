@@ -84,13 +84,13 @@ export default function App() {
 
   const [stageConfig, setStageConfig] = useState(() => {
     try {
-      const saved = localStorage.getItem("aquapilot.stageConfig.v2");
+      const saved = localStorage.getItem("aquapilot.stageConfig.v3");
       return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG));
     } catch { return JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)); }
   });
   const [stages, setStages] = useState(() => {
     try {
-      const saved = localStorage.getItem("aquapilot.stages.v2");
+      const saved = localStorage.getItem("aquapilot.stages.v3");
       return saved ? JSON.parse(saved) : STAGE_META;
     } catch { return STAGE_META; }
   });
@@ -249,13 +249,13 @@ export default function App() {
   const stageConfigJson = JSON.stringify(stageConfig);
   useEffect(() => {
     setSim(prev => ({ ...prev, stageConfig, stages }));
-    try { localStorage.setItem("aquapilot.stageConfig.v2", stageConfigJson); } catch {}
+    try { localStorage.setItem("aquapilot.stageConfig.v3", stageConfigJson); } catch {}
   }, [stageConfigJson]);
 
   const stagesJson = JSON.stringify(stages);
   useEffect(() => {
     setSim(prev => ({ ...prev, stages }));
-    try { localStorage.setItem("aquapilot.stages.v2", stagesJson); } catch {}
+    try { localStorage.setItem("aquapilot.stages.v3", stagesJson); } catch {}
   }, [stagesJson]);
 
   useEffect(() => {

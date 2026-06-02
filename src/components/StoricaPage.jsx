@@ -806,8 +806,8 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
 
       {/* ── INTERVENTI VICINI + CONSUMI ── */}
       {snap && (
-      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14}}>
-        <div style={{...card, padding:"20px 22px"}}>
+      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, alignItems:"stretch"}}>
+        <div style={{...card, padding:"20px 22px", display:"flex", flexDirection:"column"}}>
           <div style={{...secHd}}>
             <span style={{color:t.yellow}}>▸</span>
             INTERVENTI AUTO-CORREZIONE — ±30 min
@@ -827,7 +827,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
               Nessun intervento di auto-correzione registrato.
             </div>
           ) : (
-            <div style={{display:"flex", flexDirection:"column", gap:8, maxHeight:520, overflowY:"auto", paddingRight:6}}>
+            <div style={{display:"flex", flexDirection:"column", gap:8, flex:1, minHeight:0, overflowY:"auto", paddingRight:6}}>
               {shownInterv.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";
@@ -870,7 +870,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
         </div>
 
         {/* ALLARMI */}
-        <div style={{...card, padding:"20px 22px"}}>
+        <div style={{...card, padding:"20px 22px", display:"flex", flexDirection:"column"}}>
           <div style={{...secHd}}>
             <span style={{color:t.red}}>▸</span>
             ALLARMI — {snap ? fmtTime(new Date(snap.t)) : "—"}
@@ -888,7 +888,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
             return (
               <>
                 {/* summary badges */}
-                <div style={{display:"flex", gap:10, marginBottom:16, flexWrap:"wrap"}}>
+                <div style={{display:"flex", gap:10, marginBottom:16, flexWrap:"wrap", flexShrink:0}}>
                   {[
                     { label:`${crits.length} Critici`,  c: crits.length > 0 ? t.red    : t.green, filled: crits.length > 0 },
                     { label:`${warns.length} Medi`,     c: warns.length > 0 ? t.orange : t.green, filled: warns.length > 0 },
@@ -910,7 +910,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
                   </div>
                 ) : (
                   <div style={{display:"flex", flexDirection:"column", gap:7,
-                    maxHeight:330, overflowY:"auto", paddingRight:4}}>
+                    flex:1, minHeight:0, overflowY:"auto", paddingRight:4}}>
                     {active.sort(([,a],[,b]) => (a==="ALTO"?0:1) - (b==="ALTO"?0:1)).map(([param, sev]) => {
                       const c = sev === "ALTO" ? t.red : t.orange;
                       const icon = sev === "ALTO" ? "🔴" : "🟡";
@@ -953,7 +953,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
         </div>
 
         {/* CONSUMI ENERGETICI */}
-        <div style={{...card, padding:"20px 22px"}}>
+        <div style={{...card, padding:"20px 22px", display:"flex", flexDirection:"column"}}>
           <div style={{...secHd}}>
             <span style={{color:t.accent}}>▸</span>
             CONSUMI ENERGETICI — {snap ? fmtTime(new Date(snap.t)) : "—"}

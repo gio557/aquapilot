@@ -6,7 +6,7 @@ import NormativaPage from "./NormativaPage";
 
 const CONFIG_TABS = [
   { id: "stadi",       label: "CONFIGURAZIONE STADI" },
-  { id: "provenienza", label: "PROVENIENZA DATI" },
+  { id: "provenienza", label: "SEGNALI" },
   { id: "normativa",   label: "NORMATIVA" },
 ];
 

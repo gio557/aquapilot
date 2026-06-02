@@ -147,7 +147,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   if (activeTab === "normativa") {
     return (
       <div>
-        <TabBar padded />
+        {TabBar({padded:true})}
         <NormativaPage t={t} ac={ac} onAC={onAC} norms={norms} setNorms={setNorms} normativaSets={normativaSets} />
       </div>
     );
@@ -198,7 +198,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       color:t.textMuted, textTransform:"uppercase", margin:"22px 0 6px" };
     return (
       <div>
-        <TabBar padded />
+        {TabBar({padded:true})}
         <div style={{padding:"20px 24px 40px", maxWidth:680}}>
           <div style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5, marginBottom:8}}>
             Definisci, per ogni segnale, come viene ottenuto il dato in impianto.
@@ -225,7 +225,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     <div style={{padding:"20px 24px 40px"}}>
 
       {/* ── TAB BAR ── */}
-      <TabBar />
+      {TabBar({})}
 
       {config.map((sc, si) => {
         const stage   = stages[si] || { name:`ST-0${si+1}`, sub:"" };

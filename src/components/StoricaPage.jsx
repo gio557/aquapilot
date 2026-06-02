@@ -279,7 +279,10 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
 
   // L'indice del cursore dei pannelli: il punto in focus se impostato, altrimenti
   // il bordo destro della finestra. Clamp entro i limiti della finestra visibile.
-  const cursorIdx = focusIdx != null ? Math.min(Math.max(focusIdx, windowStart), selectedIdx) : selectedIdx;
+  // safeIdx guards against stale selectedIdx when switching to a day with fewer snapshots —
+  // without this the first render after a date change would have snap=null (blank page).
+  const safeIdx   = daySnaps.length > 0 ? Math.min(selectedIdx, daySnaps.length - 1) : 0;
+  const cursorIdx = focusIdx != null ? Math.min(Math.max(focusIdx, windowStart), safeIdx) : safeIdx;
   const snap = daySnaps[cursorIdx] ?? null;
 
   // auto-select most recent day on load

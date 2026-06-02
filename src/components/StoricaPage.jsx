@@ -419,9 +419,18 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
   // punto del grafico attualmente sotto il cursore (aggiornato da onMouseMove);
   // usato dal click sul contenitore per sapere quale snapshot selezionare.
   const activePtRef = useRef(null);
-  const hlIntervRef = useRef(null);
+  const hlIntervRef  = useRef(null);
+  const intervListRef = useRef(null);
   useEffect(() => {
-    if (highlightTs != null) hlIntervRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const item = hlIntervRef.current;
+    const list = intervListRef.current;
+    if (highlightTs == null || !item || !list) return;
+    const itemTop    = item.offsetTop;
+    const itemBottom = itemTop + item.offsetHeight;
+    if (itemTop < list.scrollTop)
+      list.scrollTop = itemTop - 8;
+    else if (itemBottom > list.scrollTop + list.clientHeight)
+      list.scrollTop = itemBottom - list.clientHeight + 8;
   }, [highlightTs, hlIntervIdx]);
 
   // find closest chartData label for a given timestamp
@@ -827,7 +836,7 @@ export default function StoricaPage({ t, qualitySources = {}, showMarkers = true
               Nessun intervento di auto-correzione registrato.
             </div>
           ) : (
-            <div style={{display:"flex", flexDirection:"column", gap:8, flex:1, minHeight:0, overflowY:"auto", paddingRight:6}}>
+            <div ref={intervListRef} style={{display:"flex", flexDirection:"column", gap:8, flex:1, minHeight:0, overflowY:"auto", paddingRight:6}}>
               {shownInterv.map((it, idx) => {
                 const c = it.outcome === "good" ? t.green : it.outcome === "bad" ? t.red : t.orange;
                 const icon = it.outcome === "good" ? "✓" : it.outcome === "bad" ? "✗" : "~";

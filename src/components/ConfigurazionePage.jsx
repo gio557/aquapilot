@@ -133,7 +133,11 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
             background: activeTab===tab.id ? t.surface : t.surface2,
             color: activeTab===tab.id ? t.accent : t.textSec,
             marginBottom: activeTab===tab.id ? -1 : 0,
-            transition:"all 0.15s"}}>
+            boxShadow: activeTab===tab.id
+              ? `0 0 10px ${t.accent}55, 0 0 22px ${t.accent}28, 0 -2px 8px ${t.accent}22`
+              : "none",
+            transform: activeTab===tab.id ? "translateY(-2px)" : "none",
+            transition:"all 0.18s"}}>
           {tab.label}
         </button>
       ))}

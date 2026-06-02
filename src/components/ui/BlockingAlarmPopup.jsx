@@ -10,16 +10,29 @@ export default function BlockingAlarmPopup({ alarms, t, onDismiss }) {
   const borderCol = hasMotor ? t.red : t.orange;
 
   return (
-    <div style={{position:"fixed", inset:0, zIndex:290, background:"rgba(0,0,0,0.55)",
-      backdropFilter:"blur(4px)", display:"flex", alignItems:"center",
-      justifyContent:"center", padding:20}}>
-      <div style={{background:t.surface, border:`2px solid ${borderCol}`, borderRadius:14,
+    <div style={{position:"fixed", inset:0, zIndex:290, background:"rgba(4,10,20,0.62)",
+      backdropFilter:"blur(5px)", display:"flex", alignItems:"center",
+      justifyContent:"center", padding:20,
+      animation:"crFadeIn 0.2s ease-out"}}>
+      {/* keyframes scoped here so the popup floats in without touching global CSS */}
+      <style>{`
+        @keyframes crFadeIn { from { opacity:0 } to { opacity:1 } }
+        @keyframes crPopIn {
+          0%   { opacity:0; transform:translateY(18px) scale(0.94); }
+          60%  { opacity:1; transform:translateY(-3px) scale(1.01); }
+          100% { opacity:1; transform:translateY(0)    scale(1); }
+        }
+      `}</style>
+      <div style={{background:t.surface, border:`2px solid ${borderCol}`, borderRadius:16,
         padding:0, width:480, maxWidth:"95vw", maxHeight:"82vh", overflowY:"auto",
-        boxShadow:`0 16px 70px rgba(0,0,0,0.45), 0 0 0 1px ${borderCol}33`}}>
+        animation:"crPopIn 0.32s cubic-bezier(0.34,1.4,0.5,1) both",
+        // Multi-layer shadow → the card reads as lifted off / detached from the dashboard.
+        boxShadow:`0 2px 0 ${borderCol}22, 0 24px 60px -12px rgba(0,0,0,0.65), 0 12px 28px -8px ${borderCol}55, 0 0 0 6px rgba(0,0,0,0.18)`}}>
 
         {/* Header */}
         <div style={{display:"flex", alignItems:"center", gap:10, padding:"15px 20px",
-          borderBottom:`1px solid ${t.border}`, background:`${borderCol}12`}}>
+          borderBottom:`1px solid ${t.border}`, background:`${borderCol}12`,
+          borderRadius:"14px 14px 0 0"}}>
           <span style={{fontSize:20, color:borderCol, animation:"blink 0.8s infinite"}}>⚠</span>
           <div style={{flex:1, fontFamily:"'Orbitron',sans-serif", fontSize:13,
             color:borderCol, letterSpacing:1.5}}>

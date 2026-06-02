@@ -312,8 +312,9 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
   // il bordo destro della finestra. Clamp entro i limiti della finestra visibile.
   // safeIdx guards against stale selectedIdx when switching to a day with fewer snapshots —
   // without this the first render after a date change would have snap=null (blank page).
-  const safeIdx   = daySnaps.length > 0 ? Math.min(selectedIdx, daySnaps.length - 1) : 0;
-  const cursorIdx = focusIdx != null ? Math.min(Math.max(focusIdx, windowStart), safeIdx) : safeIdx;
+  const safeIdx         = daySnaps.length > 0 ? Math.min(selectedIdx, daySnaps.length - 1) : 0;
+  const safeWindowStart = daySnaps.length > 0 ? Math.min(windowStart, safeIdx)             : 0;
+  const cursorIdx = focusIdx != null ? Math.min(Math.max(focusIdx, safeWindowStart), safeIdx) : safeIdx;
   const snap = daySnaps[cursorIdx] ?? null;
 
   // auto-select most recent day on load
@@ -424,13 +425,13 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
 
   // chart data: full day snapshots mapped to recharts-friendly format.
   // For a stage node, read that stage's saved output water; gaps where absent.
-  const chartData = useMemo(() => daySnaps.slice(windowStart, selectedIdx + 1).map(s => {
+  const chartData = useMemo(() => daySnaps.slice(safeWindowStart, safeIdx + 1).map(s => {
     const base = { t: fmtTime(new Date(s.t)), _ts: s.t };
     if (histNode === "plant")
       return { ...base, COD:s.COD, BOD5:s.BOD5, TSS:s.TSS, NH4:s.NH4, pH:s.pH, O2:s.O2 };
     const sw = s.stageWater?.[histNode] ?? s.stages?.[histNode];
     return sw ? { ...base, ...sw } : base;
-  }), [daySnaps, windowStart, selectedIdx, histNode]);
+  }), [daySnaps, safeWindowStart, safeIdx, histNode]);
 
   const snapTimeStr = snap ? fmtTime(new Date(snap.t)) : null;
 
@@ -590,19 +591,19 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
                 </div>
                 <DualSlider
                   count={daySnaps.length}
-                  left={windowStart} right={selectedIdx}
+                  left={safeWindowStart} right={safeIdx}
                   onLeft={setWindowStart} onRight={setSelectedIdx}
                   t={t} />
                 <div style={{display:"flex", justifyContent:"space-between", marginTop:10,
                   fontFamily:"'Share Tech Mono',monospace", fontSize:13}}>
                   <span style={{color:t.green}}>
-                    ▸ DA: {fmtTime(new Date(daySnaps[windowStart].t))}
+                    ▸ DA: {fmtTime(new Date(daySnaps[safeWindowStart].t))}
                   </span>
                   <span style={{color:t.textMuted, fontSize:12}}>
-                    {selectedIdx - windowStart + 1} snapshot
+                    {safeIdx - safeWindowStart + 1} snapshot
                   </span>
                   <span style={{color:t.accent}}>
-                    A: {fmtTime(new Date(daySnaps[selectedIdx].t))} ◂
+                    A: {fmtTime(new Date(daySnaps[safeIdx].t))} ◂
                   </span>
                 </div>
               </div>

@@ -529,7 +529,7 @@ export default function App() {
       ) : page === "energia" ? (
         <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
       ) : page === "storica" ? (
-        <StoricaPage t={t} qualitySources={qualitySources} showMarkers={showMarkers} onShowMarkers={setShowMarkers} />
+        <StoricaPage t={t} qualitySources={qualitySources} showMarkers={showMarkers} onShowMarkers={setShowMarkers} limits={qualityLimits} />
       ) : (
         <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12}}>
 
@@ -712,7 +712,7 @@ export default function App() {
                     {nodeMetricDefs.filter(md => activeTrends.includes(md.key)).map(md => (
                       <Line key={md.key} type={md.step ? "stepAfter" : "monotone"}
                         dataKey={md.key} stroke={md.color}
-                        strokeWidth={1.5} dot={showMarkers ? <AnomalyDot pkey={md.key} t={t}/> : false} isAnimationActive={false} connectNulls/>
+                        strokeWidth={1.5} dot={showMarkers ? <AnomalyDot pkey={md.key} t={t} limits={qualityLimits}/> : false} isAnimationActive={false} connectNulls/>
                     ))}
                   </LineChart>
                 </ResponsiveContainer>

@@ -6,10 +6,12 @@ import { qualitySeverity } from "../../constants/limits";
 //   pkey   = QUALITY_LIMITS key for this line (COD, BOD5, TSS, NH4, NO3, NTOT, O2, pH)
 //   onPick = optional; called with the point payload when the marker is clicked
 //            (used in the history page to reposition the panels on that event).
+//   limits = active normativa-derived limit set; markers follow the selected
+//            regulation instead of the static QUALITY_LIMITS default.
 export default function AnomalyDot(props) {
-  const { cx, cy, payload, pkey, t, onPick } = props;
+  const { cx, cy, payload, pkey, t, onPick, limits } = props;
   if (cx == null || cy == null) return null;
-  const sev = qualitySeverity(pkey, payload?.[pkey]);
+  const sev = qualitySeverity(pkey, payload?.[pkey], limits);
   if (!sev) return null;
   const color = sev === "ALTO" ? t.red : t.orange;
   const clickable = typeof onPick === "function";

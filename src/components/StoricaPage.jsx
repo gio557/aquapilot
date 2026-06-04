@@ -282,7 +282,7 @@ class StoricaErrorBoundary extends Component {
 }
 
 // ── Main page ─────────────────────────────────────────────────
-function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMarkers }) {
+function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMarkers, limits }) {
   const [history,       setHistory]       = useState([]);
   const [interventions, setInterventions] = useState([]);
   const [calMonth,      setCalMonth]      = useState(new Date());
@@ -830,7 +830,7 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
                 {nodeMetricDefs.filter(md => activeParams.includes(md.key)).map(md => (
                   <Line key={md.key} type={md.step ? "stepAfter" : "monotone"}
                     dataKey={md.key} stroke={md.color} strokeWidth={2}
-                    dot={showMarkers ? <AnomalyDot pkey={md.key} t={t} onPick={pickAnomaly}/> : false} isAnimationActive={false} connectNulls />
+                    dot={showMarkers ? <AnomalyDot pkey={md.key} t={t} limits={limits} onPick={pickAnomaly}/> : false} isAnimationActive={false} connectNulls />
                 ))}
               </LineChart>
             </ResponsiveContainer>

@@ -76,9 +76,12 @@ export function limitsFromNorms(norms) {
 // True if a quality parameter value is out of its regulatory limit (an anomaly),
 // honouring inverse params (O₂: lower is worse) and band params (pH). Used to mark
 // anomaly points on the trend charts. Returns the severity or null.
-//   key  = QUALITY_LIMITS key (COD, BOD5, TSS, NH4, NO3, NTOT, O2, pH)
-export function qualitySeverity(key, v) {
-  const L = QUALITY_LIMITS[key];
+//   key    = QUALITY_LIMITS key (COD, BOD5, TSS, NH4, NO3, NTOT, O2, pH)
+//   limits = active limit set (defaults to static QUALITY_LIMITS). Pass the
+//            normativa-derived limits (limitsFromNorms) so the trend markers
+//            agree with the effluent panel and the alarm engine.
+export function qualitySeverity(key, v, limits = QUALITY_LIMITS) {
+  const L = (limits || QUALITY_LIMITS)[key];
   if (!L || v == null || !Number.isFinite(v)) return null;
   if (L.low_w !== undefined) {           // pH band
     if (v < L.low_c || v > L.high_c) return "ALTO";

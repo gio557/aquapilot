@@ -10,12 +10,20 @@ const PH_C   = "#FFD060";
 const O2_C   = "#FF3B5C";
 const CUR_C  = "#FFC300";  // current / ampere
 const LVL_C  = "#00B4D8";  // level / height
-const PCT_C  = "#06D6A0";  // percentage (efficiency, intasamento)
 const ACT_C  = "#9B5DE5";  // actuator / binary
 const FLOW_C = "#F15BB5";  // flow / portata
 const ACT2_C = "#8B8BFF";  // secondary actuator
+const RDX_C  = "#E0AAFF";  // redox / ORP
+const SBL_C  = "#48CAE4";  // sludge-blanket interface level
 
-const TEMP_M = { key:"T", label:"Temperatura", unit:"°C", color:CUR_C, sensor:"temp" };
+// Shared metric defs reused across stages (data comes from the base stageWater
+// object built in engine.js, so no per-processor change is needed).
+const TEMP_M  = { key:"T",      label:"Temperatura",        unit:"°C",   color:CUR_C,  sensor:"temp"   };
+const PH_M    = { key:"pH",     label:"pH",                 unit:"",     color:PH_C,   sensor:"ph"     };
+const FLOW_M  = { key:"Q",      label:"Portata",            unit:"m³/h", color:FLOW_C, sensor:"flow"   };
+const REDOX_M = { key:"redox",  label:"Redox / ORP",        unit:"mV",   color:RDX_C,  sensor:"redox"  };
+const SBL_M   = { key:"sbl",    label:"Liv. interf. fanghi",unit:"m",    color:SBL_C,  sensor:"sbl"    };
+const DIFFP_M = { key:"diff_p", label:"Press. diff.",       unit:"mbar", color:LVL_C,  sensor:"diff_p" };
 
 export const STAGE_TREND_DEFS = {
   "Grigliatura": [
@@ -24,27 +32,25 @@ export const STAGE_TREND_DEFS = {
     { key:"corrente",   label:"Corrente rastrello", unit:"A",    color:CUR_C  },
     { key:"pulizia",    label:"Pulizia attiva",     unit:"0/1",  color:ACT_C,  step:true },
     { key:"TSS",        label:"TSS uscita",         unit:"mg/L", color:TSS_C,  sensor:"tss" },
-    TEMP_M,
+    FLOW_M, TEMP_M,
   ],
   "Dissabbiatura": [
     { key:"tss_in",      label:"TSS ingresso",      unit:"mg/L", color:COD_C,  sensor:"tss" },
     { key:"TSS",         label:"TSS uscita",        unit:"mg/L", color:TSS_C,  sensor:"tss" },
     { key:"corrente_inv",label:"Corrente inverter", unit:"A",    color:CUR_C  },
-    TEMP_M,
+    FLOW_M, TEMP_M,
   ],
   "Degrassatore": [
     { key:"cod_in", label:"COD ingresso", unit:"mg/L", color:COD_C,  sensor:"cod" },
     { key:"COD",    label:"COD uscita",   unit:"mg/L", color:BOD_C,  sensor:"cod" },
     { key:"TSS",    label:"TSS uscita",   unit:"mg/L", color:TSS_C,  sensor:"tss" },
-    { key:"pH",     label:"pH",           unit:"",     color:PH_C,   sensor:"ph"  },
-    TEMP_M,
+    PH_M, FLOW_M, TEMP_M,
   ],
   "Equalizzazione": [
     { key:"q_in", label:"Portata ingresso",  unit:"m³/h", color:COD_C,  sensor:"flow" },
     { key:"Q",    label:"Portata equaliz.",  unit:"m³/h", color:BOD_C,  sensor:"flow" },
     { key:"COD",  label:"COD ingresso",      unit:"mg/L", color:NH4_C,  sensor:"cod"  },
-    { key:"pH",   label:"pH",                unit:"",     color:PH_C,   sensor:"ph"   },
-    TEMP_M,
+    PH_M, TEMP_M,
   ],
   "Biologico": [
     { key:"O2",     label:"O₂ disciolto",  unit:"mg/L", color:O2_C,   sensor:"o2"  },
@@ -52,58 +58,51 @@ export const STAGE_TREND_DEFS = {
     { key:"MLSS",   label:"MLSS",          unit:"mg/L", color:TSS_C,  sensor:"tss" },
     { key:"COD",    label:"COD uscita",    unit:"mg/L", color:COD_C,  sensor:"cod" },
     { key:"blower", label:"Soffianti",     unit:"%",    color:ACT_C  },
-    TEMP_M,
+    PH_M, TEMP_M,
   ],
   "Nitrificazione": [
     { key:"NH4",    label:"NH₄ uscita",    unit:"mg/L", color:NH4_C,  sensor:"nh4" },
     { key:"NO3",    label:"NO₃ prodotto",  unit:"mg/L", color:ACT2_C, sensor:"nh4" },
     { key:"O2",     label:"O₂ disciolto",  unit:"mg/L", color:O2_C,   sensor:"o2"  },
     { key:"blower", label:"Soffianti",     unit:"%",    color:ACT_C  },
-    TEMP_M,
+    PH_M, FLOW_M, TEMP_M,
   ],
   "Denitrificazione": [
     { key:"no3_in", label:"NO₃ ingresso",  unit:"mg/L", color:COD_C,  sensor:"nh4" },
     { key:"NO3",    label:"NO₃ uscita",    unit:"mg/L", color:ACT2_C, sensor:"nh4" },
     { key:"COD",    label:"COD residuo",   unit:"mg/L", color:BOD_C,  sensor:"cod" },
-    { key:"pH",     label:"pH",            unit:"",     color:PH_C,   sensor:"ph"  },
-    TEMP_M,
+    PH_M, REDOX_M, FLOW_M, TEMP_M,
   ],
   "Sedimentazione": [
     { key:"tss_in",    label:"TSS ingresso",     unit:"mg/L", color:COD_C, sensor:"tss" },
     { key:"TSS",       label:"TSS uscita",       unit:"mg/L", color:TSS_C, sensor:"tss" },
     { key:"COD",       label:"COD uscita",       unit:"mg/L", color:BOD_C, sensor:"cod" },
-    { key:"pH",        label:"pH",               unit:"",     color:PH_C,  sensor:"ph"  },
     { key:"coagulant", label:"Coagulante",       unit:"%",    color:ACT_C },
-    TEMP_M,
+    PH_M, SBL_M, FLOW_M, TEMP_M,
   ],
   "Flottazione DAF": [
     { key:"tss_in", label:"TSS ingresso", unit:"mg/L", color:COD_C, sensor:"tss" },
     { key:"TSS",    label:"TSS uscita",   unit:"mg/L", color:TSS_C, sensor:"tss" },
     { key:"COD",    label:"COD uscita",   unit:"mg/L", color:BOD_C, sensor:"cod" },
-    { key:"pH",     label:"pH",           unit:"",     color:PH_C,  sensor:"ph"  },
-    TEMP_M,
+    PH_M, DIFFP_M, FLOW_M, TEMP_M,
   ],
   "Filtrazione": [
     { key:"tss_in", label:"TSS ingresso",    unit:"mg/L", color:COD_C, sensor:"tss"   },
     { key:"TSS",    label:"TSS uscita",      unit:"mg/L", color:TSS_C, sensor:"tss"   },
     { key:"COD",    label:"COD uscita",      unit:"mg/L", color:BOD_C, sensor:"cod"   },
-    { key:"pH",     label:"pH",              unit:"",     color:PH_C,  sensor:"ph"    },
-    { key:"diff_p", label:"Press. diff.",    unit:"mbar", color:LVL_C, sensor:"diff_p"},
-    TEMP_M,
+    PH_M, DIFFP_M, FLOW_M, TEMP_M,
   ],
   "Osmosi Inversa": [
     { key:"cod_in", label:"COD ingresso", unit:"mg/L", color:COD_C, sensor:"cod"   },
     { key:"COD",    label:"COD uscita",   unit:"mg/L", color:BOD_C, sensor:"cod"   },
     { key:"NH4",    label:"NH₄ uscita",   unit:"mg/L", color:NH4_C, sensor:"nh4"   },
     { key:"TSS",    label:"TSS uscita",   unit:"mg/L", color:TSS_C, sensor:"tss"   },
-    { key:"diff_p", label:"Press. diff.", unit:"mbar", color:LVL_C, sensor:"diff_p"},
-    TEMP_M,
+    DIFFP_M, FLOW_M, TEMP_M,
   ],
   "Disinfezione UV": [
     { key:"TSS",  label:"TSS uscita",  unit:"mg/L", color:TSS_C, sensor:"tss"  },
     { key:"COD",  label:"COD uscita",  unit:"mg/L", color:COD_C, sensor:"cod"  },
-    { key:"pH",   label:"pH",          unit:"",     color:PH_C,  sensor:"ph"   },
-    TEMP_M,
+    PH_M, FLOW_M, TEMP_M,
   ],
   "Disinfezione Cloro": [
     { key:"COD",   label:"COD uscita",   unit:"mg/L", color:COD_C, sensor:"cod" },
@@ -112,7 +111,7 @@ export const STAGE_TREND_DEFS = {
     { key:"pH",    label:"pH finale",    unit:"",     color:PH_C,  sensor:"ph"  },
     { key:"naoh",  label:"NaOH",         unit:"%",    color:ACT_C  },
     { key:"h2so4", label:"H₂SO₄",        unit:"%",    color:ACT2_C },
-    TEMP_M,
+    FLOW_M, TEMP_M,
   ],
   "Disinfezione": [
     { key:"COD",   label:"COD uscita",   unit:"mg/L", color:COD_C, sensor:"cod" },
@@ -121,14 +120,13 @@ export const STAGE_TREND_DEFS = {
     { key:"pH",    label:"pH finale",    unit:"",     color:PH_C,  sensor:"ph"  },
     { key:"naoh",  label:"NaOH",         unit:"%",    color:ACT_C  },
     { key:"h2so4", label:"H₂SO₄",        unit:"%",    color:ACT2_C },
-    TEMP_M,
+    FLOW_M, TEMP_M,
   ],
   "Post-trattamento": [
     { key:"cod_in", label:"COD ingresso", unit:"mg/L", color:COD_C, sensor:"cod" },
     { key:"COD",    label:"COD uscita",   unit:"mg/L", color:BOD_C, sensor:"cod" },
     { key:"TSS",    label:"TSS uscita",   unit:"mg/L", color:TSS_C, sensor:"tss" },
-    { key:"pH",     label:"pH",           unit:"",     color:PH_C,  sensor:"ph"  },
-    TEMP_M,
+    PH_M, FLOW_M, TEMP_M,
   ],
 };
 

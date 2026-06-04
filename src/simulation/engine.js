@@ -402,6 +402,19 @@ export function simTick(s) {
   // values so the chart has both water params and mechanical/actuator values.
   const stageWater = stageWaterArr.map((w, i) => {
     const td = stageDetailsArr[i]?.trendData ?? {};
+    const nm = stages[i]?.name;
+    const tssIn = stageWaterArr[i - 1]?.TSS ?? w.TSS;
+    // Redox / ORP (mV): an anoxic denitrification basin is strongly negative;
+    // aerated stages track the dissolved-O₂ level. Mirrors the redox sensor
+    // gauge convention so the trend line agrees with the stage gauge.
+    const redox = nm === "Denitrificazione"
+      ? Math.round(-250 + Math.min(1, (w.NO3 ?? 0) / 20) * 220)
+      : Math.round(-50 + (O2 / 8) * 350);
+    // Sludge-blanket interface level (m) rises with the settler solids load.
+    const sbl = +(Math.max(0.05, Math.min(2.5, 0.3 + (s3TSS / 2000) * 2.5))).toFixed(2);
+    // Differential pressure (mbar) across a filter/membrane grows with the solids
+    // load it captures and the throughput — a fouling proxy for filter stages.
+    const diff_p = Math.round(60 + tssIn * 1.2 + (iQ / 1245) * 80);
     return {
       COD:  round1(w.COD),
       BOD5: round1(w.BOD5),
@@ -409,6 +422,10 @@ export function simTick(s) {
       NH4:  round2(w.NH4),
       pH:   round2(w.pH),
       T:    round1(w.T ?? 20),
+      Q:    round1(w.Q ?? iQ),
+      redox,
+      sbl,
+      diff_p,
       ...td,   // operational metrics override/extend the baseline
     };
   });

@@ -341,14 +341,17 @@ export function simTick(s) {
   const kw  = +(stageEnergyArr.reduce((a, b) => a + b, 0)).toFixed(1);
   const kwh = +(s.energy.kwh + kw / 60 * dt).toFixed(1);
 
-  // ── Alarm checks (thresholds from the shared QUALITY_LIMITS source) ───────────
+  // ── Alarm checks (thresholds follow the selected normativa when provided) ─────
+  // s.limits is derived from the user-selected regulation (see limitsFromNorms);
+  // fall back to the static defaults if it hasn't been wired in yet.
+  const LIM = s.limits || QUALITY_LIMITS;
   const CHECKS = [
-    {p:"COD",  v:finalWater.COD,  ...QUALITY_LIMITS.COD},
-    {p:"BOD₅", v:finalWater.BOD5, ...QUALITY_LIMITS.BOD5},
-    {p:"TSS",  v:finalWater.TSS,  ...QUALITY_LIMITS.TSS},
-    {p:"NH₄",  v:finalWater.NH4,  ...QUALITY_LIMITS.NH4},
-    {p:"O₂",   v:O2,              ...QUALITY_LIMITS.O2},
-    {p:"pH",   v:finalWater.pH,   ...QUALITY_LIMITS.pH},
+    {p:"COD",  v:finalWater.COD,  ...LIM.COD},
+    {p:"BOD₅", v:finalWater.BOD5, ...LIM.BOD5},
+    {p:"TSS",  v:finalWater.TSS,  ...LIM.TSS},
+    {p:"NH₄",  v:finalWater.NH4,  ...LIM.NH4},
+    {p:"O₂",   v:O2,              ...LIM.O2},
+    {p:"pH",   v:finalWater.pH,   ...LIM.pH},
   ];
   const prevAS = s.alarmState || {};
   const newAS  = {};

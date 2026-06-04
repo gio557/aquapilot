@@ -26,6 +26,53 @@ export const QUALITY_LIMITS = {
 // MLSS operating band for the biological stage (mg/L).
 export const MLSS_LIMITS = { lo_crit: 1800, lo_warn: 2500, hi_warn: 4000, hi_crit: 5500 };
 
+// Derives a QUALITY_LIMITS-shaped object from the user-selected normativa
+// (the `norms` array edited in NormativaPage / ConfigurazionePage), so every
+// reference shown in the UI and the alarm engine follows the chosen regulation
+// instead of the hardcoded constant above.
+//
+// Mapping (the app treats target_max as the regulatory limit and legge_max as
+// the absolute/critical ceiling — e.g. Tab.3 COD: target 125 = legal limit):
+//   warn (MEDIO)  = target_max               → "fuori valore" / regulatory threshold
+//   crit (ALTO)   = legge_max                → critical/absolute ceiling
+//   pre           = target_max * preAllarme% → green-zone boundary
+//   pH band       = target_min/max (warn) and legge_min/max (crit)
+// O₂ has no discharge limit in the normativa, so it keeps the static default.
+// A param with both limits null in the selected set (e.g. Tab.4 NO₃/N-tot) is
+// treated as unbounded (Infinity) so it never raises a false breach.
+const NORM_ID_TO_KEY = {
+  COD: "COD", BOD5: "BOD5", SST: "TSS", NH4: "NH4",
+  NO3: "NO3", NTOT: "NTOT", pH: "pH", T: "T",
+};
+
+export function limitsFromNorms(norms) {
+  const L = JSON.parse(JSON.stringify(QUALITY_LIMITS));
+  if (!Array.isArray(norms)) return L;
+  const find = (id) => norms.flatMap(c => c.params || []).find(p => p.id === id);
+  for (const [id, key] of Object.entries(NORM_ID_TO_KEY)) {
+    const p = find(id);
+    if (!p) continue;
+    if (key === "pH") {
+      if (p.legge_min  != null) L.pH = { ...L.pH, low_c:  p.legge_min  };
+      if (p.target_min != null) L.pH = { ...L.pH, low_w:  p.target_min };
+      if (p.target_max != null) L.pH = { ...L.pH, high_w: p.target_max };
+      if (p.legge_max  != null) L.pH = { ...L.pH, high_c: p.legge_max  };
+      continue;
+    }
+    const tmax = p.target_max;
+    const lmax = p.legge_max;
+    if (tmax == null && lmax == null) {
+      L[key] = { ...(L[key] || {}), pre: Infinity, warn: Infinity, crit: Infinity };
+      continue;
+    }
+    const warn = tmax ?? lmax;
+    const crit = lmax ?? tmax;
+    const prePct = (p.preAllarme ?? 80) / 100;
+    L[key] = { ...(L[key] || {}), pre: +(warn * prePct).toFixed(2), warn, crit };
+  }
+  return L;
+}
+
 // True if a quality parameter value is out of its regulatory limit (an anomaly),
 // honouring inverse params (O₂: lower is worse) and band params (pH). Used to mark
 // anomaly points on the trend charts. Returns the severity or null.

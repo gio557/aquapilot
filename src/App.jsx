@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
-import { QUALITY_LIMITS as QL, qualitySeverity } from "./constants/limits";
+import { limitsFromNorms } from "./constants/limits";
 import { dataSourceTag, QUALITY_SOURCE_DEFAULTS } from "./constants/dataSource";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
@@ -126,6 +126,11 @@ export default function App() {
     try { localStorage.setItem("aquapilot.qualitySources.v1", JSON.stringify(qualitySources)); } catch {}
   }, [qualitySources]);
 
+  // Effective quality limits derived from the selected normativa. Single source
+  // of truth for every reference shown in the UI (stage gauges, QUALITÀ USCITA
+  // panel) and the alarm engine, so changing the regulation updates them all.
+  const qualityLimits = useMemo(() => limitsFromNorms(norms), [norms]);
+
   // Sync normativa targets → sim.stageTargets whenever norms changes
   useEffect(() => {
     const find = (id) => norms.flatMap(c => c.params).find(p => p.id === id);
@@ -134,6 +139,12 @@ export default function App() {
     const NH4 = find("NH4")?.target_max ?? 8;
     setSim(prev => ({ ...prev, stageTargets: { COD, SST, NH4 } }));
   }, [norms]);
+
+  // Push the derived limits into the simulation so the alarm engine evaluates
+  // breaches against the selected normativa instead of the static defaults.
+  useEffect(() => {
+    setSim(prev => ({ ...prev, limits: qualityLimits }));
+  }, [qualityLimits]);
 
   const [page, setPage] = useState("dashboard");
   const [showAlarms, setShowAlarms] = useState(false);
@@ -732,20 +743,24 @@ export default function App() {
                 {[
                   // key = chiave provenienza (qualitySources); il tipo di fonte
                   // (sensore/analizzatore/stimato) è configurabile in Configurazione.
-                  {key:"COD",  param:"COD",  v:d.COD,  unit:" mg/L", lim:QL.COD.warn,  warn:QL.COD.pre},
-                  {key:"BOD5", param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre},
-                  {key:"TSS",  param:"TSS",  v:d.TSS,  unit:" mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre},
-                  {key:"NH4",  param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre},
-                  {key:"NO3",  param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:QL.NO3.warn,  warn:QL.NO3.pre,  requiresStage:"Denitrificazione"},
-                  {key:"NTOT", param:"N-tot",v:d.NTOT, unit:" mg/L", lim:QL.NTOT.warn, warn:QL.NTOT.pre, requiresStage:"Denitrificazione"},
+                  {key:"COD",  param:"COD",  v:d.COD,  unit:" mg/L", lim:qualityLimits.COD.warn,  warn:qualityLimits.COD.pre},
+                  {key:"BOD5", param:"BOD₅", v:d.BOD5, unit:" mg/L", lim:qualityLimits.BOD5.warn, warn:qualityLimits.BOD5.pre},
+                  {key:"TSS",  param:"TSS",  v:d.TSS,  unit:" mg/L", lim:qualityLimits.TSS.warn,  warn:qualityLimits.TSS.pre},
+                  {key:"NH4",  param:"NH₄",  v:d.NH4,  unit:" mg/L", lim:qualityLimits.NH4.warn,  warn:qualityLimits.NH4.pre},
+                  {key:"NO3",  param:"NO₃",  v:d.NO3,  unit:" mg/L", lim:qualityLimits.NO3.warn,  warn:qualityLimits.NO3.pre,  requiresStage:"Denitrificazione"},
+                  {key:"NTOT", param:"N-tot",v:d.NTOT, unit:" mg/L", lim:qualityLimits.NTOT.warn, warn:qualityLimits.NTOT.pre, requiresStage:"Denitrificazione"},
                   {key:"pH",   param:"pH",   v:d.pH,   unit:"",      lim:null, warn:null, phCheck:true},
-                  {key:"T",    param:"T°",   v:d.T,    unit:"°C",    lim:30,  warn:28},
+                  {key:"T",    param:"T°",   v:d.T,    unit:"°C",    lim:qualityLimits.T?.crit ?? 30,  warn:qualityLimits.T?.warn ?? 28},
                   {key:"O2",   param:"O₂",   v:d.O2,   unit:" mg/L", lim:null, warn:null, o2Check:true},
                 ].filter(q => !q.requiresStage || stages.some(s => s.name === q.requiresStage))
                  .map(q => {
                   let ok, fuori;
-                  if (q.phCheck) { ok = q.v >= 6.5 && q.v <= 8.5; fuori = q.v < 5.5 || q.v > 9.5; }
-                  else if (q.o2Check) { ok = q.v >= 2; fuori = q.v < 1.5; }
+                  if (q.phCheck) {
+                    const ph = qualityLimits.pH;
+                    ok = q.v >= ph.low_w && q.v <= ph.high_w;
+                    fuori = q.v < ph.low_c || q.v > ph.high_c;
+                  }
+                  else if (q.o2Check) { ok = q.v >= qualityLimits.O2.warn; fuori = q.v < qualityLimits.O2.crit; }
                   else { ok = q.v < (q.warn ?? q.lim); fuori = q.lim != null && q.v >= q.lim; }
                   const c = fuori ? t.red : ok ? t.green : t.orange;
                   const badge = fuori ? "✗ FUORI" : ok ? "✓ OK" : "⚠ PRE";

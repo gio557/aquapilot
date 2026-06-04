@@ -42,6 +42,10 @@ function interventionLine(summary) {
 
 function generateAIOffline(sim, autoOn) {
   const out = sim.output;
+  // Reference the active normativa-derived limits so the advisor agrees with the
+  // effluent panel and the alarm engine; fall back to the static defaults if the
+  // simulation hasn't populated them yet (e.g. an unbounded param → no warning).
+  const LIM = sim.limits || QL;
   const actions = Object.values(sim.stageActions || {}).filter(a => a && a.sev !== "OK");
   const alarms  = Object.entries(sim.alarmState  || {}).filter(([,v]) => v !== "OK");
   const crits   = alarms.filter(([,v]) => v === "ALTO");
@@ -62,7 +66,7 @@ function generateAIOffline(sim, autoOn) {
   // N-tot isn't part of the plant's monitoring scope (the effluent panel hides
   // it too), so the advisor stays silent on it instead of contradicting the UI.
   const hasDenit = Array.isArray(sim.stages) && sim.stages.some(s => s.name === "Denitrificazione");
-  const ntotOver = hasDenit && out.NTOT != null && out.NTOT >= QL.NTOT.warn;
+  const ntotOver = hasDenit && out.NTOT != null && out.NTOT >= LIM.NTOT.warn;
   const nNoteCore = "L'azoto totale non è correggibile con le leve automatiche (aerazione/dosaggi): "
     + "la nitrificazione converte NH₄ in NO₃ ma non lo elimina. Serve la denitrificazione anossica — "
     + "verificare/attivare lo stadio di denitrificazione (comparto anossico + ricircolo nitrati).";
@@ -72,9 +76,9 @@ function generateAIOffline(sim, autoOn) {
       let msg = "INTERVENTO D'EMERGENZA ATTIVO (" + ts + ")\n";
       msg += "Parametri critici: " + crits.map(([p]) => p).join(", ") + "\n\n";
       actions.forEach(a => { msg += "• " + a.text + "\n"; });
-      if (out.O2 < QL.O2.crit)
+      if (out.O2 < LIM.O2.crit)
         msg += "\nPREVISIONE: Con soffianti al " + sim.blower + "%, l'O2 dovrebbe superare la soglia critica entro " + (sim.mode==="fast"?"2-4":"8-12") + " min.";
-      else if (out.TSS > QL.TSS.crit)
+      else if (out.TSS > LIM.TSS.crit)
         msg += "\nPREVISIONE: Dosaggio coagulante al " + sim.coagulant + "% — normalizzazione TSS attesa entro " + (sim.mode==="fast"?"5-8":"18-25") + " min.";
       if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return msg;
@@ -111,7 +115,7 @@ function generateAIOffline(sim, autoOn) {
     // denitrification stage rather than a lever the auto-correction can move.
     if (ntotOver && alarms.length === 0) {
       let msg = "Azoto totale oltre soglia (" + ts + ")\n\n";
-      msg += "• N-tot " + out.NTOT.toFixed(1) + " mg/L (limite " + QL.NTOT.warn + ") · NO₃ " + (out.NO3 ?? 0).toFixed(1) + " mg/L\n";
+      msg += "• N-tot " + out.NTOT.toFixed(1) + " mg/L (limite " + LIM.NTOT.warn + ") · NO₃ " + (out.NO3 ?? 0).toFixed(1) + " mg/L\n";
       msg += "\n" + nNoteCore;
       if (learnFooter) msg += "\n\n— APPRENDIMENTO —\n" + learnFooter;
       return msg;
@@ -125,33 +129,33 @@ function generateAIOffline(sim, autoOn) {
       return m;
     }
     return "Impianto in condizioni ottimali (" + ts + ")\n\n"
-      + "• COD: " + out.COD.toFixed(1) + " mg/L (target " + QL.COD.warn + ")\n"
-      + "• BOD5: " + out.BOD5.toFixed(1) + " mg/L (target " + QL.BOD5.warn + ")\n"
-      + "• TSS: " + out.TSS.toFixed(1) + " mg/L (target " + QL.TSS.warn + ")\n"
-      + "• NH4: " + out.NH4.toFixed(2) + " mg/L (target " + QL.NH4.warn + ")\n"
-      + "• pH: " + out.pH.toFixed(2) + " (range " + QL.pH.low_w + "-" + QL.pH.high_w + ")\n"
+      + "• COD: " + out.COD.toFixed(1) + " mg/L (target " + LIM.COD.warn + ")\n"
+      + "• BOD5: " + out.BOD5.toFixed(1) + " mg/L (target " + LIM.BOD5.warn + ")\n"
+      + "• TSS: " + out.TSS.toFixed(1) + " mg/L (target " + LIM.TSS.warn + ")\n"
+      + "• NH4: " + out.NH4.toFixed(2) + " mg/L (target " + LIM.NH4.warn + ")\n"
+      + "• pH: " + out.pH.toFixed(2) + " (range " + LIM.pH.low_w + "-" + LIM.pH.high_w + ")\n"
       + "• O2: " + out.O2.toFixed(1) + " mg/L\n\n"
       + "Nessun intervento automatico necessario. Soffianti: " + sim.blower + "%, coagulante: " + sim.coagulant + "%."
       + (learnFooter ? "\n\n— APPRENDIMENTO —\n" + learnFooter : "");
   } else {
     const sugg = [];
-    if (out.O2 < QL.O2.crit)       sugg.push("URGENTE — O2 critico (" + out.O2.toFixed(1) + " mg/L). Portare le soffianti all'85-95% immediatamente.");
-    else if (out.O2 < QL.O2.warn)  sugg.push("O2 basso (" + out.O2.toFixed(1) + " mg/L). Aumentare le soffianti del 10-15% (attuale: " + sim.blower + "%).");
-    if (out.COD > QL.COD.crit)      sugg.push("COD critico (" + out.COD.toFixed(1) + " mg/L > limite " + QL.COD.crit + "). Ridurre carico in ingresso e aumentare HRT.");
-    else if (out.COD > QL.COD.warn) sugg.push("COD oltre target (" + out.COD.toFixed(1) + " mg/L). Aumentare aerazione o ridurre COD in ingresso.");
-    if (out.TSS > QL.TSS.crit)      sugg.push("TSS critico (" + out.TSS.toFixed(1) + " mg/L). Portare coagulante all'80-90%.");
-    else if (out.TSS > QL.TSS.warn) sugg.push("TSS oltre target (" + out.TSS.toFixed(1) + " mg/L). Aumentare coagulante al " + Math.min(100,sim.coagulant+15) + "%.");
-    if (out.BOD5 > QL.BOD5.crit)      sugg.push("BOD5 critico (" + out.BOD5.toFixed(1) + " mg/L > limite " + QL.BOD5.crit + "). Carico organico elevato — aumentare aerazione e verificare l'ingresso.");
-    else if (out.BOD5 > QL.BOD5.warn) sugg.push("BOD5 oltre target (" + out.BOD5.toFixed(1) + " mg/L). Aumentare aerazione nel comparto biologico.");
-    if (out.NH4 > QL.NH4.crit)      sugg.push("NH4 critico (" + out.NH4.toFixed(1) + " mg/L). Aerazione insufficiente per nitrificazione.");
-    else if (out.NH4 > QL.NH4.warn) sugg.push("NH4 elevato (" + out.NH4.toFixed(1) + " mg/L). Aumentare aerazione.");
-    if (out.pH < QL.pH.low_c)       sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 30-40% immediatamente.");
-    else if (out.pH < QL.pH.low_w)  sugg.push("pH basso (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 15-20%.");
-    else if (out.pH > QL.pH.high_c) sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 30-40%.");
-    else if (out.pH > QL.pH.high_w) sugg.push("pH alto (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 10-15%.");
+    if (out.O2 < LIM.O2.crit)       sugg.push("URGENTE — O2 critico (" + out.O2.toFixed(1) + " mg/L). Portare le soffianti all'85-95% immediatamente.");
+    else if (out.O2 < LIM.O2.warn)  sugg.push("O2 basso (" + out.O2.toFixed(1) + " mg/L). Aumentare le soffianti del 10-15% (attuale: " + sim.blower + "%).");
+    if (out.COD > LIM.COD.crit)      sugg.push("COD critico (" + out.COD.toFixed(1) + " mg/L > limite " + LIM.COD.crit + "). Ridurre carico in ingresso e aumentare HRT.");
+    else if (out.COD > LIM.COD.warn) sugg.push("COD oltre target (" + out.COD.toFixed(1) + " mg/L). Aumentare aerazione o ridurre COD in ingresso.");
+    if (out.TSS > LIM.TSS.crit)      sugg.push("TSS critico (" + out.TSS.toFixed(1) + " mg/L). Portare coagulante all'80-90%.");
+    else if (out.TSS > LIM.TSS.warn) sugg.push("TSS oltre target (" + out.TSS.toFixed(1) + " mg/L). Aumentare coagulante al " + Math.min(100,sim.coagulant+15) + "%.");
+    if (out.BOD5 > LIM.BOD5.crit)      sugg.push("BOD5 critico (" + out.BOD5.toFixed(1) + " mg/L > limite " + LIM.BOD5.crit + "). Carico organico elevato — aumentare aerazione e verificare l'ingresso.");
+    else if (out.BOD5 > LIM.BOD5.warn) sugg.push("BOD5 oltre target (" + out.BOD5.toFixed(1) + " mg/L). Aumentare aerazione nel comparto biologico.");
+    if (out.NH4 > LIM.NH4.crit)      sugg.push("NH4 critico (" + out.NH4.toFixed(1) + " mg/L). Aerazione insufficiente per nitrificazione.");
+    else if (out.NH4 > LIM.NH4.warn) sugg.push("NH4 elevato (" + out.NH4.toFixed(1) + " mg/L). Aumentare aerazione.");
+    if (out.pH < LIM.pH.low_c)       sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 30-40% immediatamente.");
+    else if (out.pH < LIM.pH.low_w)  sugg.push("pH basso (" + out.pH.toFixed(2) + "). Avviare dosaggio NaOH al 15-20%.");
+    else if (out.pH > LIM.pH.high_c) sugg.push("pH critico (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 30-40%.");
+    else if (out.pH > LIM.pH.high_w) sugg.push("pH alto (" + out.pH.toFixed(2) + "). Avviare dosaggio H2SO4 al 10-15%.");
     if (sim.MLSS > MLSS_LIMITS.hi_crit)    sugg.push("MLSS elevato (" + sim.MLSS + " mg/L). Ridurre ricircolo fanghi al " + Math.max(20,sim.sludgeRecycle-15) + "%.");
     else if (sim.MLSS<MLSS_LIMITS.lo_crit) sugg.push("MLSS basso (" + sim.MLSS + " mg/L). Aumentare ricircolo fanghi al " + Math.min(100,sim.sludgeRecycle+15) + "%.");
-    if (ntotOver) sugg.push("Azoto totale " + out.NTOT.toFixed(1) + " mg/L oltre il limite (" + QL.NTOT.warn + " mg/L). " + nNoteCore);
+    if (ntotOver) sugg.push("Azoto totale " + out.NTOT.toFixed(1) + " mg/L oltre il limite (" + LIM.NTOT.warn + " mg/L). " + nNoteCore);
 
     if (sugg.length === 0)
       return "Parametri nella norma — monitoraggio manuale attivo (" + ts + ")\n\n"

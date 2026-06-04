@@ -1,4 +1,4 @@
-import { QUALITY_LIMITS as QL } from "../constants/limits";
+import { QUALITY_LIMITS } from "../constants/limits";
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -8,6 +8,7 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
   const disIdx = stageIndexMap?.dis >= 0 ? stageIndexMap.dis : 4;
   const ac = s.autoCorrect;
   if (!ac || !ac.enabled) return { changes: {}, actions: {} };
+  const LIM = s.limits || QUALITY_LIMITS;
   const ch = {};
   const actions = {};
   const g = s.adaptiveGains || {};
@@ -27,9 +28,9 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     // Proportional demand: gentle ramps referenced to the warn limits keep
     // normal operation energy-efficient (effluent under limit → low O2 target).
     const ramp = (v, lo, hi, gain) => clamp((v - lo) / (hi - lo), 0, 1) * gain;
-    const O2sp_nh4 = ramp(out.NH4,  QL.NH4.warn  - 3,  QL.NH4.warn  + 2,  4.5);
-    const O2sp_bod = ramp(out.BOD5, QL.BOD5.warn - 8,  QL.BOD5.warn + 5,  2.5);
-    const O2sp_cod = ramp(out.COD,  QL.COD.warn  - 35, QL.COD.warn + 20,  1.5);
+    const O2sp_nh4 = ramp(out.NH4,  LIM.NH4.warn  - 3,  LIM.NH4.warn  + 2,  4.5);
+    const O2sp_bod = ramp(out.BOD5, LIM.BOD5.warn - 8,  LIM.BOD5.warn + 5,  2.5);
+    const O2sp_cod = ramp(out.COD,  LIM.COD.warn  - 35, LIM.COD.warn + 20,  1.5);
     // Integral action: a proportional-only setpoint leaves a steady-state offset
     // (effluent parks just over limit while O2 sits at a "satisfied" target). We
     // integrate the worst error against a target inside the *green* zone — held
@@ -42,9 +43,9 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     // (no limit-cycle) and clean influent relaxes the blower for energy savings.
     const greenTgt = 0.92;
     const err = Math.max(
-      (out.NH4  - QL.NH4.pre  * greenTgt) / QL.NH4.warn,
-      (out.BOD5 - QL.BOD5.pre * greenTgt) / QL.BOD5.warn,
-      (out.COD  - QL.COD.pre  * greenTgt) / QL.COD.warn);
+      (out.NH4  - LIM.NH4.pre  * greenTgt) / LIM.NH4.warn,
+      (out.BOD5 - LIM.BOD5.pre * greenTgt) / LIM.BOD5.warn,
+      (out.COD  - LIM.COD.pre  * greenTgt) / LIM.COD.warn);
     // Low integral gain + gentle proportional inner loop, rate-limited: the O2
     // process has a long lag, so aggressive gains caused integral-windup hunting
     // (blower swinging 57↔92% in a slow limit-cycle). Softer gains track the
@@ -65,7 +66,7 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
       if (O2 < 1.5) {
         actions[bioIdx] = { text: `URGENTE Soffianti: ${s.blower}→${newBlower}% — O2 critico ${O2.toFixed(1)} mg/L (set ${O2sp})`, sev: "ALTO" };
       } else if (delta > 0) {
-        const reason = out.NH4 > 8 ? `NH4 ${out.NH4.toFixed(1)} mg/L — set O2>${O2sp.toFixed(1)}` : out.BOD5 > 25 ? `BOD5 ${out.BOD5.toFixed(1)} mg/L` : out.COD > 100 ? `COD ${out.COD.toFixed(1)} mg/L` : `O2 ${O2.toFixed(1)} mg/L → set ${O2sp.toFixed(1)}`;
+        const reason = out.NH4 > LIM.NH4.warn ? `NH4 ${out.NH4.toFixed(1)} mg/L — set O2>${O2sp.toFixed(1)}` : out.BOD5 > LIM.BOD5.warn ? `BOD5 ${out.BOD5.toFixed(1)} mg/L` : out.COD > LIM.COD.pre ? `COD ${out.COD.toFixed(1)} mg/L` : `O2 ${O2.toFixed(1)} mg/L → set ${O2sp.toFixed(1)}`;
         actions[bioIdx] = { text: `Soffianti: ${s.blower}→${newBlower}% (+${delta}%) — ${reason}`, sev: "MEDIO" };
       } else {
         actions[bioIdx] = { text: `Ottimiz. energia: soffianti ${s.blower}→${newBlower}% — O2 ${O2.toFixed(1)} mg/L, margine ok`, sev: "OK" };
@@ -75,7 +76,7 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
 
   // ── COAGULANTE — controllo TSS sedimentazione ─────────────────
   if (ac.coagulant && ac.coagulant.on) {
-    const TSSsp = 20;
+    const TSSsp = (LIM.TSS.warn ?? 35) * 0.57;
     const errTSS = out.TSS - TSSsp;
     const Kp = 1.8 * gCoagulant;
     const delta = clamp(Math.round(errTSS * Kp), -5, 20);
@@ -83,7 +84,7 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
 
     if (Math.abs(delta) >= 1) {
       ch.coagulant = newCoag;
-      if (out.TSS > 80) {
+      if (out.TSS > (LIM.TSS.crit ?? 80)) {
         actions[sedIdx] = { text: `URGENTE Coagulante: ${s.coagulant}→${newCoag}% — TSS critico ${out.TSS.toFixed(1)} mg/L`, sev: "ALTO" };
       } else if (delta > 0) {
         actions[sedIdx] = { text: `Coagulante: ${s.coagulant}→${newCoag}% (+${delta}%) — TSS ${out.TSS.toFixed(1)} mg/L > set ${TSSsp}`, sev: "MEDIO" };

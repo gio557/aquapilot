@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
@@ -16,13 +16,10 @@ import ConfigurazionePage from "./components/ConfigurazionePage";
 import AIPanel from "./components/AIPanel";
 import StoricaPage from "./components/StoricaPage";
 import EnergiaPage from "./components/EnergiaPage";
-import KpiNum from "./components/ui/KpiNum";
 import AlarmRow from "./components/ui/AlarmRow";
-import QualRow from "./components/ui/QualRow";
 import CustomTooltip from "./components/ui/CustomTooltip";
 import AnomalyDot from "./components/ui/AnomalyDot";
 import BlockingAlarmPopup from "./components/ui/BlockingAlarmPopup";
-import Tag from "./components/ui/Tag";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const TREND_KEYS = [
@@ -45,7 +42,6 @@ export default function App() {
 
   // Smoothed display values — EMA with alpha=0.10 so numbers drift gradually
   const ALPHA = 0.10;
-  const smoothRef = useRef(null);
   const [display, setDisplay] = useState(null);
 
   useEffect(() => {
@@ -111,7 +107,7 @@ export default function App() {
     } catch { return 0.22; }
   });
   useEffect(() => {
-    try { localStorage.setItem("aquapilot.energyPrice.v1", String(energyPrice)); } catch {}
+    try { localStorage.setItem("aquapilot.energyPrice.v1", String(energyPrice)); } catch { /* storage non disponibile */ }
   }, [energyPrice]);
 
   // Provenienza dati dei parametri di QUALITÀ USCITA (sensore/analizzatore/stimato),
@@ -123,7 +119,7 @@ export default function App() {
     } catch { return { ...QUALITY_SOURCE_DEFAULTS }; }
   });
   useEffect(() => {
-    try { localStorage.setItem("aquapilot.qualitySources.v1", JSON.stringify(qualitySources)); } catch {}
+    try { localStorage.setItem("aquapilot.qualitySources.v1", JSON.stringify(qualitySources)); } catch { /* storage non disponibile */ }
   }, [qualitySources]);
 
   // Effective quality limits derived from the selected normativa. Single source
@@ -165,7 +161,7 @@ export default function App() {
     try { const s = localStorage.getItem("aquapilot.showMarkers.v1"); return s == null ? true : s === "true"; }
     catch { return true; }
   });
-  useEffect(() => { try { localStorage.setItem("aquapilot.showMarkers.v1", String(showMarkers)); } catch {} }, [showMarkers]);
+  useEffect(() => { try { localStorage.setItem("aquapilot.showMarkers.v1", String(showMarkers)); } catch { /* storage non disponibile */ } }, [showMarkers]);
   const [clock, setClock] = useState(new Date());
   const [dismissedDiag, setDismissedDiag] = useState([]);
   const [dismissedBlocking, setDismissedBlocking] = useState([]);
@@ -335,17 +331,17 @@ export default function App() {
   const stageConfigJson = JSON.stringify(stageConfig);
   useEffect(() => {
     setSim(prev => ({ ...prev, stageConfig, stages }));
-    try { localStorage.setItem("aquapilot.stageConfig.v3", stageConfigJson); } catch {}
+    try { localStorage.setItem("aquapilot.stageConfig.v3", stageConfigJson); } catch { /* storage non disponibile */ }
   }, [stageConfigJson]);
 
   const stagesJson = JSON.stringify(stages);
   useEffect(() => {
     setSim(prev => ({ ...prev, stages }));
-    try { localStorage.setItem("aquapilot.stages.v3", stagesJson); } catch {}
+    try { localStorage.setItem("aquapilot.stages.v3", stagesJson); } catch { /* storage non disponibile */ }
   }, [stagesJson]);
 
   useEffect(() => {
-    try { localStorage.setItem("aquapilot.norms.v1", JSON.stringify(norms)); } catch {}
+    try { localStorage.setItem("aquapilot.norms.v1", JSON.stringify(norms)); } catch { /* storage non disponibile */ }
   }, [norms]);
 
   const handleGrigliaturaReset = () => {

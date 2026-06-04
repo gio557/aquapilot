@@ -73,7 +73,6 @@ export default function ControlRoomPage() {
     return { ...p, events: [...(p.events || []).filter(e => e.type !== type), ev] };
   });
   const stopEvent = (id)  => onSim(p => ({ ...p, events: (p.events || []).filter(e => e.id !== id) }));
-  const stopAllEvents = () => onSim(p => ({ ...p, events: [] }));
   const activeAlarms = Object.values(sim.alarmState || {}).filter(v => v !== "OK").length;
 
   // Renders a list of event/fault cards — shared between Scenari and Guasti panels.

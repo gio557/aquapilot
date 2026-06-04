@@ -27,7 +27,7 @@ function safeRead(k, fallback) {
   catch { return fallback; }
 }
 function safeWrite(k, v) {
-  try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage non disponibile */ }
 }
 
 // ── API pubblica ───────────────────────────────────────────────
@@ -37,7 +37,7 @@ export function loadInterventions() { return safeRead(KEY_INTERV, []); }
 
 export function resetLearning() {
   [KEY_HISTORY, KEY_GAINS, KEY_PENDING, KEY_INTERV].forEach(k => {
-    try { localStorage.removeItem(k); } catch {}
+    try { localStorage.removeItem(k); } catch { /* storage non disponibile */ }
   });
 }
 

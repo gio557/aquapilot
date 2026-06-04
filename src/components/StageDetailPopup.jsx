@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import Tag from "./ui/Tag";
-import { PARAM_SENSOR_MAP, SENSOR_TYPES } from "../constants/stageConfig";
+import { PARAM_SENSOR_MAP } from "../constants/stageConfig";
 import { dataSourceTag, resolveSource } from "../constants/dataSource";
 
 const HOLD_MS = 2200;
@@ -164,7 +164,6 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
 
   if (!stageDetail) return null;
 
-  const sc = stage.status==="ok" ? t.green : stage.status==="warn" ? t.orange : t.red;
   const hib = smoothOutput?.higherIsBetter;
   const rawPct = smoothOutput && !hib ? Math.round(smoothOutput.value / smoothOutput.target * 100) : 0;
   const score = smoothOutput
@@ -270,7 +269,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
             <div>
               <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>POMPE INSTALLATE</div>
               <div style={{display:"flex", flexDirection:"column", gap:6}}>
-                {stageConfig.pumps.map((pump, i) => (
+                {stageConfig.pumps.map((pump) => (
                   <div key={pump.id} style={{padding:"8px 12px", borderRadius:7,
                     background: pump.enabled ? t.surface2 : `${t.surface2}66`,
                     border:`1px solid ${pump.enabled ? t.accent+"44" : t.border}`,

@@ -305,7 +305,6 @@ function processDegrassatore(water, cfg, prevState, g) {
       COD:    +round1(waterOut.COD),
       TSS:    +round1(waterOut.TSS),
       pH:     +round2(water.pH),
-      temp:   +round1(water.T),
     },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
@@ -685,7 +684,6 @@ function processDisinfezioneUV(water, cfg, prevState, g) {
       TSS:  +round1(water.TSS),
       COD:  +round1(water.COD),
       pH:   +round2(water.pH),
-      temp: +round1(water.T),
     },
   };
   return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };

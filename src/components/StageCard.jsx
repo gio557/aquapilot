@@ -94,6 +94,74 @@ function GrigliaturaBanner({ state, onReset, t }) {
   );
 }
 
+function OsmosiCIPControl({ state, onStartCIP, t }) {
+  const PHASES = {
+    ESERCIZIO:    { label:"IN ESERCIZIO",      icon:"✓" },
+    FLUSSAGGIO:   { label:"FLUSSAGGIO",        icon:"⟳" },
+    LAV_ALCALINO: { label:"LAVAGGIO ALCALINO", icon:"⟳" },
+    LAV_ACIDO:    { label:"LAVAGGIO ACIDO",    icon:"⟳" },
+    RISCIACQUO:   { label:"RISCIACQUO",        icon:"⟳" },
+  };
+  const ph    = PHASES[state.fase] || { label:state.fase, icon:"●" };
+  const inCIP = state.fase !== "ESERCIZIO";
+  const color = inCIP ? t.orange : t.green;
+  const bgDim = inCIP ? t.orangeDim : t.greenDim;
+  const foulPct   = Math.round((state.fouling ?? 0) * 100);
+  const foulColor = foulPct >= 70 ? t.red : foulPct >= 45 ? t.orange : t.green;
+  const cipDue    = !inCIP && (state.allarmi?.length > 0);
+  return (
+    <div style={{width:"100%", display:"flex", flexDirection:"column", gap:6, padding:"4px 0"}}>
+      <div style={{display:"flex", alignItems:"center", gap:8, padding:"8px 14px", borderRadius:10,
+        background:bgDim, border:`2px solid ${color}55`, justifyContent:"space-between",
+        transition:"background 0.6s, border-color 0.6s"}}>
+        <div style={{display:"flex", alignItems:"center", gap:8}}>
+          <span style={{fontSize:16, lineHeight:1}}>{ph.icon}</span>
+          <span style={{fontFamily:"'Orbitron',sans-serif", fontSize:11, fontWeight:900, color, letterSpacing:1, transition:"color 0.6s"}}>{ph.label}</span>
+        </div>
+        {inCIP
+          ? <span style={{fontSize:9, padding:"2px 8px", borderRadius:3, background:`${t.orange}22`,
+              color:t.orange, border:`1px solid ${t.orange}66`, fontFamily:"'Share Tech Mono',monospace", flexShrink:0}}>
+              CIP IN CORSO
+            </span>
+          : <button onClick={e => { e.stopPropagation(); onStartCIP?.(); }}
+              style={{fontSize:9, padding:"2px 8px", borderRadius:3, cursor:"pointer",
+                background:`${t.accent}22`, color:t.accent, border:`1px solid ${t.accent}66`,
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, flexShrink:0}}>
+              🧪 AVVIA CIP
+            </button>
+        }
+      </div>
+      <div>
+        <div style={{display:"flex", justifyContent:"space-between", marginBottom:2}}>
+          <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>Sporcamento membrana</span>
+          <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:foulColor, fontWeight:700}}>
+            {foulPct}%
+          </span>
+        </div>
+        <div style={{height:4, background:t.surface3, borderRadius:2, overflow:"hidden"}}>
+          <div style={{height:"100%", width:`${foulPct}%`, background:foulColor, borderRadius:2, transition:"width 0.6s ease"}}/>
+        </div>
+      </div>
+      <div style={{display:"flex", gap:5, flexWrap:"wrap"}}>
+        <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.accent}18`,
+          color:t.accent, border:`1px solid ${t.accent}44`, fontFamily:"'Share Tech Mono',monospace"}}>
+          ΔP {(+state.dp).toFixed(2)} bar
+        </span>
+        <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.accent}18`,
+          color:t.accent, border:`1px solid ${t.accent}44`, fontFamily:"'Share Tech Mono',monospace"}}>
+          flux {(+state.flux_norm).toFixed(0)}%
+        </span>
+        {cipDue && (
+          <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.orange}22`,
+            color:t.orange, border:`1px solid ${t.orange}55`, fontFamily:"'Share Tech Mono',monospace"}}>
+            CIP RICHIESTO
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ClassifierBanner({ state, t }) {
   const color  = state.trafficLight === "red" ? t.red : state.trafficLight === "yellow" ? t.orange : t.green;
   const bgDim  = state.trafficLight === "red" ? t.redDim : state.trafficLight === "yellow" ? t.orangeDim : t.greenDim;
@@ -157,7 +225,7 @@ function ClassifierMini({ state, t }) {
   );
 }
 
-export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, classifierState, grigliaturaState, onGrigliaturaReset, referenceSensor, qualitySources, onClick }) {
+export default function StageCard({ stage, index, t, action, autoEnabled, stageOutput, eff, classifierState, grigliaturaState, onGrigliaturaReset, osmosiState, onOsmosiCIP, referenceSensor, qualitySources, onClick }) {
   const IDLE = [
     "Nessuna correzione attiva — stadio stabile",
     "Nessuna correzione attiva — stadio stabile",
@@ -223,7 +291,10 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
   const grRank = grigliaturaState
     ? (grigliaturaState.fase === "ALLARME_MOTORE" ? 2 : grigliaturaState.bypass_aperto ? 1 : 0)
     : 0;
-  const rank = Math.max(sevRank(stable.sev), gaugeRank, clsRank, grRank);
+  const osmoRank = osmosiState
+    ? (osmosiState.fase !== "ESERCIZIO" || (osmosiState.fouling ?? 0) >= 0.7 ? 1 : 0)
+    : 0;
+  const rank = Math.max(sevRank(stable.sev), gaugeRank, clsRank, grRank, osmoRank);
   const bColor = rank === 2 ? t.red : rank === 1 ? t.orange : t.green;
 
   // Status message: a mechanical/process condition (grigliatura motor alarm or
@@ -236,6 +307,9 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
     statusSev  = "ALTO";
   } else if (grigliaturaState?.bypass_aperto) {
     statusText = "⚠ ΔH elevato — bypass aperto. Griglia intasata, ciclo di pulizia in corso.";
+    statusSev  = "MEDIO";
+  } else if (osmosiState && osmosiState.fase !== "ESERCIZIO") {
+    statusText = "🧪 Lavaggio CIP membrane in corso — produzione permeato sospesa fino al ripristino.";
     statusSev  = "MEDIO";
   }
   const bIcon = statusSev === "ALTO" ? "🔴" : statusSev === "MEDIO" ? "🟡" : "🟢";
@@ -297,6 +371,8 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
       })()}
 
       {clsState?.mode === "timed" && <ClassifierMini state={clsState} t={t}/>}
+
+      {osmosiState && <OsmosiCIPControl state={osmosiState} onStartCIP={onOsmosiCIP} t={t}/>}
 
       <div style={{
         padding:"7px 10px", borderRadius:7,

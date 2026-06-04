@@ -318,6 +318,7 @@ export default function App() {
   // the stage list can be reordered, added to, or have earlier stages removed.
   const dissIdx = stages.findIndex(s => s.name === "Dissabbiatura");
   const grIdx   = stages.findIndex(s => s.name === "Grigliatura");
+  const osmoIdx = stages.findIndex(s => s.name === "Osmosi Inversa");
 
   const classifierCfgJson = JSON.stringify(stageConfig[dissIdx]?.classifier);
   useEffect(() => {
@@ -367,6 +368,21 @@ export default function App() {
         ? prev.stageStates.map((st, i) => i === grIdx ? reset : st)
         : prev.stageStates;
       return { ...prev, stageStates, grigliaturaState: reset };
+    });
+  };
+
+  // Manually request a membrane CIP wash on the reverse-osmosis stage. The
+  // engine reads the request flag from stageStates[osmoIdx] and starts the CIP
+  // cycle on the next tick regardless of the auto-CIP setting.
+  const handleOsmosiCIP = () => {
+    if (osmoIdx < 0) return;
+    setSim(prev => {
+      const states = Array.isArray(prev.stageStates) ? prev.stageStates : [];
+      const src = states[osmoIdx];
+      if (!src || src.fase !== "ESERCIZIO") return prev;   // already washing
+      const stageStates = states.map((st, i) =>
+        i === osmoIdx ? { ...st, cip_request: true } : st);
+      return { ...prev, stageStates };
     });
   };
 
@@ -543,7 +559,9 @@ export default function App() {
                 autoEnabled={autoOn} t={t} onClick={() => setSelectedStage(i)}
                 classifierState={i === dissIdx ? sim.sandClassifier : null}
                 grigliaturaState={i === grIdx ? sim.grigliaturaState : null}
-                onGrigliaturaReset={i === grIdx ? handleGrigliaturaReset : undefined}/>
+                onGrigliaturaReset={i === grIdx ? handleGrigliaturaReset : undefined}
+                osmosiState={i === osmoIdx ? sim.stageStates?.[osmoIdx] : null}
+                onOsmosiCIP={i === osmoIdx ? handleOsmosiCIP : undefined}/>
             ))}
           </div>
 

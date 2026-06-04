@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
+import { PC } from "../constants/processConstants";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
@@ -111,6 +112,22 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     onChange(prev => prev.map((sc, i) =>
       i !== si ? sc : { ...sc, grigliatura: { ...sc.grigliatura, [field]: value } }
     ));
+  };
+
+  const updateOsmosi = (si, field, value) => {
+    onChange(prev => prev.map((sc, i) =>
+      i !== si ? sc : { ...sc, osmosi: { ...sc.osmosi, [field]: value } }
+    ));
+  };
+
+  // Restore the RO membrane / CIP thresholds to the PC.RO defaults by dropping
+  // the per-stage overrides — the engine then falls back to the constants.
+  const resetOsmosiDefaults = (si) => {
+    onChange(prev => prev.map((sc, i) => {
+      if (i !== si) return sc;
+      const { osmosi, ...rest } = sc;   // eslint-disable-line no-unused-vars
+      return rest;
+    }));
   };
 
   const resetStage = (si) => {
@@ -530,6 +547,66 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     </div>
                   </div>
                 )}
+
+                {/* ── OSMOSI INVERSA: soglie membrana & lavaggio CIP ── */}
+                {stage.name === "Osmosi Inversa" && (() => {
+                  const ro = sc.osmosi || {};
+                  const g  = (f) => ro[f] ?? PC.RO[f];
+                  const dpTrip = (g("DP_CLEAN") * (1 + g("DP_TRIGGER"))).toFixed(2);
+                  const isCustom = Object.keys(ro).length > 0;
+                  return (
+                    <div>
+                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
+                        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
+                          SOGLIE MEMBRANA &amp; LAVAGGIO CIP {isCustom && <span style={{color}}>· personalizzate</span>}
+                        </div>
+                        <button onClick={() => resetOsmosiDefaults(si)}
+                          style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", fontSize:13,
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:600,
+                            border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
+                          ↺ Ripristino default
+                        </button>
+                      </div>
+
+                      <div style={{display:"flex", gap:18, flexWrap:"wrap", marginBottom:14}}>
+                        <NumField label="Press. alimentazione" value={g("FEED_PRESSURE")} unit="bar"
+                          onChange={v => updateOsmosi(si, "FEED_PRESSURE", Math.max(2, Math.min(80, v)))} t={t}/>
+                        <NumField label="ΔP membrana pulita" value={g("DP_CLEAN")} unit="bar"
+                          onChange={v => updateOsmosi(si, "DP_CLEAN", Math.max(0.1, Math.min(3, v)))} t={t}/>
+                        <NumField label="Salita ΔP avvio CIP" value={Math.round(g("DP_TRIGGER")*100)} unit="%"
+                          onChange={v => updateOsmosi(si, "DP_TRIGGER", Math.max(0.05, Math.min(1, v/100)))} t={t}/>
+                        <NumField label="Flusso min. avvio CIP" value={g("FLUX_TRIGGER")} unit="%"
+                          onChange={v => updateOsmosi(si, "FLUX_TRIGGER", Math.max(50, Math.min(99, Math.round(v))))} t={t}/>
+                        <NumField label="Recupero permeato" value={g("RECOVERY")} unit="%"
+                          onChange={v => updateOsmosi(si, "RECOVERY", Math.max(30, Math.min(95, Math.round(v))))} t={t}/>
+                      </div>
+
+                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between",
+                        padding:"12px 16px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`, marginBottom:10}}>
+                        <div>
+                          <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, color:t.text}}>Avvio CIP automatico</div>
+                          <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                            Avvia il lavaggio al superamento delle soglie. Se disattivo, il CIP parte solo dal pulsante manuale sulla tessera.
+                          </div>
+                        </div>
+                        <div onClick={() => updateOsmosi(si, "CIP_AUTO", !g("CIP_AUTO"))}
+                          style={{flexShrink:0, width:44, height:24, borderRadius:12, cursor:"pointer", position:"relative",
+                            background: g("CIP_AUTO") ? t.green : t.surface3,
+                            border:`1px solid ${g("CIP_AUTO") ? t.green : t.border}`, transition:"background 0.2s"}}>
+                          <div style={{position:"absolute", top:3, left: g("CIP_AUTO") ? 21 : 3,
+                            width:16, height:16, borderRadius:"50%", background:"#fff",
+                            transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                        </div>
+                      </div>
+
+                      <div style={{padding:"10px 14px", background:t.surface2, borderRadius:6,
+                        border:`1px solid ${t.border}`, fontSize:13, color:t.textMuted,
+                        fontFamily:"'Rajdhani',sans-serif", lineHeight:1.6}}>
+                        {`Lavaggio CIP ${g("CIP_AUTO") ? "automatico" : "solo manuale"}: avvio a ΔP > ${dpTrip} bar (pulita ${g("DP_CLEAN")} bar, +${Math.round(g("DP_TRIGGER")*100)}%) o flusso normalizzato < ${g("FLUX_TRIGGER")}%. Pressione alimentazione ${g("FEED_PRESSURE")} bar, recupero permeato ${g("RECOVERY")}%. Le membrane spiralate non si contro-lavano: la pulizia avviene per via chimica (Cleaning-In-Place).`}
+                      </div>
+                    </div>
+                  );
+                })()}
 
               </div>
             )}

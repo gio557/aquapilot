@@ -667,7 +667,9 @@ function processOsmosIInversa(water, cfg, prevState, g) {
   o.timer_fase += dt;
   switch (o.fase) {
     case "ESERCIZIO":
-      if ((dpOver || fluxLow || o.cip_request) && oCfg.CIP_AUTO) {
+      // L'avvio automatico (ΔP/flusso oltre soglia) è subordinato a CIP_AUTO; la
+      // richiesta manuale (pulsante "Avvia CIP") avvia il ciclo in ogni caso.
+      if (((dpOver || fluxLow) && oCfg.CIP_AUTO) || o.cip_request) {
         o.fase = "FLUSSAGGIO"; o.timer_fase = 0; o.cip_request = false;
         if (!o.allarmi.includes("CIP-01")) o.allarmi.push("CIP-01");
       }

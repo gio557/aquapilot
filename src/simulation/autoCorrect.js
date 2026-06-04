@@ -122,18 +122,23 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     const errpH = pHsp - out.pH;
     const Kp = 3 * gPH;
     const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 5);
+    // Severity follows regulatory compliance, not the distance from the 7.2
+    // process optimum: re-centring a pH that is still inside the legal band is an
+    // optimisation (OK/green), not a warning. Otherwise the action card flags an
+    // "errore" (orange) while QUALITÀ USCITA correctly reads pH OK. Only a pH
+    // outside the band is MEDIO (warn band) or ALTO (critical band).
+    const pHsev = (out.pH < LIM.pH.low_c || out.pH > LIM.pH.high_c) ? "ALTO"
+                : (out.pH < LIM.pH.low_w || out.pH > LIM.pH.high_w) ? "MEDIO" : "OK";
 
     if (Math.abs(errpH) > 0.20 && delta >= 2) {
       if (errpH > 0) {
         ch.naoh   = clamp(s.naoh + delta, 0, 100);
         ch.h2so4  = 0;
-        const sev = out.pH < 5.5 ? "ALTO" : "MEDIO";
-        actions[disIdx] = { text: `NaOH: ${s.naoh}→${ch.naoh}% (+${delta}%) — pH ${out.pH.toFixed(2)} < ${pHsp} (err ${errpH.toFixed(2)})`, sev };
+        actions[disIdx] = { text: `NaOH: ${s.naoh}→${ch.naoh}% (+${delta}%) — pH ${out.pH.toFixed(2)} ${pHsev === "OK" ? "(ottimiz. verso" : "<"} ${pHsp}${pHsev === "OK" ? ")" : ""} (err ${errpH.toFixed(2)})`, sev: pHsev };
       } else {
         ch.h2so4  = clamp(s.h2so4 + delta, 0, 100);
         ch.naoh   = 0;
-        const sev = out.pH > 9.5 ? "ALTO" : "MEDIO";
-        actions[disIdx] = { text: `H2SO4: ${s.h2so4}→${ch.h2so4}% (+${delta}%) — pH ${out.pH.toFixed(2)} > ${pHsp} (err ${(-errpH).toFixed(2)})`, sev };
+        actions[disIdx] = { text: `H2SO4: ${s.h2so4}→${ch.h2so4}% (+${delta}%) — pH ${out.pH.toFixed(2)} ${pHsev === "OK" ? "(ottimiz. verso" : ">"} ${pHsp}${pHsev === "OK" ? ")" : ""} (err ${(-errpH).toFixed(2)})`, sev: pHsev };
       }
     } else if (Math.abs(errpH) <= 0.20) {
       if (s.naoh > 0)  { ch.naoh  = Math.max(0, s.naoh  - 2); }

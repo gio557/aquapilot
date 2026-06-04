@@ -939,6 +939,8 @@ export default function App() {
           autoEnabled={autoOn}
           stageConfig={stageConfig[selectedStage] ?? null}
           qualitySources={qualitySources}
+          osmosiState={selectedStage === osmoIdx ? sim.stageStates?.[osmoIdx] : null}
+          onOsmosiCIP={selectedStage === osmoIdx ? handleOsmosiCIP : undefined}
           t={t}
           onClose={() => setSelectedStage(null)}
         />

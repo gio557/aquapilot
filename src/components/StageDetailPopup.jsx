@@ -84,7 +84,64 @@ function ParamRow({ label, value, unit, note, stageName, sourceCfg, t }) {
   );
 }
 
-export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, stageConfig, qualitySources, t, onClose }) {
+const CIP_PHASE_LABEL = {
+  ESERCIZIO:    "In esercizio",
+  FLUSSAGGIO:   "Flussaggio",
+  LAV_ALCALINO: "Lavaggio alcalino",
+  LAV_ACIDO:    "Lavaggio acido",
+  RISCIACQUO:   "Risciacquo",
+};
+
+function CIPPanel({ state, onStartCIP, t }) {
+  const inCIP   = state.fase !== "ESERCIZIO";
+  const color   = inCIP ? t.orange : t.green;
+  const foulPct = Math.round((state.fouling ?? 0) * 100);
+  const cipDue  = !inCIP && (state.allarmi?.length > 0);
+  return (
+    <div style={{padding:"12px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${color}44`, borderLeft:`3px solid ${color}`}}>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
+        <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
+          LAVAGGIO CHIMICO CIP
+        </div>
+        {inCIP
+          ? <span style={{fontSize:10, padding:"3px 10px", borderRadius:4, background:`${t.orange}22`,
+              color:t.orange, border:`1px solid ${t.orange}66`, fontFamily:"'Share Tech Mono',monospace", fontWeight:700}}>
+              {CIP_PHASE_LABEL[state.fase] ?? state.fase} · {Math.round(state.timer_fase ?? 0)} s
+            </span>
+          : <button onClick={onStartCIP}
+              style={{fontSize:12, padding:"5px 14px", borderRadius:6, cursor:"pointer",
+                background:`${t.accent}22`, color:t.accent, border:`1px solid ${t.accent}66`,
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700}}>
+              🧪 Avvia CIP
+            </button>
+        }
+      </div>
+      <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
+        {[
+          {l:"Stato",        v: inCIP ? (CIP_PHASE_LABEL[state.fase] ?? state.fase) : "In esercizio"},
+          {l:"Sporcamento",  v:`${foulPct}%`},
+          {l:"ΔP membrana",  v:`${(+state.dp).toFixed(2)} bar`},
+          {l:"Flusso norm.", v:`${(+state.flux_norm).toFixed(0)}%`},
+          {l:"Cicli CIP",    v:`${state.cip_count ?? 0}`},
+        ].map(x => (
+          <div key={x.l}>
+            <span style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.l}: </span>
+            <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:t.accent, fontWeight:700}}>{x.v}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:12, color:cipDue ? t.orange : t.textMuted, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5, marginTop:8}}>
+        {inCIP
+          ? "Lavaggio in corso — produzione permeato sospesa fino al ripristino. Le membrane spiralate non si contro-lavano: la pulizia è esclusivamente chimica."
+          : cipDue
+            ? "⚠ Soglie superate: lavaggio CIP raccomandato. Avvio automatico in attesa o disattivato — è possibile avviarlo manualmente."
+            : "Membrana in esercizio regolare. Il CIP può essere avviato manualmente in qualsiasi momento."}
+      </div>
+    </div>
+  );
+}
+
+export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, stageConfig, qualitySources, osmosiState, onOsmosiCIP, t, onClose }) {
   const [stableAction, setStableAction] = useState(action);
   const pendingPopup = useRef(null);
 
@@ -194,6 +251,8 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
               </span>
             </div>
           </div>
+
+          {osmosiState && <CIPPanel state={osmosiState} onStartCIP={onOsmosiCIP} t={t}/>}
 
           <div>
             <div style={{marginBottom:8}}>

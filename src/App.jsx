@@ -8,6 +8,7 @@ import { limitsFromNorms } from "./constants/limits";
 import { dataSourceTag, QUALITY_SOURCE_DEFAULTS } from "./constants/dataSource";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
+import { requestOsmosiCIP } from "./simulation/commands";
 import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
@@ -367,20 +368,10 @@ export default function App() {
     });
   };
 
-  // Manually request a membrane CIP wash on the reverse-osmosis stage. The
-  // engine reads the request flag from stageStates[osmoIdx] and starts the CIP
-  // cycle on the next tick regardless of the auto-CIP setting.
-  const handleOsmosiCIP = () => {
-    if (osmoIdx < 0) return;
-    setSim(prev => {
-      const states = Array.isArray(prev.stageStates) ? prev.stageStates : [];
-      const src = states[osmoIdx];
-      if (!src || src.fase !== "ESERCIZIO") return prev;   // already washing
-      const stageStates = states.map((st, i) =>
-        i === osmoIdx ? { ...st, cip_request: true } : st);
-      return { ...prev, stageStates };
-    });
-  };
+  // Manually request a membrane CIP wash on the reverse-osmosis stage. Shares the
+  // same pure helper used by the Control Room command path: the engine reads the
+  // request flag next tick and starts the CIP cycle regardless of auto-CIP.
+  const handleOsmosiCIP = () => setSim(prev => requestOsmosiCIP(prev));
 
   const selectedStageData = selectedStage != null ? {
     stage:       stages[selectedStage],

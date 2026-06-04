@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { applyCommand } from "../simulation/commands";
 
 /**
  * Cross-tab bridge for the Control Room.
@@ -8,9 +9,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
  *   - main → CR:  { kind:"state", sim, darkMode }   (on every sim change)
  *   - CR → main:  { kind:"request" }                (on mount, ask for state)
  *   - CR → main:  { kind:"control", patch }         (control-field changes)
+ *   - CR → main:  { kind:"command", cmd }           (one-shot operator commands)
  *
  * Only the whitelisted control fields are accepted from the Control Room — the
- * engine remains the single source of truth for everything it computes.
+ * engine remains the single source of truth for everything it computes. One-shot
+ * commands (e.g. start a CIP wash) go through applyCommand, which only flips
+ * engine-honoured request flags rather than overwriting computed state.
  */
 const CHANNEL = "aquapilot-control";
 const CONTROL_FIELDS = [
@@ -41,6 +45,8 @@ export function useControlBroadcast(sim, setSim, darkMode) {
           for (const f of CONTROL_FIELDS) if (f in msg.patch) next[f] = msg.patch[f];
           return next;
         });
+      } else if (msg.kind === "command" && msg.cmd) {
+        setSim(prev => applyCommand(prev, msg.cmd));
       }
     };
     return () => ch.close();
@@ -93,5 +99,11 @@ export function useControlMirror() {
     chRef.current?.postMessage({ kind: "control", patch });
   }, []);
 
-  return { sim, darkMode, onSim, connected };
+  // Fire a one-shot command (e.g. "cip-osmosi"). The main tab applies it to the
+  // engine state and the change comes back on the next state broadcast.
+  const sendCommand = useCallback((cmd) => {
+    chRef.current?.postMessage({ kind: "command", cmd });
+  }, []);
+
+  return { sim, darkMode, onSim, sendCommand, connected };
 }

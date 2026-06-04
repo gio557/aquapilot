@@ -29,7 +29,7 @@ const subHd = (t) => ({ fontSize:10, color:t.textMuted, fontFamily:"'Share Tech 
   letterSpacing:1.5, textTransform:"uppercase", margin:"6px 0 10px" });
 
 export default function ControlRoomPage() {
-  const { sim, darkMode, onSim, connected } = useControlMirror();
+  const { sim, darkMode, onSim, sendCommand, connected } = useControlMirror();
   const t = darkMode ? DARK : LIGHT;
 
   // Set tab title for the Control Room window only
@@ -74,6 +74,12 @@ export default function ControlRoomPage() {
   });
   const stopEvent = (id)  => onSim(p => ({ ...p, events: (p.events || []).filter(e => e.id !== id) }));
   const activeAlarms = Object.values(sim.alarmState || {}).filter(v => v !== "OK").length;
+
+  // Reverse-osmosis membrane / CIP state, mirrored from the engine.
+  const osmoIdx = (sim.stages ?? []).findIndex(s => s.name === "Osmosi Inversa");
+  const osmo    = osmoIdx >= 0 ? sim.stageStates?.[osmoIdx] : null;
+  const CIP_PHASE = { ESERCIZIO:"In esercizio", FLUSSAGGIO:"Flussaggio",
+    LAV_ALCALINO:"Lavaggio alcalino", LAV_ACIDO:"Lavaggio acido", RISCIACQUO:"Risciacquo" };
 
   // Renders a list of event/fault cards — shared between Scenari and Guasti panels.
   const EventCards = ({ list, activeEvents, triggerEvent, stopEvent, activeBtnLabel }) =>
@@ -226,6 +232,74 @@ export default function ControlRoomPage() {
             )}
           </div>
         </Panel>
+
+        {/* MEMBRANE OSMOSI / CIP */}
+        {osmo && (() => {
+          const inCIP     = osmo.fase !== "ESERCIZIO";
+          const foulPct   = Math.round((osmo.fouling ?? 0) * 100);
+          const foulColor = foulPct >= 70 ? t.red : foulPct >= 45 ? t.orange : t.green;
+          const cipDue    = !inCIP && (osmo.allarmi?.length > 0);
+          const stColor   = inCIP ? t.orange : t.green;
+          return (
+            <Panel title="MEMBRANE OSMOSI" icon="💠" t={t}>
+              <div style={{padding:"8px 12px", background: inCIP ? t.orangeDim : t.surface2,
+                border:`1px solid ${stColor}44`, borderRadius:8,
+                display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, color:stColor}}>
+                  {inCIP ? "🧪 Lavaggio CIP in corso" : "Membrana in esercizio"}
+                </span>
+                <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:stColor}}>
+                  {CIP_PHASE[osmo.fase] ?? osmo.fase}{inCIP ? ` · ${Math.round(osmo.timer_fase ?? 0)}s` : ""}
+                </span>
+              </div>
+
+              <div>
+                <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                  <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>Sporcamento membrana</span>
+                  <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:foulColor, fontWeight:700}}>{foulPct}%</span>
+                </div>
+                <div style={{height:6, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                  <div style={{height:"100%", width:`${foulPct}%`, background:foulColor, borderRadius:3, transition:"width 0.5s ease"}}/>
+                </div>
+              </div>
+
+              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                {[
+                  {l:"ΔP membrana",  v:`${(+osmo.dp).toFixed(2)} bar`},
+                  {l:"Flusso norm.", v:`${(+osmo.flux_norm).toFixed(0)}%`},
+                  {l:"Reiezione",    v:`${(+osmo.salt_rej).toFixed(1)}%`},
+                  {l:"Cicli CIP",    v:`${osmo.cip_count ?? 0}`},
+                ].map(x => (
+                  <div key={x.l} style={{flex:"1 1 120px", padding:"7px 10px", background:t.surface2,
+                    border:`1px solid ${t.border}`, borderRadius:7}}>
+                    <div style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.l}</div>
+                    <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:t.accent, fontWeight:700}}>{x.v}</div>
+                  </div>
+                ))}
+              </div>
+
+              {inCIP ? (
+                <div style={{padding:"9px 12px", background:t.orangeDim, border:`1px solid ${t.orange}44`,
+                  borderRadius:8, fontSize:12, color:t.orange, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>
+                  Lavaggio chimico in corso — produzione permeato sospesa fino al ripristino.
+                </div>
+              ) : (
+                <button onClick={() => sendCommand("cip-osmosi")}
+                  style={{width:"100%", padding:"10px", background:`${t.accent}1a`, border:`1px solid ${t.accent}66`,
+                    color:t.accent, borderRadius:8, fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
+                    fontSize:14, cursor:"pointer", letterSpacing:1}}>
+                  🧪 AVVIA LAVAGGIO CIP
+                </button>
+              )}
+
+              <div style={{fontSize:12, color:cipDue ? t.orange : t.textMuted, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>
+                {cipDue
+                  ? "⚠ Soglie superate: lavaggio CIP raccomandato."
+                  : "Le membrane spiralate non si contro-lavano: la pulizia è esclusivamente chimica (CIP)."}
+              </div>
+            </Panel>
+          );
+        })()}
 
         {/* ACQUA IN INGRESSO */}
         <Panel title="ACQUA IN INGRESSO" icon="🌊" t={t}>

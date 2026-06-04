@@ -125,6 +125,7 @@ export const INIT_SIM = {
   stageConfig:  JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)),
   stages:       STAGE_META,
   stageStates:  null,   // per-stage persistent state (array parallel to stageConfig)
+  pumpHours: {},        // "StageName::pumpId" → ore di funzionamento accumulate
   qHistory: [],
   events: [],   // scenari/eventi attivi (vedi constants/events.js)
   output: { Q: 1245, COD: 22.4, BOD5: 8.1, TSS: 7.3, NH4: 0.80, pH: 7.2, T: 18.4, O2: 4.5 },
@@ -474,6 +475,20 @@ export function simTick(s) {
     .map(ev => (ev.remaining != null ? { ...ev, remaining: ev.remaining - 1 } : ev))
     .filter(ev => ev.remaining == null || ev.remaining > 0);
 
+  // ── Contatori ore di funzionamento pompe ────────────────────────────────────
+  // Ogni pompa installata e abilitata accumula tempo simulato di esercizio. Le
+  // ore alimentano la soglia di manutenzione programmata (vedi ConfigurazionePage).
+  const hoursInc = dt / 3600;   // ore simulate trascorse in questo tick
+  const pumpHours = { ...(s.pumpHours || {}) };
+  for (let si = 0; si < stageCfgs.length; si++) {
+    const stName = stages[si]?.name ?? `ST-${String(si + 1).padStart(2, "0")}`;
+    for (const p of (stageCfgs[si]?.pumps ?? [])) {
+      if (!p.enabled) continue;
+      const key = `${stName}::${p.id}`;
+      pumpHours[key] = (pumpHours[key] || 0) + hoursInc;
+    }
+  }
+
   return {
     ...s, ...acChanges,
     blower: persistedBlower, sludgeRecycle: persistedSludge,
@@ -485,6 +500,7 @@ export function simTick(s) {
     trend, alarms, alarmState: newAS,
     stageActions, sandClassifier, grigliaturaState,
     stageStates: newStageStates,
+    pumpHours,
     events: updatedEvents,
     diagnostics, diagTrack,
   };

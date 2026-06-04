@@ -9,6 +9,8 @@ import { dataSourceTag, QUALITY_SOURCE_DEFAULTS } from "./constants/dataSource";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import { requestOsmosiCIP } from "./simulation/commands";
+import { savePumpHours, pumpKey } from "./simulation/pumpHours";
+import MaintenancePopup from "./components/ui/MaintenancePopup";
 import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
@@ -166,6 +168,7 @@ export default function App() {
   const [clock, setClock] = useState(new Date());
   const [dismissedDiag, setDismissedDiag] = useState([]);
   const [dismissedBlocking, setDismissedBlocking] = useState([]);
+  const [dismissedMaint, setDismissedMaint] = useState([]);
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 1000);
@@ -247,6 +250,44 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blockingIds]);
   const activeBlocking = blockingAlarms.filter(a => !dismissedBlocking.includes(a.id));
+
+  // ── Manutenzione programmata pompe ──────────────────────────────────────────
+  // Una pompa abilitata con soglia > 0 che supera le ore impostate genera una
+  // notifica; alla stessa logica di dismiss/riemersione della diagnostica.
+  const maintAlerts = (() => {
+    const out = [];
+    const hours = sim.pumpHours || {};
+    stages.forEach((st, si) => {
+      (stageConfig[si]?.pumps ?? []).forEach(p => {
+        const thr = Number(p.maintH) || 0;
+        if (thr <= 0 || !p.enabled) return;
+        const h = hours[pumpKey(st.name, p.id)] || 0;
+        if (h >= thr) out.push({
+          id: `maint_${st.name}_${p.id}`, stageName: st.name,
+          stageTag: `ST-${String(si + 1).padStart(2, "0")}`,
+          pumpId: p.id, pump: p.name, hours: h, threshold: thr,
+        });
+      });
+    });
+    return out;
+  })();
+  const maintIds = maintAlerts.map(a => a.id).join(",");
+  useEffect(() => {
+    const ids = maintAlerts.map(a => a.id);
+    setDismissedMaint(prev => prev.filter(id => ids.includes(id)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maintIds]);
+  const activeMaint = maintAlerts.filter(a => !dismissedMaint.includes(a.id));
+
+  // Reset a pump's run-hour counter (after servicing). Persist immediately so a
+  // reload right after won't resurrect the old value from localStorage.
+  const handleResetPumpHours = (stageName, pumpId) => {
+    setSim(prev => {
+      const next = { ...prev.pumpHours, [pumpKey(stageName, pumpId)]: 0 };
+      savePumpHours(next);
+      return { ...prev, pumpHours: next };
+    });
+  };
   // ─────────────────────────────────────────────────────────────────────────────
 
   // Reset to plant view if the selected stage node no longer exists
@@ -528,6 +569,7 @@ export default function App() {
           onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}
           norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}
           qualitySources={qualitySources} onQualitySources={setQualitySources}
+          pumpHours={sim.pumpHours} onResetPumpHours={handleResetPumpHours}
           ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
       ) : page === "energia" ? (
         <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
@@ -967,6 +1009,14 @@ export default function App() {
         alarms={activeBlocking}
         t={t}
         onDismiss={() => setDismissedBlocking(blockingAlarms.map(a => a.id))}
+      />
+
+      {/* ── MANUTENZIONE PROGRAMMATA POMPE: popup soglia ore ── */}
+      <MaintenancePopup
+        alerts={activeMaint}
+        t={t}
+        onService={handleResetPumpHours}
+        onDismiss={() => setDismissedMaint(maintAlerts.map(a => a.id))}
       />
 
       {/* ── DIAGNOSTICA: pop-up causa probabile (auto-correzione inefficace) ── */}

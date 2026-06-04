@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
+import { pumpKey } from "../simulation/pumpHours";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
@@ -48,7 +49,7 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, ac, onAC }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC }) {
   const [activeTab, setActiveTab] = useState("stadi");
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
@@ -445,6 +446,61 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           <NumField label="Velocità" value={pump.rpm} unit="RPM"
                             onChange={v => updatePump(si, pi, "rpm", v)} t={t}/>
                         </div>
+
+                        {/* ── MANUTENZIONE PROGRAMMATA (contatore ore + soglia) ── */}
+                        {(() => {
+                          const hrs = pumpHours?.[pumpKey(stage.name, pump.id)] || 0;
+                          const thr = Number(pump.maintH) || 0;
+                          const due = thr > 0 && hrs >= thr;
+                          const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
+                          const barColor = due ? t.red : pct >= 80 ? t.orange : t.green;
+                          return (
+                            <div style={{marginTop:14, paddingTop:14, borderTop:`1px solid ${t.border}`}}>
+                              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
+                                <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
+                                  MANUTENZIONE PROGRAMMATA
+                                </span>
+                                {thr > 0 && (
+                                  <span style={{fontSize:11, padding:"2px 9px", borderRadius:4, fontFamily:"'Share Tech Mono',monospace",
+                                    background: due ? `${t.red}1a` : `${t.green}14`, color: due ? t.red : t.green,
+                                    border:`1px solid ${(due ? t.red : t.green)}55`}}>
+                                    {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{display:"flex", gap:18, flexWrap:"wrap", alignItems:"flex-end"}}>
+                                <div style={{display:"flex", flexDirection:"column", gap:3}}>
+                                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Ore di funzionamento</div>
+                                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color: due ? t.red : t.text, fontWeight:700}}>
+                                    {hrs.toFixed(1)} <span style={{fontSize:12, color:t.textMuted}}>h</span>
+                                  </div>
+                                </div>
+                                <NumField label="Soglia manutenzione" value={thr} unit="h"
+                                  onChange={v => updatePump(si, pi, "maintH", Math.max(0, Math.round(v)))} t={t}/>
+                                <button onClick={() => onResetPumpHours?.(stage.name, pump.id)}
+                                  style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
+                                    fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
+                                    border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
+                                  ↺ Manutenzione eseguita
+                                </button>
+                              </div>
+                              {thr > 0 ? (
+                                <div style={{marginTop:10}}>
+                                  <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                                    <div style={{height:"100%", width:`${pct}%`, background:barColor, borderRadius:3, transition:"width 0.5s ease"}}/>
+                                  </div>
+                                  <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>
+                                    {hrs.toFixed(1)} / {thr} h ({Math.round(pct)}%) — {due ? "soglia superata: pianificare l'intervento." : `mancano ${Math.max(0, thr - hrs).toFixed(1)} h alla manutenzione.`}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:8}}>
+                                  Imposta una soglia di ore &gt; 0 per attivare la notifica di manutenzione programmata.
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))
                   )}

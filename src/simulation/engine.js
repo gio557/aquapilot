@@ -408,6 +408,7 @@ export function simTick(s) {
       TSS:  round1(w.TSS),
       NH4:  round2(w.NH4),
       pH:   round2(w.pH),
+      T:    round1(w.T ?? 20),
       ...td,   // operational metrics override/extend the baseline
     };
   });

@@ -123,7 +123,7 @@ const STAGE_SENSOR_PRESETS = {
   },
   "Sedimentazione": {
     referenceSensor: "tss",
-    sensors: { tss:{enabled:true}, sbl:{enabled:true}, ph:{enabled:false}, flow:{enabled:false}, cod:{enabled:false} },
+    sensors: { tss:{enabled:true}, sbl:{enabled:true}, ph:{enabled:false}, flow:{enabled:false}, cod:{enabled:false}, temp:{enabled:false} },
   },
   "Flottazione DAF": {
     referenceSensor: "tss",

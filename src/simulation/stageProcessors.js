@@ -31,7 +31,7 @@ function passiveStep(water, rem, kwBase, kwJitter, effOverride) {
 
 // ─── GRIGLIATURA ──────────────────────────────────────────────────────────────
 function processGrigliatura(water, cfg, prevState, g) {
-  const { dt, noise, round1, round2 } = g;
+  const { dt, round1 } = g;
   const gCfg = {
     DH_AVVIO_PULIZIA:        cfg?.grigliatura?.DH_AVVIO_PULIZIA        ?? PC.GR.DH_AVVIO_PULIZIA,
     DH_STOP_PULIZIA:         cfg?.grigliatura?.DH_STOP_PULIZIA         ?? PC.GR.DH_STOP_PULIZIA,
@@ -476,7 +476,7 @@ function processNitrificazione(water, cfg, prevState, g) {
 
 // ─── DENITRIFICAZIONE ─────────────────────────────────────────────────────────
 function processDenitrificazione(water, cfg, prevState, g) {
-  const { round1, round2, tgt } = g;
+  const { round1, round2 } = g;
   const no3In  = water.NO3 ?? 0;
   // Removal efficiency is set by operation (carbon availability via MLE recycle /
   // dosed carbon) and curtailed by temperature (θ≈1.07): a cold anoxic basin
@@ -631,37 +631,151 @@ function processFiltrazione(water, cfg, prevState, g) {
 
 // ─── OSMOSI INVERSA ───────────────────────────────────────────────────────────
 function processOsmosIInversa(water, cfg, prevState, g) {
-  const { round1, round2, tgt } = g;
-  const { waterOut, eff, kw } = passiveStep(water, PC.RO, 3.5, 0.5);
-  const stageOutput = {
-    value: round1(waterOut.COD), target: 10, unit: "mg/L", label: "COD osmosi inversa",
+  const { dt, round1, round2, iQ } = g;
+  const R = PC.RO;
+  const oCfg = {
+    FEED_PRESSURE: cfg?.osmosi?.FEED_PRESSURE ?? R.FEED_PRESSURE,
+    DP_CLEAN:      cfg?.osmosi?.DP_CLEAN      ?? R.DP_CLEAN,
+    DP_TRIGGER:    cfg?.osmosi?.DP_TRIGGER    ?? R.DP_TRIGGER,
+    FLUX_TRIGGER:  cfg?.osmosi?.FLUX_TRIGGER  ?? R.FLUX_TRIGGER,
+    RECOVERY:      cfg?.osmosi?.RECOVERY      ?? R.RECOVERY,
+    CIP_AUTO:      cfg?.osmosi?.CIP_AUTO      ?? R.CIP_AUTO,
   };
+
+  const o0 = prevState ?? initStageState("Osmosi Inversa");
+  const o  = { ...o0, allarmi: [...(o0.allarmi ?? [])] };
+
+  const { waterOut, eff, kw: kwBase } = passiveStep(water, R, 3.5, 0.5);
+
+  // ── Sporcamento membrana ────────────────────────────────────────
+  // Le membrane spiralate dell'osmosi NON si possono contro-lavare: lo
+  // sporcamento (fouling/scaling) cresce con il carico di solidi/organico in
+  // alimentazione e cala solo con un lavaggio chimico CIP.
+  const load = Math.max(0.3, water.TSS / 5 + water.COD / 200);
+  if (o.fase === "ESERCIZIO") {
+    o.fouling = clamp(o.fouling + R.FOULING_RATE * load * dt, 0.04, 1);
+    o.hours_run += dt;
+  }
+
+  // Indicatori derivati dallo sporcamento — usati per la soglia di avvio CIP.
+  const dpNow   = oCfg.DP_CLEAN * (1 + o.fouling * R.DP_FOUL_K);
+  const fluxNow = 100 - o.fouling * R.FLUX_DROP_K;
+  const dpOver  = dpNow   >= oCfg.DP_CLEAN * (1 + oCfg.DP_TRIGGER);
+  const fluxLow = fluxNow <= oCfg.FLUX_TRIGGER;
+
+  // ── Macchina a stati del lavaggio CIP ───────────────────────────
+  o.timer_fase += dt;
+  switch (o.fase) {
+    case "ESERCIZIO":
+      if ((dpOver || fluxLow || o.cip_request) && oCfg.CIP_AUTO) {
+        o.fase = "FLUSSAGGIO"; o.timer_fase = 0; o.cip_request = false;
+        if (!o.allarmi.includes("CIP-01")) o.allarmi.push("CIP-01");
+      }
+      break;
+    case "FLUSSAGGIO":   // risciacquo a bassa pressione per spiazzare il concentrato
+      if (o.timer_fase >= R.CIP_FLUSH_T) { o.fase = "LAV_ALCALINO"; o.timer_fase = 0; }
+      break;
+    case "LAV_ALCALINO": // pH alto: rimuove sostanza organica e biofilm
+      o.fouling = Math.max(0.04, o.fouling - (0.5 / R.CIP_ALK_T) * dt);
+      if (o.timer_fase >= R.CIP_ALK_T) { o.fase = "LAV_ACIDO"; o.timer_fase = 0; }
+      break;
+    case "LAV_ACIDO":    // pH basso: scioglie incrostazioni e metalli
+      o.fouling = Math.max(0.04, o.fouling - (0.5 / R.CIP_ACID_T) * dt);
+      if (o.timer_fase >= R.CIP_ACID_T) { o.fase = "RISCIACQUO"; o.timer_fase = 0; }
+      break;
+    case "RISCIACQUO":   // lavaggio finale e rientro in esercizio
+      if (o.timer_fase >= R.CIP_RINSE_T) {
+        o.fase = "ESERCIZIO"; o.timer_fase = 0;
+        o.fouling = 0.05; o.hours_run = 0; o.cip_count += 1;
+        o.allarmi = o.allarmi.filter(a => a !== "CIP-01");
+      }
+      break;
+    default:
+      o.fase = "ESERCIZIO"; break;
+  }
+  const inCIP = o.fase !== "ESERCIZIO";
+
+  // Indicatori finali (dopo l'eventuale pulizia avvenuta in questo tick).
+  o.dp        = +(oCfg.DP_CLEAN * (1 + o.fouling * R.DP_FOUL_K)).toFixed(3);
+  o.flux_norm = +clamp(100 - o.fouling * R.FLUX_DROP_K, 60, 100).toFixed(1);
+  o.salt_rej  = +clamp(R.REJ_CLEAN - o.fouling * R.REJ_DROP_K, 95, 99.9).toFixed(2);
+  o.perm_cond = Math.round(R.COND_CLEAN * (1 + o.fouling * R.COND_RISE_K));
+
+  // Bilancio di portata permeato / concentrato.
+  const feedQ = round1(water.Q ?? iQ);
+  const permQ = round1(feedQ * oCfg.RECOVERY / 100);
+  const concQ = round1(feedQ - permQ);
+  const dpTrip = +(oCfg.DP_CLEAN * (1 + oCfg.DP_TRIGGER)).toFixed(2);
+
+  // L'energia cresce con lo sporcamento (serve più pressione). Durante il CIP
+  // l'alta pressione è esclusa: lavora la pompa di ricircolo del lavaggio.
+  const kw = inCIP
+    ? +(2.0 + Math.random() * 0.2).toFixed(2)
+    : +(kwBase + (oCfg.FEED_PRESSURE / 15) * 0.5 + o.fouling * 0.6).toFixed(2);
+
+  // Gauge di stadio: la reiezione sali è l'indicatore sintetico di salute della
+  // membrana e degrada man mano che si avvicina la necessità di un CIP.
+  const stageOutput = {
+    value: o.salt_rej, target: 97, unit: "%",
+    label: "Reiezione sali", higherIsBetter: true,
+  };
+
+  const faseLabel = {
+    ESERCIZIO:    "In esercizio",
+    FLUSSAGGIO:   "Flussaggio",
+    LAV_ALCALINO: "Lavaggio alcalino",
+    LAV_ACIDO:    "Lavaggio acido",
+    RISCIACQUO:   "Risciacquo",
+  }[o.fase] ?? o.fase;
+
   const stageDetail = {
     icon: "💠",
-    function: "Separazione avanzata per osmosi inversa — rimozione molecolare di inquinanti disciolti",
+    function: "Separazione avanzata per osmosi inversa — rimozione molecolare di sali e inquinanti disciolti; manutenzione membrane con lavaggio chimico CIP (Cleaning-In-Place)",
     params: [
-      { label:"COD ingresso", value:round1(water.COD),    unit:"mg/L" },
-      { label:"COD uscita",   value:round1(waterOut.COD), unit:"mg/L", note:`-${Math.round(PC.RO.COD_REM*100)}%` },
-      { label:"TSS uscita",   value:round1(waterOut.TSS), unit:"mg/L" },
-      { label:"NH4 uscita",   value:round2(waterOut.NH4), unit:"mg/L" },
-      { label:"NO3 uscita",   value:round2(waterOut.NO3??0), unit:"mg/L" },
-      { label:"pH",           value:round2(water.pH),     unit:"" },
+      { label:"COD ingresso",      value:round1(water.COD),        unit:"mg/L" },
+      { label:"COD uscita",        value:round1(waterOut.COD),     unit:"mg/L", note:`-${Math.round(R.COD_REM*100)}%` },
+      { label:"TSS uscita",        value:round1(waterOut.TSS),     unit:"mg/L" },
+      { label:"NH4 uscita",        value:round2(waterOut.NH4),     unit:"mg/L" },
+      { label:"NO3 uscita",        value:round2(waterOut.NO3??0),  unit:"mg/L" },
+      { label:"pH",                value:round2(water.pH),         unit:"" },
+      { label:"Press. alimentaz.", value:round1(oCfg.FEED_PRESSURE), unit:"bar" },
+      { label:"ΔP membrana",       value:o.dp,                     unit:"bar",  note:`pulita ${oCfg.DP_CLEAN} · CIP>${dpTrip}` },
+      { label:"Flusso normaliz.",  value:o.flux_norm,              unit:"%",    note:`CIP se < ${oCfg.FLUX_TRIGGER}%` },
+      { label:"Reiezione sali",    value:o.salt_rej,               unit:"%",    note:"integrità membrana" },
+      { label:"Cond. permeato",    value:o.perm_cond,              unit:"µS/cm" },
+      { label:"Recupero",          value:round1(oCfg.RECOVERY),    unit:"%",    note:"permeato/alimentazione" },
+      { label:"Portata permeato",  value:permQ,                    unit:"m³/h" },
+      { label:"Portata concentr.", value:concQ,                    unit:"m³/h", note:"da gestire separatamente" },
+      { label:"Sporcamento",       value:Math.round(o.fouling*100),unit:"%",    note:"0=pulita · 100=da lavare" },
+      { label:"Cicli CIP",         value:o.cip_count,              unit:"" },
     ],
-    controls: [],
-    note: `Osmosi inversa attiva — trattamento terziario avanzato. Recupero permeato ≈ 75%. Concentrato da gestire separatamente.`,
+    controls: [
+      { label:"Sporcamento membrana", value:Math.round(o.fouling*100),                  unit:"%" },
+      { label:"ΔP / soglia CIP",      value:Math.round(o.dp / dpTrip * 100),            unit:"%" },
+    ],
+    note: inCIP
+      ? `🧪 Lavaggio CIP in corso — fase: ${faseLabel} (${o.timer_fase.toFixed(0)} s) — sporcamento ${Math.round(o.fouling*100)}%.`
+      : o.allarmi.length > 0
+        ? `⚠ ${o.allarmi.join(" · ")} — CIP richiesto: ΔP ${o.dp} bar / flusso ${o.flux_norm}%.`
+        : `Osmosi in esercizio — recupero ≈ ${oCfg.RECOVERY}%, reiezione ${o.salt_rej}%, sporcamento ${Math.round(o.fouling*100)}%. Prossimo CIP a ΔP>${dpTrip} bar o flusso<${oCfg.FLUX_TRIGGER}%.`,
     trendData: {
-      cod_in: +round1(water.COD),
-      COD:    +round1(waterOut.COD),
-      NH4:    +round2(waterOut.NH4),
-      TSS:    +round1(waterOut.TSS),
+      cod_in:    +round1(water.COD),
+      COD:       +round1(waterOut.COD),
+      NH4:       +round2(waterOut.NH4),
+      TSS:       +round1(waterOut.TSS),
+      dp_ro:     +o.dp,
+      flux:      +o.flux_norm,
+      perm_cond: +o.perm_cond,
+      perm_q:    +permQ,
+      cip:       inCIP ? 1 : 0,
     },
   };
-  return { waterOut, newState: null, stageOutput, stageDetail, eff, kw };
+  return { waterOut, newState: o, stageOutput, stageDetail, eff, kw };
 }
 
 // ─── DISINFEZIONE UV ──────────────────────────────────────────────────────────
 function processDisinfezioneUV(water, cfg, prevState, g) {
-  const { round1, round2, tgt } = g;
+  const { round1, round2 } = g;
   // UV does not change bulk water chemistry (COD/TSS/etc.) — only pathogens
   const waterOut = { ...water };
   const kw  = +(0.40 + Math.random()*0.05).toFixed(2);
@@ -801,5 +915,11 @@ export function initStageState(stageName) {
     sedimentLevel: 0.25, trafficLight: "green", mode: "timed",
   };
   if (stageName === "Equalizzazione") return { Qbuf: 1000 };
+  if (stageName === "Osmosi Inversa") return {
+    fase: "ESERCIZIO", fouling: 0.05,
+    dp: PC.RO.DP_CLEAN, flux_norm: 100, salt_rej: PC.RO.REJ_CLEAN,
+    perm_cond: PC.RO.COND_CLEAN, hours_run: 0, timer_fase: 0,
+    cip_count: 0, cip_request: false, allarmi: [],
+  };
   return null;
 }

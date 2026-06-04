@@ -10,6 +10,7 @@ export const SENSOR_TYPES = {
   nh4:    { label: "Analizzatore NH₄ online",     unit: "mg/L",  icon: "🔬" },
   redox:  { label: "Sonda Redox / ORP",           unit: "mV",    icon: "⚡" },
   sbl:    { label: "Livello interfaccia fanghi",  unit: "m",     icon: "📊" },
+  cond:   { label: "Conducimetro permeato",       unit: "µS/cm", icon: "🧪" },
 };
 
 // Maps stage NAME → param label → required sensorId.
@@ -66,6 +67,8 @@ export const PARAM_SENSOR_MAP = {
     "COD ingresso": "cod", "COD uscita": "cod",
     "TSS uscita": "tss", "NH4 uscita": "nh4", "NO3 uscita": "nh4",
     "pH": "ph",
+    "ΔP membrana": "diff_p", "Cond. permeato": "cond",
+    "Portata permeato": "flow", "Portata concentr.": "flow",
   },
   "Disinfezione UV": {
     "COD uscita": "cod", "TSS uscita": "tss",
@@ -134,8 +137,8 @@ const STAGE_SENSOR_PRESETS = {
     sensors: { flow:{enabled:true}, tss:{enabled:true}, diff_p:{enabled:true}, cod:{enabled:true}, ph:{enabled:false}, temp:{enabled:false}, level:{enabled:false} },
   },
   "Osmosi Inversa": {
-    referenceSensor: "cod",
-    sensors: { flow:{enabled:true}, diff_p:{enabled:true}, cod:{enabled:true}, nh4:{enabled:true}, tss:{enabled:true}, ph:{enabled:false}, temp:{enabled:false} },
+    referenceSensor: null,
+    sensors: { flow:{enabled:true}, diff_p:{enabled:true}, cond:{enabled:true}, cod:{enabled:true}, nh4:{enabled:true}, tss:{enabled:true}, ph:{enabled:false}, temp:{enabled:false} },
   },
   "Disinfezione UV": {
     referenceSensor: null,

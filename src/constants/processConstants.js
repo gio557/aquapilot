@@ -157,6 +157,28 @@ export const PC = {
     TSS_REM:  0.99,
     NH4_REM:  0.90,
     NO3_REM:  0.90,
+    // ── Membrana & lavaggio chimico CIP (Cleaning-In-Place) ─────────────────
+    // Le membrane spiralate dell'osmosi NON si contro-lavano (no backwash): lo
+    // sporcamento si rimuove solo con un ciclo CIP (flussaggio + lavaggio
+    // alcalino + acido + risciacquo). Le soglie d'avvio CIP seguono le linee
+    // guida dei produttori di membrane: +15% ΔP o −15% di flusso normalizzato.
+    FEED_PRESSURE: 15.0,   // bar — pressione di alimentazione nominale
+    DP_CLEAN:      0.60,   // bar — ΔP membrana pulita (feed→concentrato)
+    DP_FOUL_K:     0.30,   // ΔP = DP_CLEAN*(1 + sporcamento*K)
+    DP_TRIGGER:    0.18,   // frazione di salita ΔP che avvia il CIP (+18%)
+    FLUX_DROP_K:   22,     // flusso normalizzato % = 100 − sporcamento*K
+    FLUX_TRIGGER:  85,     // % — soglia minima flusso normalizzato che avvia il CIP
+    REJ_CLEAN:     99.2,   // % — reiezione sali a membrana pulita
+    REJ_DROP_K:    1.6,    // reiezione % = REJ_CLEAN − sporcamento*K
+    COND_CLEAN:    22,     // µS/cm — conducibilità permeato pulita
+    COND_RISE_K:   1.2,    // cond = COND_CLEAN*(1 + sporcamento*K)
+    RECOVERY:      75,     // % — recupero permeato (permeato/alimentazione)
+    FOULING_RATE:  0.0035, // incremento sporcamento per s, scalato dal carico
+    CIP_FLUSH_T:   30,     // s — flussaggio iniziale a bassa pressione
+    CIP_ALK_T:     90,     // s — lavaggio alcalino (organico/biofilm)
+    CIP_ACID_T:    90,     // s — lavaggio acido (incrostazioni/metalli)
+    CIP_RINSE_T:   45,     // s — risciacquo finale
+    CIP_AUTO:      true,
   },
 
   // ── POST-TRATTAMENTO ──────────────────────────────────────────────────────

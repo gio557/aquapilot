@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
-import { pumpKey } from "../simulation/pumpHours";
+import { pumpKey, pumpMaintH, DEFAULT_MAINT_H } from "../simulation/pumpHours";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
@@ -91,7 +91,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
         ...sc,
         pumps: [...sc.pumps, {
           id: `p${Date.now()}`, name: "Nuova pompa", enabled: true,
-          power_kw: 5.5, flow_m3h: 100, head_m: 10, rpm: 1450, vfd: false
+          power_kw: 5.5, flow_m3h: 100, head_m: 10, rpm: 1450, vfd: false, maintH: DEFAULT_MAINT_H
         }]
       }
     ));
@@ -450,7 +450,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         {/* ── MANUTENZIONE PROGRAMMATA (contatore ore + soglia) ── */}
                         {(() => {
                           const hrs = pumpHours?.[pumpKey(stage.name, pump.id)] || 0;
-                          const thr = Number(pump.maintH) || 0;
+                          const thr = pumpMaintH(pump);
                           const due = thr > 0 && hrs >= thr;
                           const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
                           const barColor = due ? t.red : pct >= 80 ? t.orange : t.green;
@@ -479,9 +479,9 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                                   onChange={v => updatePump(si, pi, "maintH", Math.max(0, Math.round(v)))} t={t}/>
                                 <button onClick={() => onResetPumpHours?.(stage.name, pump.id)}
                                   style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
-                                    fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
-                                    border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
-                                  ↺ Manutenzione eseguita
+                                    fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                                    border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green}}>
+                                  ✓ Manutenzione effettuata
                                 </button>
                               </div>
                               {thr > 0 ? (

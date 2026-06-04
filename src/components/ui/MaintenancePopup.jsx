@@ -49,7 +49,7 @@ export default function MaintenancePopup({ alerts, t, onService, onDismiss }) {
                 style={{width:"100%", padding:"8px", background:`${t.green}1a`, border:`1px solid ${t.green}66`,
                   color:t.green, borderRadius:7, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                   cursor:"pointer", letterSpacing:0.5}}>
-                ✓ Manutenzione eseguita — azzera contatore
+                ✓ Manutenzione effettuata — azzera contatore
               </button>
             </div>
           ))}

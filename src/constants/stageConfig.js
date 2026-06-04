@@ -1,3 +1,5 @@
+import { DEFAULT_MAINT_H } from "../simulation/pumpHours";
+
 export const SENSOR_TYPES = {
   flow:   { label: "Misuratore portata",          unit: "m³/h",  icon: "〰" },
   level:  { label: "Sensore livello",             unit: "m",     icon: "📶" },
@@ -89,7 +91,7 @@ export const PARAM_SENSOR_MAP = {
 };
 
 const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>
-  ({ id, name, enabled: true, power_kw, flow_m3h, head_m, rpm, vfd });
+  ({ id, name, enabled: true, power_kw, flow_m3h, head_m, rpm, vfd, maintH: DEFAULT_MAINT_H });
 
 // Per-stage-type sensor/referenceSensor defaults. Single source of truth for
 // the sensor layout of a stage type — consumed both by makeDefaultStageConfig

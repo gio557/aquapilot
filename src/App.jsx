@@ -9,7 +9,7 @@ import { dataSourceTag, QUALITY_SOURCE_DEFAULTS } from "./constants/dataSource";
 import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import { requestOsmosiCIP } from "./simulation/commands";
-import { savePumpHours, pumpKey } from "./simulation/pumpHours";
+import { savePumpHours, pumpKey, pumpMaintH } from "./simulation/pumpHours";
 import MaintenancePopup from "./components/ui/MaintenancePopup";
 import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
@@ -259,7 +259,7 @@ export default function App() {
     const hours = sim.pumpHours || {};
     stages.forEach((st, si) => {
       (stageConfig[si]?.pumps ?? []).forEach(p => {
-        const thr = Number(p.maintH) || 0;
+        const thr = pumpMaintH(p);
         if (thr <= 0 || !p.enabled) return;
         const h = hours[pumpKey(st.name, p.id)] || 0;
         if (h >= thr) out.push({

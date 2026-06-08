@@ -87,25 +87,44 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     ));
   };
 
+  // Se nello stadio esiste già una pompa con lo stesso nome base, aggiunge un
+  // suffisso numerico progressivo ("Pompa X", "Pompa X 2", "Pompa X 3"…) così
+  // ogni unità resta identificabile e configurabile singolarmente.
+  const uniquePumpName = (pumps, baseName) => {
+    const esc = baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`^${esc}(?: (\\d+))?$`);
+    let max = 0, found = false;
+    for (const p of pumps) {
+      const m = (p.name || "").match(re);
+      if (!m) continue;
+      found = true;
+      max = Math.max(max, m[1] ? Number(m[1]) : 1);
+    }
+    return found ? `${baseName} ${max + 1}` : baseName;
+  };
+
   // Add a pump chosen from the catalog dropdown. `value` is either a process
   // pump key ("soffianti", ...) or a dosing-pump token "dose:<productId>".
   const addPumpFromCatalog = (si, value) => {
     if (!value) return;
-    let p;
+    let baseName, spec;
     if (value.startsWith("dose:")) {
       const pid = value.slice(5);
       const prod = consumabili.find(c => c.id === pid);
-      p = makePump({ name: `Pompa dosaggio ${prod ? prod.nome : ""}`.trim(),
-        ...DOSING_PUMP_SPEC, isDosatrice: true, productId: pid });
+      baseName = `Pompa dosaggio ${prod ? prod.nome : ""}`.trim();
+      spec = { ...DOSING_PUMP_SPEC, isDosatrice: true, productId: pid };
     } else {
       const tpl = PUMP_CATALOG.find(c => c.key === value);
       if (!tpl) return;
-      p = makePump({ name: tpl.name, power_kw: tpl.power_kw, flow_m3h: tpl.flow_m3h,
-        head_m: tpl.head_m, rpm: tpl.rpm, vfd: !!tpl.vfd });
+      baseName = tpl.name;
+      spec = { power_kw: tpl.power_kw, flow_m3h: tpl.flow_m3h,
+        head_m: tpl.head_m, rpm: tpl.rpm, vfd: !!tpl.vfd };
     }
-    onChange(prev => prev.map((sc, i) =>
-      i !== si ? sc : { ...sc, pumps: [...sc.pumps, p] }
-    ));
+    onChange(prev => prev.map((sc, i) => {
+      if (i !== si) return sc;
+      const p = makePump({ name: uniquePumpName(sc.pumps, baseName), ...spec });
+      return { ...sc, pumps: [...sc.pumps, p] };
+    }));
   };
 
   const removePump = (si, pi) => {

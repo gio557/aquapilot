@@ -101,7 +101,6 @@ export const PUMP_CATALOG = [
   { key:"soffianti",     name:"Soffianti aria",                power_kw:15.0, flow_m3h:0,   head_m:0,  rpm:2900, vfd:true },
   { key:"ric_fanghi",    name:"Pompa ricircolo fanghi",        power_kw:5.5,  flow_m3h:200, head_m:6,  rpm:1450, vfd:true },
   { key:"ric_miscela",   name:"Pompa ricircolo miscela (MLR)", power_kw:5.5,  flow_m3h:300, head_m:5,  rpm:1450, vfd:true },
-  { key:"fanghi_ric",    name:"Pompa fanghi di ricircolo",     power_kw:4.0,  flow_m3h:120, head_m:7,  rpm:1450 },
   { key:"classificatore",name:"Pompa classificatore sabbie",   power_kw:2.2,  flow_m3h:45,  head_m:5,  rpm:1450 },
   { key:"rilancio",      name:"Pompa di rilancio",             power_kw:5.5,  flow_m3h:100, head_m:10, rpm:1450 },
 ];
@@ -242,7 +241,7 @@ export const DEFAULT_STAGE_CONFIG = [
     stageIndex: 4,
     ...fromPreset("Sedimentazione"),
     pumps: [
-      pump("p1", "Pompa fanghi di ricircolo", 4.0, 120, 7, 1450),
+      pump("p1", "Pompa ricircolo fanghi", 4.0, 120, 7, 1450),
     ],
   },
   {

@@ -10,13 +10,8 @@ export const DEFAULT_CONSUMABILI = [
     stadiTipici: ["Sedimentazione", "Flottazione DAF", "Filtrazione"],
   },
   {
-    id: "polielettrolita", nome: "Polielettrolita",
-    note: "Flocculante (poliacrilammide)",
-    stadiTipici: ["Sedimentazione", "Flottazione DAF"],
-  },
-  {
     id: "naoh", nome: "NaOH (Soda caustica)",
-    note: "Correzione pH / alcalinità",
+    note: "Correzione pH / alcalinità (soluzione 30-50%)",
     stadiTipici: ["Equalizzazione", "Biologico", "Nitrificazione", "Post-trattamento"],
   },
   {
@@ -26,22 +21,12 @@ export const DEFAULT_CONSUMABILI = [
   },
   {
     id: "carbonio", nome: "Fonte di carbonio",
-    note: "Metanolo / Etanolo / Acetato (donatore di elettroni)",
+    note: "Metanolo / Etanolo (donatore di elettroni)",
     stadiTipici: ["Denitrificazione", "Biologico"],
   },
   {
-    id: "bicarbonato", nome: "Bicarbonato di sodio",
-    note: "Supplemento di alcalinità",
-    stadiTipici: ["Nitrificazione"],
-  },
-  {
-    id: "nutrienti", nome: "Nutrienti N/P",
-    note: "Urea / Acido fosforico (reflui industriali)",
-    stadiTipici: ["Biologico"],
-  },
-  {
     id: "antischiuma", nome: "Antischiuma",
-    note: "Agente antifoam",
+    note: "Agente antifoam (emulsione)",
     stadiTipici: ["Biologico", "Equalizzazione", "Degrassatore"],
   },
   {
@@ -50,19 +35,9 @@ export const DEFAULT_CONSUMABILI = [
     stadiTipici: ["Osmosi Inversa"],
   },
   {
-    id: "metabisolfito", nome: "Metabisolfito di sodio",
-    note: "Declorazione / protezione membrane",
-    stadiTipici: ["Osmosi Inversa", "Disinfezione Cloro"],
-  },
-  {
     id: "ipoclorito", nome: "Ipoclorito di sodio",
-    note: "Disinfettante a base di cloro",
+    note: "Disinfettante a base di cloro (soluzione)",
     stadiTipici: ["Disinfezione Cloro"],
-  },
-  {
-    id: "calce", nome: "Calce (idrossido di calcio)",
-    note: "Rimineralizzazione / correzione alcalinità",
-    stadiTipici: ["Post-trattamento"],
   },
 ].map(p => ({
   fornitore: "", emailFornitore: "", emailResponsabile: "",

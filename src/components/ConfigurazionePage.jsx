@@ -681,14 +681,16 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                                 color: pump.vfd ? t.accent : t.textMuted}}>
                               INVERTER {pump.vfd ? "ON" : "OFF"}
                             </div>
-                            <div onClick={() => updatePump(si, pi, "isDosatrice", !pump.isDosatrice)}
-                              style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", fontSize:12,
-                                fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
-                                background: pump.isDosatrice ? `${t.orange}22` : t.surface3,
-                                border:`1px solid ${pump.isDosatrice ? t.orange : t.border}`,
-                                color: pump.isDosatrice ? t.orange : t.textMuted}}>
-                              DOSATRICE {pump.isDosatrice ? "ON" : "OFF"}
-                            </div>
+                            {!pump.noDosaggio && (
+                              <div onClick={() => updatePump(si, pi, "isDosatrice", !pump.isDosatrice)}
+                                style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", fontSize:12,
+                                  fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
+                                  background: pump.isDosatrice ? `${t.orange}22` : t.surface3,
+                                  border:`1px solid ${pump.isDosatrice ? t.orange : t.border}`,
+                                  color: pump.isDosatrice ? t.orange : t.textMuted}}>
+                                DOSATRICE {pump.isDosatrice ? "ON" : "OFF"}
+                              </div>
+                            )}
                             <button onClick={() => removePump(si, pi)}
                               style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
                                 fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,

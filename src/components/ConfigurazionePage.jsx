@@ -108,7 +108,10 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   const addPumpFromCatalog = (si, value) => {
     if (!value) return;
     let baseName, spec;
-    if (value.startsWith("dose:")) {
+    if (value === "custom") {
+      baseName = "Nuova pompa";
+      spec = { power_kw: 0, flow_m3h: 0, head_m: 0, rpm: 0 };
+    } else if (value.startsWith("dose:")) {
       const pid = value.slice(5);
       const prod = consumabili.find(c => c.id === pid);
       baseName = `Pompa dosaggio ${prod ? prod.nome : ""}`.trim();
@@ -670,6 +673,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                         border:`1px solid ${color}`, background:`${color}18`, color, outline:"none"}}>
                       <option value="">+ Aggiungi pompa…</option>
+                      <option value="custom">✏ Pompa personalizzata…</option>
                       <optgroup label="Pompe di processo">
                         {PUMP_CATALOG.map(c => (
                           <option key={c.key} value={c.key}>{c.name}</option>
@@ -749,60 +753,35 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                             onChange={v => updatePump(si, pi, "rpm", v)} t={t}/>
                         </div>
 
-                        {/* ── PRODOTTO DOSATO (solo per pompe dosatrici) ── */}
-                        {pump.isDosatrice && (
-                          <div style={{marginTop:12, paddingTop:12, borderTop:`1px solid ${t.border}`}}>
-                            <div style={{fontSize:12, color:t.orange, fontFamily:"'Share Tech Mono',monospace",
-                              letterSpacing:1, marginBottom:8}}>PRODOTTO DOSATO</div>
-                            <select
-                              value={pump.productId || ""}
-                              onChange={e => updatePump(si, pi, "productId", e.target.value || null)}
-                              style={{width:"100%", background:t.surface3, border:`1px solid ${t.orange}66`,
-                                borderRadius:6, color:t.text, padding:"7px 10px",
-                                fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14,
-                                cursor:"pointer", outline:"none"}}>
-                              <option value="">— nessun prodotto selezionato —</option>
-                              {consumabili.map(c => (
-                                <option key={c.id} value={c.id}>{c.nome}</option>
-                              ))}
-                            </select>
-                            {!pump.productId && (
-                              <div style={{fontSize:11.5, color:t.orange, fontFamily:"'Rajdhani',sans-serif",
-                                marginTop:5, opacity:0.8}}>
-                                Seleziona il prodotto dalla cisterna collegata a questa pompa.
-                              </div>
-                            )}
-                            {pump.productId && (() => {
-                              const prod = consumabili.find(c => c.id === pump.productId);
-                              const sens = consumabiliSensors[pump.productId] || {};
-                              return prod ? (
-                                <div style={{marginTop:8, display:"flex", gap:8, flexWrap:"wrap"}}>
-                                  {sens.riordino && (
-                                    <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                                      background:`${t.orange}1a`, border:`1px solid ${t.orange}55`,
-                                      color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>
-                                      ↓ RIORDINO
-                                    </span>
-                                  )}
-                                  {sens.vuoto && (
-                                    <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                                      background:`${t.red}1a`, border:`1px solid ${t.red}55`,
-                                      color:t.red, fontFamily:"'Share Tech Mono',monospace"}}>
-                                      ⚠ VUOTO
-                                    </span>
-                                  )}
-                                  {!sens.riordino && !sens.vuoto && (
-                                    <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                                      background:`${t.green}14`, border:`1px solid ${t.green}44`,
-                                      color:t.green, fontFamily:"'Share Tech Mono',monospace"}}>
-                                      ✓ LIVELLO OK
-                                    </span>
-                                  )}
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                        )}
+                        {/* Badge livello cisterna (solo per pompe dosatrici con prodotto collegato) */}
+                        {pump.isDosatrice && pump.productId && (() => {
+                          const sens = consumabiliSensors[pump.productId] || {};
+                          return (
+                            <div style={{marginTop:10, display:"flex", gap:8, flexWrap:"wrap"}}>
+                              {sens.riordino && (
+                                <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                  background:`${t.orange}1a`, border:`1px solid ${t.orange}55`,
+                                  color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>
+                                  ↓ RIORDINO
+                                </span>
+                              )}
+                              {sens.vuoto && (
+                                <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                  background:`${t.red}1a`, border:`1px solid ${t.red}55`,
+                                  color:t.red, fontFamily:"'Share Tech Mono',monospace"}}>
+                                  ⚠ VUOTO
+                                </span>
+                              )}
+                              {!sens.riordino && !sens.vuoto && (
+                                <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                  background:`${t.green}14`, border:`1px solid ${t.green}44`,
+                                  color:t.green, fontFamily:"'Share Tech Mono',monospace"}}>
+                                  ✓ LIVELLO OK
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* ── MANUTENZIONE PROGRAMMATA (contatore ore + soglia) ── */}
                         {(() => {

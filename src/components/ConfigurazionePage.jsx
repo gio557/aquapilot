@@ -243,7 +243,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
         <div style={{padding:"24px 24px 40px"}}>
           <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20}}>
             <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
-              GESTIONE CONSUMABILI
+              GESTIONE POMPE
             </div>
             <div style={{display:"flex", gap:8}}>
               <button onClick={addDefaults}

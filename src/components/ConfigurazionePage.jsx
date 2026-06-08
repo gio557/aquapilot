@@ -10,9 +10,9 @@ import NormativaPage from "./NormativaPage";
 
 const CONFIG_TABS = [
   { id: "stadi",       label: "CONFIGURAZIONE STADI" },
+  { id: "consumabili", label: "POMPE" },
   { id: "provenienza", label: "SEGNALI" },
   { id: "normativa",   label: "NORMATIVA" },
-  { id: "consumabili", label: "CONSUMABILI" },
 ];
 
 const STAGE_COLORS = ["#00CFFF","#00E599","#BB66FF","#FF9422","#FFD060"];

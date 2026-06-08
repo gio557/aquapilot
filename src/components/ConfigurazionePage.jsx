@@ -618,11 +618,16 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
 
         return (
           <div key={si} style={{marginBottom:12}}>
-            {/* Accordion header */}
-            <button onClick={() => setExpanded(isOpen ? null : si)}
+            {/* Accordion header — div (non button) per poter contenere i
+                pulsanti azione senza annidare <button> dentro <button>. */}
+            <div role="button" tabIndex={0}
+              onClick={() => setExpanded(isOpen ? null : si)}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(isOpen ? null : si); } }}
               style={{width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between",
-                padding:"14px 18px", background:t.surface, cursor:"pointer",
-                border:`1px solid ${isOpen ? color : t.border}`,
+                padding:"14px 18px", background:t.surface, cursor:"pointer", boxSizing:"border-box",
+                borderTop:`1px solid ${isOpen ? color : t.border}`,
+                borderRight:`1px solid ${isOpen ? color : t.border}`,
+                borderBottom:`1px solid ${isOpen ? color : t.border}`,
                 borderLeft:`4px solid ${color}`,
                 borderRadius: isOpen ? "10px 10px 0 0" : "10px",
                 transition:"border-color 0.2s"}}>
@@ -670,7 +675,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                 )}
                 <span style={{color:t.textMuted, fontSize:14, transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s"}}>▼</span>
               </div>
-            </button>
+            </div>
 
             {isOpen && (
               <div style={{background:t.surface, border:`1px solid ${t.border}`, borderTop:"none",

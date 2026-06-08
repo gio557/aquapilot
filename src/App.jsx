@@ -10,7 +10,9 @@ import { EVENT_TYPES } from "./constants/events";
 import { useSimulation } from "./hooks/useSimulation";
 import { requestOsmosiCIP } from "./simulation/commands";
 import { savePumpHours, pumpKey, pumpMaintH } from "./simulation/pumpHours";
+import { loadConsumabili, saveConsumabili } from "./simulation/consumabili";
 import MaintenancePopup from "./components/ui/MaintenancePopup";
+import ConsumabiliPopup from "./components/ui/ConsumabiliPopup";
 import GreenEcoLogo from "./components/GreenEcoLogo";
 import StageCard from "./components/StageCard";
 import StageDetailPopup from "./components/StageDetailPopup";
@@ -169,6 +171,8 @@ export default function App() {
   const [dismissedDiag, setDismissedDiag] = useState([]);
   const [dismissedBlocking, setDismissedBlocking] = useState([]);
   const [dismissedMaint, setDismissedMaint] = useState([]);
+  const [dismissedConsumabili, setDismissedConsumabili] = useState([]);
+  const [consumabili, setConsumabili] = useState(() => loadConsumabili());
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 1000);
@@ -288,6 +292,52 @@ export default function App() {
       return { ...prev, pumpHours: next };
     });
   };
+  // Persist consumabili config on every change.
+  useEffect(() => { saveConsumabili(consumabili); }, [consumabili]);
+
+  const handleConsumabili = (updater) => {
+    setConsumabili(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      // drop productId from pumps for any product no longer present
+      const ids = new Set(next.map(c => c.id));
+      setStageConfig(sc => sc.map(st => ({
+        ...st,
+        pumps: st.pumps.map(p => (!p.productId || ids.has(p.productId)) ? p : { ...p, productId: null }),
+      })));
+      return next;
+    });
+  };
+
+  const onToggleSensor = (productId, tipo) => {
+    setSim(prev => {
+      const cur = prev.consumabiliSensors?.[productId] || {};
+      return {
+        ...prev,
+        consumabiliSensors: {
+          ...prev.consumabiliSensors,
+          [productId]: { ...cur, [tipo]: !cur[tipo] },
+        },
+      };
+    });
+  };
+
+  const consumabiliAlerts = (() => {
+    const out = [];
+    const sensors = sim.consumabiliSensors || {};
+    consumabili.forEach(c => {
+      const s = sensors[c.id] || {};
+      if (s.vuoto)    out.push({ id:`cons_vuoto_${c.id}`,    tipo:"vuoto",    ...c });
+      else if (s.riordino) out.push({ id:`cons_riordino_${c.id}`, tipo:"riordino", ...c });
+    });
+    return out;
+  })();
+  const consumabiliAlertIds = consumabiliAlerts.map(a => a.id).join(",");
+  useEffect(() => {
+    const ids = consumabiliAlerts.map(a => a.id);
+    setDismissedConsumabili(prev => prev.filter(id => ids.includes(id)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consumabiliAlertIds]);
+  const activeConsumabili = consumabiliAlerts.filter(a => !dismissedConsumabili.includes(a.id));
   // ─────────────────────────────────────────────────────────────────────────────
 
   // Reset to plant view if the selected stage node no longer exists
@@ -570,7 +620,9 @@ export default function App() {
           norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}
           qualitySources={qualitySources} onQualitySources={setQualitySources}
           pumpHours={sim.pumpHours} onResetPumpHours={handleResetPumpHours}
-          ac={sim.autoCorrect || {enabled:false}} onAC={setSim}/>
+          ac={sim.autoCorrect || {enabled:false}} onAC={setSim}
+          consumabili={consumabili} onConsumabili={handleConsumabili}
+          consumabiliSensors={sim.consumabiliSensors || {}} onToggleSensor={onToggleSensor}/>
       ) : page === "energia" ? (
         <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
       ) : page === "storica" ? (
@@ -1017,6 +1069,13 @@ export default function App() {
         t={t}
         onService={handleResetPumpHours}
         onDismiss={() => setDismissedMaint(maintAlerts.map(a => a.id))}
+      />
+
+      {/* ── CONSUMABILI: popup livello riordino / vuoto ── */}
+      <ConsumabiliPopup
+        alerts={activeConsumabili}
+        t={t}
+        onDismiss={() => setDismissedConsumabili(consumabiliAlerts.map(a => a.id))}
       />
 
       {/* ── DIAGNOSTICA: pop-up causa probabile (auto-correzione inefficace) ── */}

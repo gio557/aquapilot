@@ -2,6 +2,7 @@ import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
 import { pumpKey, pumpMaintH, DEFAULT_MAINT_H } from "../simulation/pumpHours";
+import { newConsumabile } from "../simulation/consumabili";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
@@ -10,6 +11,7 @@ const CONFIG_TABS = [
   { id: "stadi",       label: "CONFIGURAZIONE STADI" },
   { id: "provenienza", label: "SEGNALI" },
   { id: "normativa",   label: "NORMATIVA" },
+  { id: "consumabili", label: "CONSUMABILI" },
 ];
 
 const STAGE_COLORS = ["#00CFFF","#00E599","#BB66FF","#FF9422","#FFD060"];
@@ -49,7 +51,7 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC, consumabili = [], onConsumabili, consumabiliSensors = {}, onToggleSensor }) {
   const [activeTab, setActiveTab] = useState("stadi");
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
@@ -91,7 +93,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
         ...sc,
         pumps: [...sc.pumps, {
           id: `p${Date.now()}`, name: "Nuova pompa", enabled: true,
-          power_kw: 5.5, flow_m3h: 100, head_m: 10, rpm: 1450, vfd: false, maintH: DEFAULT_MAINT_H
+          power_kw: 5.5, flow_m3h: 100, head_m: 10, rpm: 1450, vfd: false, maintH: DEFAULT_MAINT_H,
+          isDosatrice: false, productId: null
         }]
       }
     ));
@@ -167,6 +170,225 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       <div>
         {TabBar({padded:true})}
         <NormativaPage t={t} ac={ac} onAC={onAC} norms={norms} setNorms={setNorms} normativaSets={normativaSets} />
+      </div>
+    );
+  }
+
+  if (activeTab === "consumabili") {
+    const updateC = (id, field, value) =>
+      onConsumabili?.(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+    const removeC = (id) =>
+      onConsumabili?.(prev => prev.filter(c => c.id !== id));
+    const addC = () =>
+      onConsumabili?.(prev => [...prev, newConsumabile()]);
+
+    const TextField = ({ label, value, onChange: onCh, placeholder }) => (
+      <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:180}}>
+        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{label}</div>
+        <input type="text" value={value || ""} placeholder={placeholder || ""}
+          onChange={e => onCh(e.target.value)}
+          style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
+            color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif", fontSize:14, outline:"none",
+            width:"100%", boxSizing:"border-box"}}/>
+      </div>
+    );
+
+    return (
+      <div>
+        {TabBar({padded:true})}
+        <div style={{padding:"24px 24px 40px"}}>
+          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20}}>
+            <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
+              GESTIONE CONSUMABILI
+            </div>
+            <button onClick={addC}
+              style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
+                border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
+              + Aggiungi prodotto
+            </button>
+          </div>
+
+          {consumabili.length === 0 ? (
+            <div style={{padding:"28px", textAlign:"center", color:t.textMuted,
+              fontFamily:"'Rajdhani',sans-serif", fontSize:14, background:t.surface2,
+              borderRadius:10, border:`1px dashed ${t.border}`}}>
+              Nessun prodotto configurato. Aggiungi un prodotto per iniziare.
+            </div>
+          ) : consumabili.map(c => {
+            const sens = consumabiliSensors[c.id] || {};
+            const hasAlert = sens.riordino || sens.vuoto;
+            const borderColor = sens.vuoto ? t.red : sens.riordino ? t.orange : t.border;
+            return (
+              <div key={c.id} style={{marginBottom:16, padding:"18px 20px", borderRadius:11,
+                background:t.surface2, border:`1px solid ${hasAlert ? borderColor : t.border}`}}>
+
+                {/* ── HEADER CISTERNA ── */}
+                <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:16}}>
+                  <span style={{fontSize:20}}>🧴</span>
+                  <input type="text" value={c.nome}
+                    onChange={e => updateC(c.id, "nome", e.target.value)}
+                    style={{flex:1, background:"transparent", border:"none",
+                      borderBottom:`1px solid ${t.border}`, color:t.text,
+                      fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:17,
+                      outline:"none", padding:"2px 4px"}}/>
+                  {sens.vuoto && (
+                    <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
+                      background:`${t.red}1a`, border:`1px solid ${t.red}66`, color:t.red,
+                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>⚠ VUOTO</span>
+                  )}
+                  {!sens.vuoto && sens.riordino && (
+                    <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
+                      background:`${t.orange}1a`, border:`1px solid ${t.orange}66`, color:t.orange,
+                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>↓ RIORDINO</span>
+                  )}
+                  <button onClick={() => removeC(c.id)}
+                    style={{padding:"4px 12px", borderRadius:5, cursor:"pointer",
+                      fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
+                      border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
+                    Rimuovi
+                  </button>
+                </div>
+
+                {/* ── DATI FORNITORE ── */}
+                <div style={{display:"flex", gap:12, flexWrap:"wrap", marginBottom:14}}>
+                  <TextField label="Fornitore" value={c.fornitore}
+                    onChange={v => updateC(c.id, "fornitore", v)} placeholder="Nome fornitore"/>
+                  <TextField label="Email fornitore" value={c.emailFornitore}
+                    onChange={v => updateC(c.id, "emailFornitore", v)} placeholder="ordini@fornitore.it"/>
+                  <TextField label="Email responsabile" value={c.emailResponsabile}
+                    onChange={v => updateC(c.id, "emailResponsabile", v)} placeholder="resp@impianto.it"/>
+                </div>
+
+                {/* ── SENSORI LIVELLO ── */}
+                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14, marginBottom:14}}>
+                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                    letterSpacing:1, marginBottom:10}}>SENSORI LIVELLO CISTERNA</div>
+                  <div style={{display:"flex", gap:16, flexWrap:"wrap"}}>
+                    {/* Sensore riordino */}
+                    <div style={{flex:1, minWidth:200, padding:"12px 14px", borderRadius:8,
+                      background:t.surface3, border:`1px solid ${sens.riordino ? t.orange+"66" : t.border}`}}>
+                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8}}>
+                        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                          color: sens.riordino ? t.orange : t.text}}>↓ Sensore riordino</span>
+                        <div onClick={() => onToggleSensor?.(c.id, "riordino")}
+                          style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative",
+                            background: sens.riordino ? t.orange : t.surface2,
+                            border:`1px solid ${sens.riordino ? t.orange : t.border}`, transition:"background 0.2s"}}>
+                          <div style={{position:"absolute", top:2, left: sens.riordino ? 17 : 2,
+                            width:14, height:14, borderRadius:"50%", background:"#fff",
+                            transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                        </div>
+                      </div>
+                      <div style={{display:"flex", alignItems:"center", gap:8}}>
+                        <input type="number" value={c.livelloRiordino_mm}
+                          onChange={e => updateC(c.id, "livelloRiordino_mm", Math.max(0, parseInt(e.target.value)||0))}
+                          style={{width:80, background:t.surface, border:`1px solid ${t.border}`,
+                            borderRadius:5, color:t.text, padding:"5px 8px",
+                            fontFamily:"'Share Tech Mono',monospace", fontSize:14}}/>
+                        <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>mm</span>
+                        <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                          marginLeft:4}}>quota galleggiante</span>
+                      </div>
+                    </div>
+
+                    {/* Sensore vuoto */}
+                    <div style={{flex:1, minWidth:200, padding:"12px 14px", borderRadius:8,
+                      background:t.surface3, border:`1px solid ${sens.vuoto ? t.red+"66" : t.border}`}}>
+                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8}}>
+                        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                          color: sens.vuoto ? t.red : t.text}}>⚠ Sensore vuoto</span>
+                        <div onClick={() => onToggleSensor?.(c.id, "vuoto")}
+                          style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative",
+                            background: sens.vuoto ? t.red : t.surface2,
+                            border:`1px solid ${sens.vuoto ? t.red : t.border}`, transition:"background 0.2s"}}>
+                          <div style={{position:"absolute", top:2, left: sens.vuoto ? 17 : 2,
+                            width:14, height:14, borderRadius:"50%", background:"#fff",
+                            transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                        </div>
+                      </div>
+                      <div style={{display:"flex", alignItems:"center", gap:8}}>
+                        <input type="number" value={c.livelloVuoto_mm}
+                          onChange={e => updateC(c.id, "livelloVuoto_mm", Math.max(0, parseInt(e.target.value)||0))}
+                          style={{width:80, background:t.surface, border:`1px solid ${t.border}`,
+                            borderRadius:5, color:t.text, padding:"5px 8px",
+                            fontFamily:"'Share Tech Mono',monospace", fontSize:14}}/>
+                        <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>mm</span>
+                        <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                          marginLeft:4}}>quota galleggiante</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── OPZIONI EMAIL ── */}
+                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14}}>
+                  <div style={{display:"flex", alignItems:"center", gap:10}}>
+                    <div onClick={() => updateC(c.id, "autoEmailFornitore", !c.autoEmailFornitore)}
+                      style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative",
+                        flexShrink:0,
+                        background: c.autoEmailFornitore ? t.green : t.surface3,
+                        border:`1px solid ${c.autoEmailFornitore ? t.green : t.border}`, transition:"background 0.2s"}}>
+                      <div style={{position:"absolute", top:2, left: c.autoEmailFornitore ? 17 : 2,
+                        width:14, height:14, borderRadius:"50%", background:"#fff",
+                        transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                    </div>
+                    <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13.5, color:t.text, fontWeight:600}}>
+                      Invio automatico ordine di riordino al fornitore
+                    </span>
+                    <InfoDot text="Quando il sensore di riordino si attiva, viene proposto l'invio di una mail di riordino al fornitore. Con il server edge sarà completamente automatico senza intervento dell'operatore." t={t}/>
+                  </div>
+                  {c.autoEmailFornitore && !c.emailFornitore && (
+                    <div style={{fontSize:11.5, color:t.orange, fontFamily:"'Rajdhani',sans-serif", marginTop:6}}>
+                      ⚠ Configura l'email del fornitore qui sopra per abilitare questa funzione.
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            );
+          })}
+
+          {/* ── POMPE DOSATRICI COLLEGATE (riepilogo) ── */}
+          {consumabili.length > 0 && (() => {
+            const linked = [];
+            stages.forEach((st, si) => {
+              (config[si]?.pumps ?? []).forEach(p => {
+                if (!p.isDosatrice || !p.productId) return;
+                const prod = consumabili.find(c => c.id === p.productId);
+                linked.push({ stageName: st.name, pumpName: p.name, prodNome: prod?.nome || p.productId });
+              });
+            });
+            if (linked.length === 0) return (
+              <div style={{marginTop:24, padding:"14px 16px", borderRadius:8, background:t.surface2,
+                border:`1px dashed ${t.border}`, fontFamily:"'Rajdhani',sans-serif", fontSize:13,
+                color:t.textMuted}}>
+                Nessuna pompa dosatrice collegata. Vai in "Configurazione Stadi", abilita il toggle
+                DOSATRICE su ogni pompa che dosa un prodotto e seleziona il prodotto collegato.
+              </div>
+            );
+            return (
+              <div style={{marginTop:24}}>
+                <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                  letterSpacing:1, marginBottom:10}}>POMPE DOSATRICI COLLEGATE</div>
+                <div style={{display:"flex", flexDirection:"column", gap:6}}>
+                  {linked.map((l, i) => (
+                    <div key={i} style={{display:"flex", alignItems:"center", gap:12, padding:"9px 14px",
+                      borderRadius:7, background:t.surface2, border:`1px solid ${t.border}`}}>
+                      <span style={{fontSize:15}}>⚙️</span>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14,
+                        color:t.text, flex:1}}>{l.pumpName}</span>
+                      <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{l.stageName}</span>
+                      <span style={{fontSize:11, padding:"2px 9px", borderRadius:4,
+                        background:`${t.orange}18`, border:`1px solid ${t.orange}44`,
+                        color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>→ {l.prodNome}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </div>
     );
   }
@@ -428,6 +650,14 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                                 color: pump.vfd ? t.accent : t.textMuted}}>
                               INVERTER {pump.vfd ? "ON" : "OFF"}
                             </div>
+                            <div onClick={() => updatePump(si, pi, "isDosatrice", !pump.isDosatrice)}
+                              style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", fontSize:12,
+                                fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
+                                background: pump.isDosatrice ? `${t.orange}22` : t.surface3,
+                                border:`1px solid ${pump.isDosatrice ? t.orange : t.border}`,
+                                color: pump.isDosatrice ? t.orange : t.textMuted}}>
+                              DOSATRICE {pump.isDosatrice ? "ON" : "OFF"}
+                            </div>
                             <button onClick={() => removePump(si, pi)}
                               style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
                                 fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
@@ -446,6 +676,61 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           <NumField label="Velocità" value={pump.rpm} unit="RPM"
                             onChange={v => updatePump(si, pi, "rpm", v)} t={t}/>
                         </div>
+
+                        {/* ── PRODOTTO DOSATO (solo per pompe dosatrici) ── */}
+                        {pump.isDosatrice && (
+                          <div style={{marginTop:12, paddingTop:12, borderTop:`1px solid ${t.border}`}}>
+                            <div style={{fontSize:12, color:t.orange, fontFamily:"'Share Tech Mono',monospace",
+                              letterSpacing:1, marginBottom:8}}>PRODOTTO DOSATO</div>
+                            <select
+                              value={pump.productId || ""}
+                              onChange={e => updatePump(si, pi, "productId", e.target.value || null)}
+                              style={{width:"100%", background:t.surface3, border:`1px solid ${t.orange}66`,
+                                borderRadius:6, color:t.text, padding:"7px 10px",
+                                fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14,
+                                cursor:"pointer", outline:"none"}}>
+                              <option value="">— nessun prodotto selezionato —</option>
+                              {consumabili.map(c => (
+                                <option key={c.id} value={c.id}>{c.nome}</option>
+                              ))}
+                            </select>
+                            {!pump.productId && (
+                              <div style={{fontSize:11.5, color:t.orange, fontFamily:"'Rajdhani',sans-serif",
+                                marginTop:5, opacity:0.8}}>
+                                Seleziona il prodotto dalla cisterna collegata a questa pompa.
+                              </div>
+                            )}
+                            {pump.productId && (() => {
+                              const prod = consumabili.find(c => c.id === pump.productId);
+                              const sens = consumabiliSensors[pump.productId] || {};
+                              return prod ? (
+                                <div style={{marginTop:8, display:"flex", gap:8, flexWrap:"wrap"}}>
+                                  {sens.riordino && (
+                                    <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                      background:`${t.orange}1a`, border:`1px solid ${t.orange}55`,
+                                      color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>
+                                      ↓ RIORDINO
+                                    </span>
+                                  )}
+                                  {sens.vuoto && (
+                                    <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                      background:`${t.red}1a`, border:`1px solid ${t.red}55`,
+                                      color:t.red, fontFamily:"'Share Tech Mono',monospace"}}>
+                                      ⚠ VUOTO
+                                    </span>
+                                  )}
+                                  {!sens.riordino && !sens.vuoto && (
+                                    <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                      background:`${t.green}14`, border:`1px solid ${t.green}44`,
+                                      color:t.green, fontFamily:"'Share Tech Mono',monospace"}}>
+                                      ✓ LIVELLO OK
+                                    </span>
+                                  )}
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        )}
 
                         {/* ── MANUTENZIONE PROGRAMMATA (contatore ore + soglia) ── */}
                         {(() => {

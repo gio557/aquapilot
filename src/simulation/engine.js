@@ -126,6 +126,7 @@ export const INIT_SIM = {
   stages:       STAGE_META,
   stageStates:  null,   // per-stage persistent state (array parallel to stageConfig)
   pumpHours: {},        // "StageName::pumpId" → ore di funzionamento accumulate
+  consumabiliSensors: {}, // productId → { riordino: bool, vuoto: bool }
   qHistory: [],
   events: [],   // scenari/eventi attivi (vedi constants/events.js)
   output: { Q: 1245, COD: 22.4, BOD5: 8.1, TSS: 7.3, NH4: 0.80, pH: 7.2, T: 18.4, O2: 4.5 },

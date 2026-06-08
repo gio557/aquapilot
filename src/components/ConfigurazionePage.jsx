@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
 import { pumpKey, pumpMaintH, DEFAULT_MAINT_H } from "../simulation/pumpHours";
-import { newConsumabile } from "../simulation/consumabili";
+import { newConsumabile, mergeDefaults } from "../simulation/consumabili";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
@@ -181,6 +181,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       onConsumabili?.(prev => prev.filter(c => c.id !== id));
     const addC = () =>
       onConsumabili?.(prev => [...prev, newConsumabile()]);
+    const addDefaults = () =>
+      onConsumabili?.(prev => mergeDefaults(prev));
 
     const TextField = ({ label, value, onChange: onCh, placeholder }) => (
       <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:180}}>
@@ -201,12 +203,20 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
             <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
               GESTIONE CONSUMABILI
             </div>
-            <button onClick={addC}
-              style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
-                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
-                border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
-              + Aggiungi prodotto
-            </button>
+            <div style={{display:"flex", gap:8}}>
+              <button onClick={addDefaults}
+                style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
+                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
+                  border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
+                ↻ Aggiungi predefiniti mancanti
+              </button>
+              <button onClick={addC}
+                style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
+                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
+                  border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
+                + Aggiungi prodotto
+              </button>
+            </div>
           </div>
 
           {consumabili.length === 0 ? (
@@ -249,6 +259,27 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     Rimuovi
                   </button>
                 </div>
+
+                {/* ── NOTA SOSTANZA + STADI TIPICI ── */}
+                {(c.note || (c.stadiTipici && c.stadiTipici.length > 0)) && (
+                  <div style={{marginBottom:14, marginTop:-6}}>
+                    {c.note && (
+                      <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                        fontStyle:"italic", marginBottom:7}}>{c.note}</div>
+                    )}
+                    {c.stadiTipici && c.stadiTipici.length > 0 && (
+                      <div style={{display:"flex", gap:6, flexWrap:"wrap", alignItems:"center"}}>
+                        <span style={{fontSize:10.5, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                          letterSpacing:0.5, marginRight:2}}>STADI TIPICI</span>
+                        {c.stadiTipici.map(s => (
+                          <span key={s} style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                            background:`${t.accent}14`, border:`1px solid ${t.accent}33`, color:t.accent,
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{s}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* ── DATI FORNITORE ── */}
                 <div style={{display:"flex", gap:12, flexWrap:"wrap", marginBottom:14}}>

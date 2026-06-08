@@ -10,6 +10,11 @@ export const DEFAULT_CONSUMABILI = [
     stadiTipici: ["Sedimentazione", "Flottazione DAF", "Filtrazione"],
   },
   {
+    id: "polielettrolita", nome: "Polielettrolita (forma liquida)",
+    note: "Flocculante in emulsione liquida",
+    stadiTipici: ["Sedimentazione", "Flottazione DAF"],
+  },
+  {
     id: "naoh", nome: "NaOH (Soda caustica)",
     note: "Correzione pH / alcalinità (soluzione 30-50%)",
     stadiTipici: ["Equalizzazione", "Biologico", "Nitrificazione", "Post-trattamento"],
@@ -25,6 +30,16 @@ export const DEFAULT_CONSUMABILI = [
     stadiTipici: ["Denitrificazione", "Biologico"],
   },
   {
+    id: "bicarbonato", nome: "Bicarbonato di sodio (forma liquida)",
+    note: "Soluzione di bicarbonato — supplemento di alcalinità",
+    stadiTipici: ["Nitrificazione"],
+  },
+  {
+    id: "nutrienti", nome: "Nutrienti N/P (forma liquida)",
+    note: "Acido fosforico / soluzione di urea (reflui industriali)",
+    stadiTipici: ["Biologico"],
+  },
+  {
     id: "antischiuma", nome: "Antischiuma",
     note: "Agente antifoam (emulsione)",
     stadiTipici: ["Biologico", "Equalizzazione", "Degrassatore"],
@@ -35,9 +50,19 @@ export const DEFAULT_CONSUMABILI = [
     stadiTipici: ["Osmosi Inversa"],
   },
   {
+    id: "metabisolfito", nome: "Metabisolfito di sodio (forma liquida)",
+    note: "Soluzione di bisolfito — declorazione / protezione membrane",
+    stadiTipici: ["Osmosi Inversa", "Disinfezione Cloro"],
+  },
+  {
     id: "ipoclorito", nome: "Ipoclorito di sodio",
     note: "Disinfettante a base di cloro (soluzione)",
     stadiTipici: ["Disinfezione Cloro"],
+  },
+  {
+    id: "calce", nome: "Calce (forma liquida)",
+    note: "Latte di calce (sospensione) — rimineralizzazione / alcalinità",
+    stadiTipici: ["Post-trattamento"],
   },
 ].map(p => ({
   fornitore: "", emailFornitore: "", emailResponsabile: "",

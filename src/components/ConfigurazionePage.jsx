@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
+import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG, PUMP_CATALOG, DOSING_PUMP_SPEC, makePump } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
-import { pumpKey, pumpMaintH, DEFAULT_MAINT_H } from "../simulation/pumpHours";
+import { pumpKey, pumpMaintH } from "../simulation/pumpHours";
 import { newConsumabile, mergeDefaults } from "../simulation/consumabili";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
@@ -87,16 +87,24 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     ));
   };
 
-  const addPump = (si) => {
+  // Add a pump chosen from the catalog dropdown. `value` is either a process
+  // pump key ("soffianti", ...) or a dosing-pump token "dose:<productId>".
+  const addPumpFromCatalog = (si, value) => {
+    if (!value) return;
+    let p;
+    if (value.startsWith("dose:")) {
+      const pid = value.slice(5);
+      const prod = consumabili.find(c => c.id === pid);
+      p = makePump({ name: `Pompa dosaggio ${prod ? prod.nome : ""}`.trim(),
+        ...DOSING_PUMP_SPEC, isDosatrice: true, productId: pid });
+    } else {
+      const tpl = PUMP_CATALOG.find(c => c.key === value);
+      if (!tpl) return;
+      p = makePump({ name: tpl.name, power_kw: tpl.power_kw, flow_m3h: tpl.flow_m3h,
+        head_m: tpl.head_m, rpm: tpl.rpm, vfd: !!tpl.vfd });
+    }
     onChange(prev => prev.map((sc, i) =>
-      i !== si ? sc : {
-        ...sc,
-        pumps: [...sc.pumps, {
-          id: `p${Date.now()}`, name: "Nuova pompa", enabled: true,
-          power_kw: 5.5, flow_m3h: 100, head_m: 10, rpm: 1450, vfd: false, maintH: DEFAULT_MAINT_H,
-          isDosatrice: false, productId: null
-        }]
-      }
+      i !== si ? sc : { ...sc, pumps: [...sc.pumps, p] }
     ));
   };
 
@@ -394,8 +402,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
               <div style={{marginTop:24, padding:"14px 16px", borderRadius:8, background:t.surface2,
                 border:`1px dashed ${t.border}`, fontFamily:"'Rajdhani',sans-serif", fontSize:13,
                 color:t.textMuted}}>
-                Nessuna pompa dosatrice collegata. Vai in "Configurazione Stadi", abilita il toggle
-                DOSATRICE su ogni pompa che dosa un prodotto e seleziona il prodotto collegato.
+                Nessuna pompa dosatrice collegata. Vai in "Configurazione Stadi" e, dal menu
+                "+ Aggiungi pompa", scegli una pompa dosatrice per il prodotto desiderato.
               </div>
             );
             return (
@@ -637,12 +645,27 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
                       POMPE E MOTORI
                     </div>
-                    <button onClick={() => addPump(si)}
-                      style={{padding:"5px 14px", borderRadius:6, cursor:"pointer",
+                    <select value=""
+                      onChange={e => { addPumpFromCatalog(si, e.target.value); e.target.value = ""; }}
+                      style={{padding:"6px 12px", borderRadius:6, cursor:"pointer",
                         fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
-                        border:`1px solid ${color}`, background:`${color}18`, color}}>
-                      + Aggiungi pompa
-                    </button>
+                        border:`1px solid ${color}`, background:`${color}18`, color, outline:"none"}}>
+                      <option value="">+ Aggiungi pompa…</option>
+                      <optgroup label="Pompe di processo">
+                        {PUMP_CATALOG.map(c => (
+                          <option key={c.key} value={c.key}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                      {consumabili.length > 0 && (
+                        <optgroup label="Pompe dosatrici">
+                          {consumabili.map(prod => (
+                            <option key={prod.id} value={`dose:${prod.id}`}>
+                              Pompa dosaggio {prod.nome}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
                   </div>
 
                   {sc.pumps.length === 0 ? (
@@ -681,14 +704,11 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                                 color: pump.vfd ? t.accent : t.textMuted}}>
                               INVERTER {pump.vfd ? "ON" : "OFF"}
                             </div>
-                            {!pump.noDosaggio && (
-                              <div onClick={() => updatePump(si, pi, "isDosatrice", !pump.isDosatrice)}
-                                style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", fontSize:12,
-                                  fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
-                                  background: pump.isDosatrice ? `${t.orange}22` : t.surface3,
-                                  border:`1px solid ${pump.isDosatrice ? t.orange : t.border}`,
-                                  color: pump.isDosatrice ? t.orange : t.textMuted}}>
-                                DOSATRICE {pump.isDosatrice ? "ON" : "OFF"}
+                            {pump.isDosatrice && (
+                              <div style={{padding:"4px 10px", borderRadius:5, fontSize:12,
+                                fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
+                                background:`${t.orange}22`, border:`1px solid ${t.orange}`, color:t.orange}}>
+                                DOSATRICE
                               </div>
                             )}
                             <button onClick={() => removePump(si, pi)}

@@ -94,6 +94,32 @@ const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>
   ({ id, name, enabled: true, power_kw, flow_m3h, head_m, rpm, vfd, maintH: DEFAULT_MAINT_H,
      isDosatrice: false, productId: null });
 
+// Catalogo delle pompe di PROCESSO (non dosatrici) selezionabili quando si
+// aggiunge una pompa a uno stadio. Le pompe dosatrici NON stanno qui: vengono
+// generate dinamicamente, una per ogni prodotto consumabile, dalla UI.
+export const PUMP_CATALOG = [
+  { key:"soffianti",     name:"Soffianti aria",                power_kw:15.0, flow_m3h:0,   head_m:0,  rpm:2900, vfd:true },
+  { key:"ric_fanghi",    name:"Pompa ricircolo fanghi",        power_kw:5.5,  flow_m3h:200, head_m:6,  rpm:1450, vfd:true },
+  { key:"ric_miscela",   name:"Pompa ricircolo miscela (MLR)", power_kw:5.5,  flow_m3h:300, head_m:5,  rpm:1450, vfd:true },
+  { key:"fanghi_ric",    name:"Pompa fanghi di ricircolo",     power_kw:4.0,  flow_m3h:120, head_m:7,  rpm:1450 },
+  { key:"classificatore",name:"Pompa classificatore sabbie",   power_kw:2.2,  flow_m3h:45,  head_m:5,  rpm:1450 },
+  { key:"rilancio",      name:"Pompa di rilancio",             power_kw:5.5,  flow_m3h:100, head_m:10, rpm:1450 },
+];
+
+// Caratteristiche di default per una pompa dosatrice (piccola portata, alta
+// prevalenza), usate quando la si aggiunge dal catalogo per un prodotto.
+export const DOSING_PUMP_SPEC = { power_kw:0.37, flow_m3h:0.4, head_m:15, rpm:1450 };
+
+// Factory pubblica per costruire una pompa con tutti i campi di default. Usata
+// dalla UI di configurazione per aggiungere pompe dal catalogo.
+export function makePump({ name, power_kw, flow_m3h, head_m, rpm, vfd = false, isDosatrice = false, productId = null }) {
+  return {
+    id: `p${Date.now()}`, name, enabled: true,
+    power_kw, flow_m3h, head_m, rpm, vfd, maintH: DEFAULT_MAINT_H,
+    isDosatrice, productId,
+  };
+}
+
 // Per-stage-type sensor/referenceSensor defaults. Single source of truth for
 // the sensor layout of a stage type — consumed both by makeDefaultStageConfig
 // (newly added stages) and by DEFAULT_STAGE_CONFIG below (initial plant), so
@@ -185,7 +211,7 @@ export const DEFAULT_STAGE_CONFIG = [
     stageIndex: 1,
     ...fromPreset("Dissabbiatura"),
     pumps: [
-      { ...pump("p1", "Pompa classificatore sabbie", 2.2, 45, 5, 1450), noDosaggio: true },
+      pump("p1", "Pompa classificatore sabbie", 2.2, 45, 5, 1450),
     ],
     classifier: {
       mode: "timed",    // "timed" | "continuous"
@@ -200,23 +226,23 @@ export const DEFAULT_STAGE_CONFIG = [
     stageIndex: 2,
     ...fromPreset("Biologico"),
     pumps: [
-      { ...pump("p1", "Soffianti aria",        15.0,   0,  0, 2900, true), noDosaggio: true },
-      { ...pump("p2", "Pompa ricircolo fanghi", 5.5, 200,  6, 1450, true), noDosaggio: true },
+      pump("p1", "Soffianti aria",        15.0,   0,  0, 2900, true),
+      pump("p2", "Pompa ricircolo fanghi", 5.5, 200,  6, 1450, true),
     ],
   },
   {
     stageIndex: 3,
     ...fromPreset("Denitrificazione"),
     pumps: [
-      { ...pump("p1", "Pompa ricircolo miscela (MLR)", 5.5, 300, 5, 1450, true), noDosaggio: true },
-      pump("p2", "Pompa dosaggio carbonio",       0.37, 0.4, 15, 1450),
+      pump("p1", "Pompa ricircolo miscela (MLR)", 5.5, 300, 5, 1450, true),
+      { ...pump("p2", "Pompa dosaggio Fonte di carbonio", 0.37, 0.4, 15, 1450), isDosatrice: true, productId: "carbonio" },
     ],
   },
   {
     stageIndex: 4,
     ...fromPreset("Sedimentazione"),
     pumps: [
-      { ...pump("p1", "Pompa fanghi di ricircolo", 4.0, 120, 7, 1450), noDosaggio: true },
+      pump("p1", "Pompa fanghi di ricircolo", 4.0, 120, 7, 1450),
     ],
   },
   {

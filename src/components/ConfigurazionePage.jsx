@@ -3,6 +3,7 @@ import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG, PUMP_CATALOG, DOSING_PUMP_SPEC, mak
 import { PC } from "../constants/processConstants";
 import { pumpKey, pumpMaintH } from "../simulation/pumpHours";
 import { newConsumabile, mergeDefaults } from "../simulation/consumabili";
+import { newCustomPump } from "../simulation/customPumps";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
@@ -51,7 +52,7 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC, consumabili = [], onConsumabili, consumabiliSensors = {}, onToggleSensor }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC, consumabili = [], onConsumabili, consumabiliSensors = {}, onToggleSensor, customPumps = [], onCustomPumps }) {
   const [activeTab, setActiveTab] = useState("stadi");
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
@@ -108,9 +109,11 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   const addPumpFromCatalog = (si, value) => {
     if (!value) return;
     let baseName, spec;
-    if (value === "custom") {
-      baseName = "Nuova pompa";
-      spec = { power_kw: 0, flow_m3h: 0, head_m: 0, rpm: 0 };
+    if (value.startsWith("model:")) {
+      const m = customPumps.find(cp => cp.id === value.slice(6));
+      if (!m) return;
+      baseName = m.name || "Pompa personalizzata";
+      spec = { power_kw: m.power_kw, flow_m3h: m.flow_m3h, head_m: m.head_m, rpm: m.rpm, vfd: !!m.vfd };
     } else if (value.startsWith("dose:")) {
       const pid = value.slice(5);
       const prod = consumabili.find(c => c.id === pid);
@@ -213,6 +216,15 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       onConsumabili?.(prev => [...prev, newConsumabile()]);
     const addDefaults = () =>
       onConsumabili?.(prev => mergeDefaults(prev));
+
+    // CRUD modelli di pompa personalizzata (vivono qui, confluiscono nel menu
+    // "Aggiungi pompa" degli stadi come gruppo "Pompe personalizzate").
+    const updateCP = (id, field, value) =>
+      onCustomPumps?.(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+    const removeCP = (id) =>
+      onCustomPumps?.(prev => prev.filter(p => p.id !== id));
+    const addCP = () =>
+      onCustomPumps?.(prev => [...prev, newCustomPump()]);
 
     const TextField = ({ label, value, onChange: onCh, placeholder }) => (
       <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:180}}>
@@ -449,6 +461,74 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
               </div>
             );
           })()}
+
+          {/* ── POMPE PERSONALIZZATE ── */}
+          <div style={{marginTop:32, paddingTop:20, borderTop:`1px solid ${t.border}`}}>
+            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
+              <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
+                POMPE PERSONALIZZATE
+              </div>
+              <button onClick={addCP}
+                style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
+                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
+                  border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
+                + Aggiungi pompa
+              </button>
+            </div>
+            <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:14}}>
+              Definisci qui pompe non presenti nel catalogo standard. Compaiono nel menu
+              "+ Aggiungi pompa" di ogni stadio (gruppo "Pompe personalizzate") con il nome scelto.
+            </div>
+
+            {customPumps.length === 0 ? (
+              <div style={{padding:"22px", textAlign:"center", color:t.textMuted,
+                fontFamily:"'Rajdhani',sans-serif", fontSize:14, background:t.surface2,
+                borderRadius:10, border:`1px dashed ${t.border}`}}>
+                Nessuna pompa personalizzata. Aggiungine una per renderla disponibile negli stadi.
+              </div>
+            ) : customPumps.map(cp => (
+              <div key={cp.id} style={{marginBottom:14, padding:"16px 18px", borderRadius:11,
+                background:t.surface2, border:`1px solid ${t.border}`}}>
+                <div style={{display:"flex", alignItems:"flex-end", gap:14, flexWrap:"wrap"}}>
+                  <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:220}}>
+                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
+                    <input type="text" value={cp.name || ""} placeholder="Nome pompa"
+                      onChange={e => updateCP(cp.id, "name", e.target.value)}
+                      style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
+                        color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif", fontSize:14,
+                        fontWeight:700, outline:"none", width:"100%", boxSizing:"border-box"}}/>
+                  </div>
+                  <button onClick={() => removeCP(cp.id)}
+                    style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
+                      fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5,
+                      border:`1px solid ${t.red}66`, background:`${t.red}14`, color:t.red, alignSelf:"flex-end"}}>
+                    Rimuovi
+                  </button>
+                </div>
+                <div style={{display:"flex", gap:18, flexWrap:"wrap", marginTop:14}}>
+                  <NumField label="Potenza" value={cp.power_kw} unit="kW"
+                    onChange={v => updateCP(cp.id, "power_kw", v)} t={t}/>
+                  <NumField label="Portata" value={cp.flow_m3h} unit="m³/h"
+                    onChange={v => updateCP(cp.id, "flow_m3h", v)} t={t}/>
+                  <NumField label="Prevalenza" value={cp.head_m} unit="m"
+                    onChange={v => updateCP(cp.id, "head_m", v)} t={t}/>
+                  <NumField label="Velocità" value={cp.rpm} unit="RPM"
+                    onChange={v => updateCP(cp.id, "rpm", v)} t={t}/>
+                  <div style={{display:"flex", alignItems:"center", gap:10, alignSelf:"flex-end", paddingBottom:4}}>
+                    <div onClick={() => updateCP(cp.id, "vfd", !cp.vfd)}
+                      style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative", flexShrink:0,
+                        background: cp.vfd ? t.accent : t.surface3,
+                        border:`1px solid ${cp.vfd ? t.accent : t.border}`, transition:"background 0.2s"}}>
+                      <div style={{position:"absolute", top:2, left: cp.vfd ? 17 : 2,
+                        width:14, height:14, borderRadius:"50%", background:"#fff",
+                        transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                    </div>
+                    <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13.5, color:t.text, fontWeight:600}}>Inverter (VFD)</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -673,7 +753,6 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                         border:`1px solid ${color}`, background:`${color}18`, color, outline:"none"}}>
                       <option value="">+ Aggiungi pompa…</option>
-                      <option value="custom">✏ Pompa personalizzata…</option>
                       <optgroup label="Pompe di processo">
                         {PUMP_CATALOG.map(c => (
                           <option key={c.key} value={c.key}>{c.name}</option>
@@ -684,6 +763,15 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           {consumabili.map(prod => (
                             <option key={prod.id} value={`dose:${prod.id}`}>
                               Pompa dosaggio {prod.nome}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {customPumps.length > 0 && (
+                        <optgroup label="Pompe personalizzate">
+                          {customPumps.map(cp => (
+                            <option key={cp.id} value={`model:${cp.id}`}>
+                              {cp.name || "Pompa personalizzata"}
                             </option>
                           ))}
                         </optgroup>

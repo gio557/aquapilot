@@ -11,6 +11,7 @@ import { useSimulation } from "./hooks/useSimulation";
 import { requestOsmosiCIP } from "./simulation/commands";
 import { savePumpHours, pumpKey, pumpMaintH } from "./simulation/pumpHours";
 import { loadConsumabili, saveConsumabili } from "./simulation/consumabili";
+import { loadCustomPumps, saveCustomPumps } from "./simulation/customPumps";
 import MaintenancePopup from "./components/ui/MaintenancePopup";
 import ConsumabiliPopup from "./components/ui/ConsumabiliPopup";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -173,6 +174,7 @@ export default function App() {
   const [dismissedMaint, setDismissedMaint] = useState([]);
   const [dismissedConsumabili, setDismissedConsumabili] = useState([]);
   const [consumabili, setConsumabili] = useState(() => loadConsumabili());
+  const [customPumps, setCustomPumps] = useState(() => loadCustomPumps());
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 1000);
@@ -294,6 +296,11 @@ export default function App() {
   };
   // Persist consumabili config on every change.
   useEffect(() => { saveConsumabili(consumabili); }, [consumabili]);
+
+  // Persist custom pump models on every change.
+  useEffect(() => { saveCustomPumps(customPumps); }, [customPumps]);
+  const handleCustomPumps = (updater) =>
+    setCustomPumps(prev => (typeof updater === "function" ? updater(prev) : updater));
 
   const handleConsumabili = (updater) => {
     setConsumabili(prev => {
@@ -622,7 +629,8 @@ export default function App() {
           pumpHours={sim.pumpHours} onResetPumpHours={handleResetPumpHours}
           ac={sim.autoCorrect || {enabled:false}} onAC={setSim}
           consumabili={consumabili} onConsumabili={handleConsumabili}
-          consumabiliSensors={sim.consumabiliSensors || {}} onToggleSensor={onToggleSensor}/>
+          consumabiliSensors={sim.consumabiliSensors || {}} onToggleSensor={onToggleSensor}
+          customPumps={customPumps} onCustomPumps={handleCustomPumps}/>
       ) : page === "energia" ? (
         <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
       ) : page === "storica" ? (

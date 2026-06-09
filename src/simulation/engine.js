@@ -482,10 +482,10 @@ export function simTick(s) {
   const hoursInc = dt / 3600;   // ore simulate trascorse in questo tick
   const pumpHours = { ...(s.pumpHours || {}) };
   for (let si = 0; si < stageCfgs.length; si++) {
-    const stName = stages[si]?.name ?? `ST-${String(si + 1).padStart(2, "0")}`;
     for (const p of (stageCfgs[si]?.pumps ?? [])) {
       if (!p.enabled) continue;
-      const key = `${stName}::${p.id}`;
+      // Counter keyed by physical pump id (see pumpHours.pumpKey).
+      const key = `pump::${p.id}`;
       pumpHours[key] = (pumpHours[key] || 0) + hoursInc;
     }
   }

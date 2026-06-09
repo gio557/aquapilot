@@ -292,7 +292,7 @@ export default function App() {
       (resolvedStageConfig[si]?.pumps ?? []).forEach(p => {
         const thr = pumpMaintH(p);
         if (thr <= 0 || !p.enabled) return;
-        const h = hours[pumpKey(st.name, p.id)] || 0;
+        const h = hours[pumpKey(p.id)] || 0;
         if (h >= thr) out.push({
           id: `maint_${st.name}_${p.id}`, stageName: st.name,
           stageTag: `ST-${String(si + 1).padStart(2, "0")}`,
@@ -312,9 +312,9 @@ export default function App() {
 
   // Reset a pump's run-hour counter (after servicing). Persist immediately so a
   // reload right after won't resurrect the old value from localStorage.
-  const handleResetPumpHours = (stageName, pumpId) => {
+  const handleResetPumpHours = (pumpId) => {
     setSim(prev => {
-      const next = { ...prev.pumpHours, [pumpKey(stageName, pumpId)]: 0 };
+      const next = { ...prev.pumpHours, [pumpKey(pumpId)]: 0 };
       savePumpHours(next);
       return { ...prev, pumpHours: next };
     });

@@ -15,6 +15,13 @@ export function useSimulation() {
   const prevRef = useRef(null);
   const latestRef = useRef(sim);
 
+  // Keep latestRef in sync with EVERY sim update, not just engine ticks. The
+  // periodic/unmount pump-hour persister reads latestRef; without this, a
+  // pump-hours reset done from App (setSim) while the simulation is paused
+  // would never reach latestRef and the stale pre-reset value would be
+  // written back to localStorage, resurrecting it on reload.
+  useEffect(() => { latestRef.current = sim; }, [sim]);
+
   useEffect(() => {
     if (!sim.running) return;
     const id = setInterval(() => setSim(prev => {

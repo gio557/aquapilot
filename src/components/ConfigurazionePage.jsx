@@ -284,6 +284,11 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
               ) : pumpsRegistry.dosatrici.map(p => {
                 const link = linkedStage(p.id, config, stages);
                 const linked = !!link;
+                const hrs = pumpHours[pumpKey(p.id)] || 0;
+                const thr = p.maintH || 0;
+                const due = thr > 0 && hrs >= thr;
+                const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
+                const barC = due ? t.red : pct >= 80 ? t.orange : t.green;
                 return (
                   <div key={p.id} style={{marginBottom:14, padding:"16px 18px", borderRadius:11,
                     background:t.surface2, border:`1px solid ${linked ? t.orange+"55" : t.border}`}}>
@@ -325,6 +330,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
                       <NumField label="Portata massima" value={p.flow_m3h} unit="m³/h"
                         onChange={v => updateD(p.id, "flow_m3h", v)} t={t}/>
+                      <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
+                        onChange={v => updateD(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
                       <div style={{display:"flex", flexDirection:"column", gap:3}}>
                         <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Prodotto collegato</div>
                         <select value={p.productId || ""}
@@ -338,7 +345,34 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           ))}
                         </select>
                       </div>
+                      {thr > 0 && (
+                        <button onClick={() => onResetPumpHours?.(p.id)}
+                          style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                            border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green, alignSelf:"flex-end"}}>
+                          ✓ Manutenzione effettuata
+                        </button>
+                      )}
                     </div>
+                    {thr > 0 && (
+                      <div style={{marginTop:12}}>
+                        <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                          <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                            Ore: <b style={{color: due ? t.red : t.text}}>{hrs.toFixed(1)}</b> / {thr} h
+                          </span>
+                          <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                            fontFamily:"'Share Tech Mono',monospace",
+                            background: due ? `${t.red}1a` : `${t.green}14`,
+                            color: due ? t.red : t.green,
+                            border:`1px solid ${(due ? t.red : t.green)}55`}}>
+                            {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
+                          </span>
+                        </div>
+                        <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                          <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3, transition:"width 0.5s"}}/>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -370,7 +404,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
               ) : pumpsRegistry.inverter.map(p => {
                 const link = linkedStage(p.id, config, stages);
                 const linked = !!link;
-                const hrs = linked ? (pumpHours[pumpKey(link.stage.name, p.id)] || 0) : 0;
+                const hrs = pumpHours[pumpKey(p.id)] || 0;
                 const thr = p.maintH || 0;
                 const due = thr > 0 && hrs >= thr;
                 const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
@@ -418,8 +452,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         onChange={v => updateI(p.id, "flow_m3h", v)} t={t}/>
                       <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
                         onChange={v => updateI(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
-                      {linked && thr > 0 && (
-                        <button onClick={() => onResetPumpHours?.(link.stage.name, p.id)}
+                      {thr > 0 && (
+                        <button onClick={() => onResetPumpHours?.(p.id)}
                           style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
                             fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                             border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green, alignSelf:"flex-end"}}>
@@ -427,7 +461,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         </button>
                       )}
                     </div>
-                    {linked && thr > 0 && (
+                    {thr > 0 && (
                       <div style={{marginTop:12}}>
                         <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
                           <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
@@ -869,8 +903,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     resolveLinks(sc.pumps, pumpsRegistry).map(pump => {
                       const isDos = pump.isDosatrice;
                       const pumpColor = isDos ? t.orange : t.accent;
-                      const hrs = pump.vfd ? (pumpHours?.[pumpKey(stage.name, pump.id)] || 0) : 0;
-                      const thr = pump.vfd ? (pump.maintH || 0) : 0;
+                      const hrs = pumpHours?.[pumpKey(pump.id)] || 0;
+                      const thr = pump.maintH || 0;
                       const due = thr > 0 && hrs >= thr;
                       const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
                       const barColor = due ? t.red : pct >= 80 ? t.orange : t.green;
@@ -932,7 +966,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                               </div>
                             );
                           })()}
-                          {pump.vfd && thr > 0 && (
+                          {thr > 0 && (
                             <div style={{marginTop:10, paddingTop:10, borderTop:`1px solid ${t.border}`}}>
                               <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4}}>
                                 <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>

@@ -45,7 +45,7 @@ export default function MaintenancePopup({ alerts, t, onService, onDismiss }) {
                   {a.hours.toFixed(1)} h / {a.threshold} h
                 </span>
               </div>
-              <button onClick={() => onService(a.stageName, a.pumpId)}
+              <button onClick={() => onService(a.pumpId)}
                 style={{width:"100%", padding:"8px", background:`${t.green}1a`, border:`1px solid ${t.green}66`,
                   color:t.green, borderRadius:7, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                   cursor:"pointer", letterSpacing:0.5}}>

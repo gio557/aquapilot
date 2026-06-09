@@ -15,11 +15,13 @@ export function pumpMaintH(pump) {
   return pump?.maintH == null ? DEFAULT_MAINT_H : Number(pump.maintH) || 0;
 }
 
-// Stable per-pump key. Stage names are unique within a plant (a stage type
-// can't be added twice) and pump ids are unique within a stage, so the pair is
-// stable across stage reordering — unlike a positional index.
-export function pumpKey(stageName, pumpId) {
-  return `${stageName}::${pumpId}`;
+// Stable per-pump key. The counter follows the physical pump (registry id),
+// so its accumulated wear survives relinking to another stage and stage
+// rename/remove — unlike the old "stageName::pumpId" key, which reset the
+// meter whenever a pump moved and resurrected stale hours onto a re-added
+// stage of the same name.
+export function pumpKey(pumpId) {
+  return `pump::${pumpId}`;
 }
 
 export function loadPumpHours() {

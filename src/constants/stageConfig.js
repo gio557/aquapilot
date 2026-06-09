@@ -113,7 +113,7 @@ export const DOSING_PUMP_SPEC = { power_kw:0.37, flow_m3h:0.4, head_m:15, rpm:14
 // dalla UI di configurazione per aggiungere pompe dal catalogo.
 export function makePump({ name, power_kw, flow_m3h, head_m, rpm, vfd = false, isDosatrice = false, productId = null }) {
   return {
-    id: `p${Date.now()}`, name, enabled: true,
+    id: `p${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, name, enabled: true,
     power_kw, flow_m3h, head_m, rpm, vfd, maintH: DEFAULT_MAINT_H,
     isDosatrice, productId,
   };
@@ -210,7 +210,7 @@ export const DEFAULT_STAGE_CONFIG = [
     stageIndex: 1,
     ...fromPreset("Dissabbiatura"),
     pumps: [
-      pump("p1", "Pompa classificatore sabbie", 2.2, 45, 5, 1450),
+      pump("pd_classif", "Pompa classificatore sabbie", 2.2, 45, 5, 1450),
     ],
     classifier: {
       mode: "timed",    // "timed" | "continuous"
@@ -225,23 +225,23 @@ export const DEFAULT_STAGE_CONFIG = [
     stageIndex: 2,
     ...fromPreset("Biologico"),
     pumps: [
-      pump("p1", "Soffianti aria",        15.0,   0,  0, 2900, true),
-      pump("p2", "Pompa ricircolo fanghi", 5.5, 200,  6, 1450, true),
+      pump("pb_soffianti", "Soffianti aria",        15.0,   0,  0, 2900, true),
+      pump("pb_ricircolo", "Pompa ricircolo fanghi", 5.5, 200,  6, 1450, true),
     ],
   },
   {
     stageIndex: 3,
     ...fromPreset("Denitrificazione"),
     pumps: [
-      pump("p1", "Pompa ricircolo miscela (MLR)", 5.5, 300, 5, 1450, true),
-      { ...pump("p2", "Pompa dosaggio Fonte di carbonio", 0.37, 0.4, 15, 1450), isDosatrice: true, productId: "carbonio" },
+      pump("pden_mlr", "Pompa ricircolo miscela (MLR)", 5.5, 300, 5, 1450, true),
+      { ...pump("pden_carbonio", "Pompa dosaggio Fonte di carbonio", 0.37, 0.4, 15, 1450), isDosatrice: true, productId: "carbonio" },
     ],
   },
   {
     stageIndex: 4,
     ...fromPreset("Sedimentazione"),
     pumps: [
-      pump("p1", "Pompa ricircolo fanghi", 4.0, 120, 7, 1450),
+      pump("psed_ricircolo", "Pompa ricircolo fanghi", 4.0, 120, 7, 1450),
     ],
   },
   {

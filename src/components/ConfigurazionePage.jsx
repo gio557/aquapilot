@@ -214,19 +214,18 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       </div>
     );
 
-    // Sub-tab bar helper
+    // Sotto-sezione: pill di un segmented control interno alla scheda POMPE.
     const PompeSubTab = ({ id, label, col }) => {
       const on = activePompeTab === id;
       return (
         <button onClick={() => setActivePompeTab(id)}
-          style={{padding:"8px 18px", borderRadius:"6px 6px 0 0", cursor:"pointer",
+          style={{padding:"9px 20px", borderRadius:8, cursor:"pointer",
             fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:1,
-            border:`1px solid ${on ? col : t.border}`,
-            borderBottom: on ? `1px solid ${t.surface2}` : `1px solid ${t.border}`,
-            background: on ? t.surface2 : t.surface3,
-            color: on ? col : t.textMuted, marginBottom: on ? -1 : 0,
-            boxShadow: on ? `0 0 10px ${col}44, 0 -2px 6px ${col}22` : "none",
-            transform: on ? "translateY(-2px)" : "none", transition:"all 0.18s"}}>
+            border:`1px solid ${on ? col : "transparent"}`,
+            background: on ? `${col}1f` : "transparent",
+            color: on ? col : t.textMuted,
+            boxShadow: on ? `0 0 12px ${col}33, inset 0 0 0 1px ${col}33` : "none",
+            transition:"all 0.18s"}}>
           {label}
         </button>
       );
@@ -236,14 +235,28 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       <div>
         {TabBar({padded:true})}
 
-        {/* ── SOTTO-TAB BAR ── */}
-        <div style={{display:"flex", gap:6, padding:"0 24px", borderBottom:`1px solid ${t.border}`, background:t.surface, marginTop:1}}>
-          <PompeSubTab id="dosatrici" label="GESTIONE POMPE DOSATRICI" col={t.orange}/>
-          <PompeSubTab id="inverter"  label="GESTIONE POMPE INVERTER"  col={t.accent}/>
-          <PompeSubTab id="prodotti"  label="PRODOTTI / CISTERNE"      col={t.green}/>
+        {/* ── SOTTO-SEZIONE POMPE ──
+            Breadcrumb + segmented control racchiuso in un pannello rientrato,
+            così si legge chiaramente come sottoinsieme della scheda POMPE. */}
+        <div style={{padding:"22px 24px 0", marginLeft:18,
+          borderLeft:`2px solid ${t.accent}44`}}>
+          <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:11, paddingLeft:14}}>
+            <span style={{fontSize:11, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1.5,
+              color:t.accent, textTransform:"uppercase"}}>POMPE</span>
+            <span style={{color:t.textMuted, fontSize:12}}>▸</span>
+            <span style={{fontSize:11, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1.5,
+              color:t.textMuted, textTransform:"uppercase"}}>scegli sezione da gestire</span>
+          </div>
+          <div style={{display:"inline-flex", gap:6, padding:6, marginLeft:14, borderRadius:12,
+            background:t.surface2, border:`1px solid ${t.border}`}}>
+            <PompeSubTab id="dosatrici" label="POMPE DOSATRICI"   col={t.orange}/>
+            <PompeSubTab id="inverter"  label="POMPE INVERTER"    col={t.accent}/>
+            <PompeSubTab id="prodotti"  label="PRODOTTI / CISTERNE" col={t.green}/>
+          </div>
         </div>
 
-        <div style={{padding:"24px 24px 40px"}}>
+        <div style={{padding:"22px 24px 40px", marginLeft:18,
+          borderLeft:`2px solid ${t.accent}44`}}>
 
           {/* ════ SUB-TAB: POMPE DOSATRICI ════ */}
           {activePompeTab === "dosatrici" && (

@@ -829,11 +829,15 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                                 const on = (pump.isDosatrice ? "dosatrice" : "inverter") === m;
                                 return (
                                   <div key={m} onClick={() => setPumpMode(si, pi, m)}
-                                    style={{padding:"5px 13px", cursor:"pointer", fontSize:12,
+                                    style={{padding:"5px 14px", cursor:"pointer", fontSize:12,
                                       fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, fontWeight:700,
-                                      background: on ? `${col}22` : t.surface3,
-                                      color: on ? col : t.textMuted,
+                                      position:"relative",
+                                      background: on ? col : "transparent",
+                                      color: on ? "#0a0e14" : t.textMuted,
+                                      opacity: on ? 1 : 0.55,
                                       borderLeft: idx ? `1px solid ${t.border}` : "none",
+                                      boxShadow: on ? `inset 0 0 0 1px ${col}, 0 0 12px ${col}88` : "none",
+                                      textShadow: on ? "0 1px 1px rgba(0,0,0,0.25)" : "none",
                                       transition:"all 0.15s"}}>
                                     {label}
                                   </div>

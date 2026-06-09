@@ -699,78 +699,10 @@ export default function App() {
             ))}
           </div>
 
-          {/* ── MAIN ROW: left sidebar | trend | right panel ── */}
+          {/* ── MAIN ROW: trend | right panel ── */}
           <div style={{display:"grid",
-            gridTemplateColumns: bp === "sm" ? "175px 1fr 280px" : bp === "xl" ? "220px 1fr 360px" : "195px 1fr 320px",
+            gridTemplateColumns: bp === "sm" ? "1fr 300px" : bp === "xl" ? "1fr 420px" : "1fr 380px",
             gap:12, minHeight:300}}>
-
-            {/* ── LEFT SIDEBAR ── */}
-            <div style={{display:"flex", flexDirection:"column", gap:8}}>
-
-              {/* PORTATA */}
-              <div style={{...card, padding:"14px 16px"}}>
-                <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:8}}>
-                  ▸ PORTATA <span style={{width:7,height:7,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
-                </div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:34, fontWeight:700, color:t.accent, lineHeight:1}}>
-                  {Math.round(d.Q ?? sim.inlet?.Q ?? 0)}
-                </div>
-                <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:10}}>m³/h · Portata attuale</div>
-                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8}}>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:17, color:t.textSec}}>
-                    {sim.qHistory?.length > 0
-                      ? (sim.qHistory.reduce((a,b)=>a+b,0)/sim.qHistory.length).toFixed(3)
-                      : "—"}
-                  </div>
-                  <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>m³/g · Medio mobile ({sim.qHistory?.length ?? 0} camp.)</div>
-                </div>
-              </div>
-
-              {/* FANGHI */}
-              <div style={{...card, padding:"14px 16px"}}>
-                <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:8}}>
-                  ▸ FANGHI <span style={{width:7,height:7,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
-                </div>
-                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:34, fontWeight:700, color:t.purple, lineHeight:1}}>
-                  {Math.round(d.MLSS ?? 0)}
-                </div>
-                <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:10}}>mg/L · MLSS biologico</div>
-                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8}}>
-                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:17,
-                    color: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green}}>
-                    {d.blower?.toFixed(0) ?? 0}%
-                  </div>
-                  <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>potenza · Soffianti</div>
-                  <div style={{height:4, background:t.surface3, borderRadius:2, marginTop:6, overflow:"hidden"}}>
-                    <div style={{height:"100%", width:`${d.blower??0}%`,
-                      background: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green,
-                      borderRadius:2, transition:"width 0.5s"}}/>
-                  </div>
-                </div>
-              </div>
-
-              {/* CONN. */}
-              <div style={{...card, padding:"14px 16px", flex:1}}>
-                <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:12}}>▸ CONN.</div>
-                {[
-                  {label:"Internet",   on:true},
-                  {label:"PLC/SCADA",  on:true},
-                  {label:"AI Engine",  on:true},
-                  {label:"Simulatore", on:sim.running},
-                ].map(c => (
-                  <div key={c.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
-                    <span style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{c.label}</span>
-                    <span style={{fontSize:13, padding:"3px 9px", borderRadius:4,
-                      background:c.on?`${t.green}18`:`${t.red}18`,
-                      color:c.on?t.green:t.red,
-                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
-                      border:`1px solid ${c.on?t.green:t.red}33`}}>
-                      <span style={{marginRight:3, fontSize:10}}>●</span>{c.on?"ON":"OFF"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
             {/* ── TREND LIVE ── */}
             <div style={{...card, padding:14, display:"flex", flexDirection:"column", minWidth:0}}>
@@ -947,10 +879,10 @@ export default function App() {
           </div>
 
           {/* ── BOTTOM ROW ── */}
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:12}}>
+          <div style={{display:"flex", gap:12, flexWrap: bp === "sm" ? "wrap" : "nowrap", alignItems:"stretch"}}>
 
             {/* CONSUMI ENERGETICI */}
-            <div style={{...card, padding:"16px 18px"}}>
+            <div style={{...card, padding:"16px 18px", flex:"1 1 280px", minWidth:0}}>
               <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:14}}>
                 <span style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ CONSUMI ENERGETICI</span>
                 <span style={{fontSize:11, padding:"2px 8px", borderRadius:3, background:`${t.green}18`, color:t.green, fontFamily:"'Share Tech Mono',monospace", border:`1px solid ${t.green}44`}}>LIVE</span>
@@ -990,7 +922,7 @@ export default function App() {
             </div>
 
             {/* STORICO ALLARMI */}
-            <div style={{...card, padding:"16px 18px", display:"flex", flexDirection:"column"}}>
+            <div style={{...card, padding:"16px 18px", display:"flex", flexDirection:"column", flex:"2 1 340px", minWidth:0}}>
               <div style={{display:"flex", alignItems:"center", gap:8, marginBottom:14}}>
                 <span style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ STORICO ALLARMI</span>
                 <span style={{fontSize:11, padding:"2px 8px", borderRadius:3,
@@ -1024,7 +956,7 @@ export default function App() {
             </div>
 
             {/* IMPIANTO */}
-            <div style={{...card, padding:"16px 18px"}}>
+            <div style={{...card, padding:"16px 18px", flex:"1 1 240px", minWidth:0}}>
               <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:14}}>▸ IMPIANTO</div>
               {(() => {
                 const dm = sim.dosageMax || {};
@@ -1055,6 +987,70 @@ export default function App() {
                   );
                 });
               })()}
+            </div>
+
+            {/* PORTATA */}
+            <div style={{...card, padding:"14px 16px", flex:"0 0 165px", minWidth:0}}>
+              <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:8}}>
+                ▸ PORTATA <span style={{width:7,height:7,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:30, fontWeight:700, color:t.accent, lineHeight:1}}>
+                {Math.round(d.Q ?? sim.inlet?.Q ?? 0)}
+              </div>
+              <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:10}}>m³/h · Portata attuale</div>
+              <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color:t.textSec}}>
+                  {sim.qHistory?.length > 0
+                    ? (sim.qHistory.reduce((a,b)=>a+b,0)/sim.qHistory.length).toFixed(3)
+                    : "—"}
+                </div>
+                <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>m³/g · Medio mobile</div>
+              </div>
+            </div>
+
+            {/* FANGHI */}
+            <div style={{...card, padding:"14px 16px", flex:"0 0 165px", minWidth:0}}>
+              <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:8}}>
+                ▸ FANGHI <span style={{width:7,height:7,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
+              </div>
+              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:30, fontWeight:700, color:t.purple, lineHeight:1}}>
+                {Math.round(d.MLSS ?? 0)}
+              </div>
+              <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:10}}>mg/L · MLSS biologico</div>
+              <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8}}>
+                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15,
+                  color: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green}}>
+                  {d.blower?.toFixed(0) ?? 0}%
+                </div>
+                <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>potenza · Soffianti</div>
+                <div style={{height:4, background:t.surface3, borderRadius:2, marginTop:6, overflow:"hidden"}}>
+                  <div style={{height:"100%", width:`${d.blower??0}%`,
+                    background: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green,
+                    borderRadius:2, transition:"width 0.5s"}}/>
+                </div>
+              </div>
+            </div>
+
+            {/* CONN. */}
+            <div style={{...card, padding:"14px 16px", flex:"0 0 175px", minWidth:0}}>
+              <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:12}}>▸ CONN.</div>
+              {[
+                {label:"Internet",   on:true},
+                {label:"PLC/SCADA",  on:true},
+                {label:"AI Engine",  on:true},
+                {label:"Simulatore", on:sim.running},
+              ].map(c => (
+                <div key={c.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+                  <span style={{fontSize:14, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{c.label}</span>
+                  <span style={{fontSize:11, padding:"2px 7px", borderRadius:4,
+                    background:c.on?`${t.green}18`:`${t.red}18`,
+                    color:c.on?t.green:t.red,
+                    fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
+                    border:`1px solid ${c.on?t.green:t.red}33`}}>
+                    <span style={{marginRight:3, fontSize:9}}>●</span>{c.on?"ON":"OFF"}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 

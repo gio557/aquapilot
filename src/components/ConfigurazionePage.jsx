@@ -249,9 +249,9 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
           </div>
           <div style={{display:"inline-flex", gap:6, padding:6, marginLeft:14, borderRadius:12,
             background:t.surface2, border:`1px solid ${t.border}`}}>
-            {PompeSubTab({ id:"dosatrici", label:"POMPE DOSATRICI",    col:t.orange })}
             {PompeSubTab({ id:"inverter",  label:"POMPE INVERTER",     col:t.accent })}
             {PompeSubTab({ id:"prodotti",  label:"PRODOTTI / CISTERNE", col:t.green })}
+            {PompeSubTab({ id:"dosatrici", label:"POMPE DOSATRICI",    col:t.orange })}
           </div>
         </div>
 

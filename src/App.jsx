@@ -12,7 +12,7 @@ import { useSimulation } from "./hooks/useSimulation";
 import { requestOsmosiCIP } from "./simulation/commands";
 import { savePumpHours, pumpKey, pumpMaintH } from "./simulation/pumpHours";
 import { loadConsumabili, saveConsumabili } from "./simulation/consumabili";
-import { loadCustomPumps, saveCustomPumps } from "./simulation/customPumps";
+import { loadPumpsRegistry, savePumpsRegistry, resolveLinks, migrateToRegistry } from "./simulation/pumpsRegistry";
 import MaintenancePopup from "./components/ui/MaintenancePopup";
 import ConsumabiliPopup from "./components/ui/ConsumabiliPopup";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -90,12 +90,29 @@ export default function App() {
   }, [sim.stageEnergy]);
   const seDisp = stageEnergyDisp ?? (sim.stageEnergy || []);
 
-  const [stageConfig, setStageConfig] = useState(() => {
-    try {
-      const saved = localStorage.getItem("aquapilot.stageConfig.v3");
-      return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG));
-    } catch { return JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)); }
+  // Compute initial stageConfig + pumpsRegistry together so migration (old
+  // inline pump objects → link format + separate registry) runs exactly once.
+  const [_init] = useState(() => {
+    const sc = (() => {
+      try {
+        const saved = localStorage.getItem("aquapilot.stageConfig.v3");
+        return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG));
+      } catch { return JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)); }
+    })();
+    const pr = loadPumpsRegistry();
+    const needsMigration =
+      pr.dosatrici.length === 0 && pr.inverter.length === 0 &&
+      sc.some(s => (s.pumps || []).some(p => p.name !== undefined));
+    if (!needsMigration) return { sc, pr };
+    const cp = (() => {
+      try { return JSON.parse(localStorage.getItem("aquapilot.customPumps.v1") || "[]") || []; }
+      catch { return []; }
+    })();
+    const { registry, configs } = migrateToRegistry(sc, cp);
+    return { sc: configs, pr: registry };
   });
+  const [stageConfig, setStageConfig] = useState(_init.sc);
+  const [pumpsRegistry, setPumpsRegistry] = useState(_init.pr);
   const [stages, setStages] = useState(() => {
     try {
       const saved = localStorage.getItem("aquapilot.stages.v3");
@@ -176,7 +193,6 @@ export default function App() {
   const [dismissedMaint, setDismissedMaint] = useState([]);
   const [dismissedConsumabili, setDismissedConsumabili] = useState([]);
   const [consumabili, setConsumabili] = useState(() => loadConsumabili());
-  const [customPumps, setCustomPumps] = useState(() => loadCustomPumps());
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 1000);
@@ -262,11 +278,18 @@ export default function App() {
   // ── Manutenzione programmata pompe ──────────────────────────────────────────
   // Una pompa abilitata con soglia > 0 che supera le ore impostate genera una
   // notifica; alla stessa logica di dismiss/riemersione della diagnostica.
+  // Resolved pumps (full objects) used for engine, popup, maint alerts.
+  // Recomputed whenever stageConfig links or registry entries change.
+  const resolvedStageConfig = useMemo(() =>
+    stageConfig.map(sc => ({ ...sc, pumps: resolveLinks(sc.pumps, pumpsRegistry) })),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [JSON.stringify(stageConfig), JSON.stringify(pumpsRegistry)]);
+
   const maintAlerts = (() => {
     const out = [];
     const hours = sim.pumpHours || {};
     stages.forEach((st, si) => {
-      (stageConfig[si]?.pumps ?? []).forEach(p => {
+      (resolvedStageConfig[si]?.pumps ?? []).forEach(p => {
         const thr = pumpMaintH(p);
         if (thr <= 0 || !p.enabled) return;
         const h = hours[pumpKey(st.name, p.id)] || 0;
@@ -299,20 +322,20 @@ export default function App() {
   // Persist consumabili config on every change.
   useEffect(() => { saveConsumabili(consumabili); }, [consumabili]);
 
-  // Persist custom pump models on every change.
-  useEffect(() => { saveCustomPumps(customPumps); }, [customPumps]);
-  const handleCustomPumps = (updater) =>
-    setCustomPumps(prev => (typeof updater === "function" ? updater(prev) : updater));
+  // Persist pumpsRegistry on every change.
+  useEffect(() => { savePumpsRegistry(pumpsRegistry); }, [pumpsRegistry]);
 
   const handleConsumabili = (updater) => {
     setConsumabili(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      // drop productId from pumps for any product no longer present
+      // Clear productId on dosing pumps whose product was removed
       const ids = new Set(next.map(c => c.id));
-      setStageConfig(sc => sc.map(st => ({
-        ...st,
-        pumps: st.pumps.map(p => (!p.productId || ids.has(p.productId)) ? p : { ...p, productId: null }),
-      })));
+      setPumpsRegistry(pr => ({
+        ...pr,
+        dosatrici: pr.dosatrici.map(p =>
+          p.productId && !ids.has(p.productId) ? { ...p, productId: null } : p
+        ),
+      }));
       return next;
     });
   };
@@ -430,10 +453,16 @@ export default function App() {
   }, [grCfgJson]);
 
   const stageConfigJson = JSON.stringify(stageConfig);
+  // Save raw (link format) stageConfig to localStorage
   useEffect(() => {
-    setSim(prev => ({ ...prev, stageConfig, stages }));
     try { localStorage.setItem("aquapilot.stageConfig.v3", stageConfigJson); } catch { /* storage non disponibile */ }
   }, [stageConfigJson]);
+  // Push resolved (full pump objects) stageConfig to sim engine
+  const resolvedJson = JSON.stringify(resolvedStageConfig);
+  useEffect(() => {
+    setSim(prev => ({ ...prev, stageConfig: resolvedStageConfig, stages }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedJson, stagesJson]);
 
   const stagesJson = JSON.stringify(stages);
   useEffect(() => {
@@ -645,7 +674,7 @@ export default function App() {
           ac={sim.autoCorrect || {enabled:false}} onAC={setSim}
           consumabili={consumabili} onConsumabili={handleConsumabili}
           consumabiliSensors={sim.consumabiliSensors || {}} onToggleSensor={onToggleSensor}
-          customPumps={customPumps} onCustomPumps={handleCustomPumps}/>
+          pumpsRegistry={pumpsRegistry} onPumpsRegistry={setPumpsRegistry}/>
       ) : page === "energia" ? (
         <EnergiaPage t={t} sim={sim} price={energyPrice} onPrice={setEnergyPrice} stages={stages} />
       ) : page === "storica" ? (
@@ -1044,7 +1073,7 @@ export default function App() {
         <StageDetailPopup
           {...selectedStageData}
           autoEnabled={autoOn}
-          stageConfig={stageConfig[selectedStage] ?? null}
+          stageConfig={resolvedStageConfig[selectedStage] ?? null}
           qualitySources={qualitySources}
           osmosiState={selectedStage === osmoIdx ? sim.stageStates?.[osmoIdx] : null}
           onOsmosiCIP={selectedStage === osmoIdx ? handleOsmosiCIP : undefined}

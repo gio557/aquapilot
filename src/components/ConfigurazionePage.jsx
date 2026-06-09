@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useBreakpoint } from "../hooks/useWindowSize";
-import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG, PUMP_CATALOG, DOSING_PUMP_SPEC, makePump } from "../constants/stageConfig";
+import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
 import { pumpKey, pumpMaintH } from "../simulation/pumpHours";
 import { newConsumabile, mergeDefaults } from "../simulation/consumabili";
-import { newCustomPump } from "../simulation/customPumps";
+import { newDosatriceEntry, newInverterEntry, resolveLinks, linkedStage } from "../simulation/pumpsRegistry";
 import { STAGE_META } from "../constants/stages";
 import { QUALITY_PARAMS, STAGE_SIGNALS, SOURCE_OPTIONS, dataSourceTag } from "../constants/dataSource";
 import NormativaPage from "./NormativaPage";
@@ -53,11 +53,11 @@ function NumField({ label, value, unit, onChange, t }) {
   );
 }
 
-export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC, consumabili = [], onConsumabili, consumabiliSensors = {}, onToggleSensor, customPumps = [], onCustomPumps }) {
+export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC, consumabili = [], onConsumabili, consumabiliSensors = {}, onToggleSensor, pumpsRegistry = { dosatrici: [], inverter: [] }, onPumpsRegistry }) {
   const bp = useBreakpoint();
   const [activeTab, setActiveTab] = useState("stadi");
+  const [activePompeTab, setActivePompeTab] = useState("dosatrici");
   const [expanded, setExpanded] = useState(null);
-  const [showAddPopup, setShowAddPopup] = useState(false);
   const stages = stagesProp || STAGE_META;
 
   const availableTypes = (stageTypes || []).filter(st => !stages.some(s => s.name === st.name));
@@ -81,77 +81,30 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     ));
   };
 
-  const updatePump = (si, pi, field, value) => {
+  // Link a registry pump to a stage (adds a {registryId, enabled} link object).
+  const linkPump = (si, registryId) => {
+    if (!registryId) return;
     onChange(prev => prev.map((sc, i) =>
-      i !== si ? sc : {
-        ...sc,
-        pumps: sc.pumps.map((p, j) => j !== pi ? p : { ...p, [field]: value })
-      }
+      i !== si ? sc : { ...sc, pumps: [...(sc.pumps || []), { registryId, enabled: true }] }
     ));
   };
 
-  // Modalità della pompa: "dosatrice" e "inverter" si escludono a vicenda e
-  // determinano quali parametri vengono mostrati nella card. Manteniamo allineato
-  // anche `vfd` (= inverter attivo) usato altrove per il badge INVERTER.
-  const setPumpMode = (si, pi, mode) => {
+  // Remove a pump link from a stage (pump stays in registry, just unlinked).
+  const unlinkPump = (si, registryId) => {
     onChange(prev => prev.map((sc, i) =>
-      i !== si ? sc : {
-        ...sc,
-        pumps: sc.pumps.map((p, j) => j !== pi ? p : {
-          ...p, isDosatrice: mode === "dosatrice", vfd: mode === "inverter",
-        })
-      }
+      i !== si ? sc : { ...sc, pumps: (sc.pumps || []).filter(l => l.registryId !== registryId) }
     ));
   };
 
-  // Se nello stadio esiste già una pompa con lo stesso nome base, aggiunge un
-  // suffisso numerico progressivo ("Pompa X", "Pompa X 2", "Pompa X 3"…) così
-  // ogni unità resta identificabile e configurabile singolarmente.
-  const uniquePumpName = (pumps, baseName) => {
-    const esc = baseName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`^${esc}(?: (\\d+))?$`);
-    let max = 0, found = false;
-    for (const p of pumps) {
-      const m = (p.name || "").match(re);
-      if (!m) continue;
-      found = true;
-      max = Math.max(max, m[1] ? Number(m[1]) : 1);
-    }
-    return found ? `${baseName} ${max + 1}` : baseName;
-  };
-
-  // Add a pump chosen from the catalog dropdown. `value` is either a process
-  // pump key ("soffianti", ...) or a dosing-pump token "dose:<productId>".
-  const addPumpFromCatalog = (si, value) => {
-    if (!value) return;
-    let baseName, spec;
-    if (value.startsWith("model:")) {
-      const m = customPumps.find(cp => cp.id === value.slice(6));
-      if (!m) return;
-      baseName = m.name || "Pompa personalizzata";
-      spec = { power_kw: m.power_kw, flow_m3h: m.flow_m3h, head_m: m.head_m, rpm: m.rpm, vfd: !!m.vfd };
-    } else if (value.startsWith("dose:")) {
-      const pid = value.slice(5);
-      const prod = consumabili.find(c => c.id === pid);
-      baseName = `Pompa dosaggio ${prod ? prod.nome : ""}`.trim();
-      spec = { ...DOSING_PUMP_SPEC, isDosatrice: true, productId: pid };
-    } else {
-      const tpl = PUMP_CATALOG.find(c => c.key === value);
-      if (!tpl) return;
-      baseName = tpl.name;
-      spec = { power_kw: tpl.power_kw, flow_m3h: tpl.flow_m3h,
-        head_m: tpl.head_m, rpm: tpl.rpm, vfd: !!tpl.vfd };
-    }
-    onChange(prev => prev.map((sc, i) => {
-      if (i !== si) return sc;
-      const p = makePump({ name: uniquePumpName(sc.pumps, baseName), ...spec });
-      return { ...sc, pumps: [...sc.pumps, p] };
-    }));
-  };
-
-  const removePump = (si, pi) => {
+  // Toggle the enabled flag on a stage pump link.
+  const togglePumpEnabled = (si, registryId) => {
     onChange(prev => prev.map((sc, i) =>
-      i !== si ? sc : { ...sc, pumps: sc.pumps.filter((_, j) => j !== pi) }
+      i !== si ? sc : {
+        ...sc,
+        pumps: (sc.pumps || []).map(l =>
+          l.registryId !== registryId ? l : { ...l, enabled: !l.enabled }
+        ),
+      }
     ));
   };
 
@@ -224,6 +177,22 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   }
 
   if (activeTab === "consumabili") {
+    // ── Registry CRUD helpers ──
+    const updateD = (id, field, val) =>
+      onPumpsRegistry?.(pr => ({ ...pr, dosatrici: pr.dosatrici.map(p => p.id===id ? {...p,[field]:val} : p) }));
+    const removeD = (id) =>
+      onPumpsRegistry?.(pr => ({ ...pr, dosatrici: pr.dosatrici.filter(p => p.id !== id) }));
+    const addD = () =>
+      onPumpsRegistry?.(pr => ({ ...pr, dosatrici: [...pr.dosatrici, newDosatriceEntry()] }));
+
+    const updateI = (id, field, val) =>
+      onPumpsRegistry?.(pr => ({ ...pr, inverter: pr.inverter.map(p => p.id===id ? {...p,[field]:val} : p) }));
+    const removeI = (id) =>
+      onPumpsRegistry?.(pr => ({ ...pr, inverter: pr.inverter.filter(p => p.id !== id) }));
+    const addI = () =>
+      onPumpsRegistry?.(pr => ({ ...pr, inverter: [...pr.inverter, newInverterEntry()] }));
+
+    // ── Consumabili CRUD helpers ──
     const updateC = (id, field, value) =>
       onConsumabili?.(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
     const removeC = (id) =>
@@ -232,15 +201,6 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       onConsumabili?.(prev => [...prev, newConsumabile()]);
     const addDefaults = () =>
       onConsumabili?.(prev => mergeDefaults(prev));
-
-    // CRUD modelli di pompa personalizzata (vivono qui, confluiscono nel menu
-    // "Aggiungi pompa" degli stadi come gruppo "Pompe personalizzate").
-    const updateCP = (id, field, value) =>
-      onCustomPumps?.(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-    const removeCP = (id) =>
-      onCustomPumps?.(prev => prev.filter(p => p.id !== id));
-    const addCP = () =>
-      onCustomPumps?.(prev => [...prev, newCustomPump()]);
 
     const TextField = ({ label, value, onChange: onCh, placeholder }) => (
       <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:180}}>
@@ -253,292 +213,360 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
       </div>
     );
 
+    // Sub-tab bar helper
+    const PompeSubTab = ({ id, label, col }) => {
+      const on = activePompeTab === id;
+      return (
+        <button onClick={() => setActivePompeTab(id)}
+          style={{padding:"8px 18px", borderRadius:"6px 6px 0 0", cursor:"pointer",
+            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:1,
+            border:`1px solid ${on ? col : t.border}`,
+            borderBottom: on ? `1px solid ${t.surface2}` : `1px solid ${t.border}`,
+            background: on ? t.surface2 : t.surface3,
+            color: on ? col : t.textMuted, marginBottom: on ? -1 : 0,
+            boxShadow: on ? `0 0 10px ${col}44, 0 -2px 6px ${col}22` : "none",
+            transform: on ? "translateY(-2px)" : "none", transition:"all 0.18s"}}>
+          {label}
+        </button>
+      );
+    };
+
     return (
       <div>
         {TabBar({padded:true})}
+
+        {/* ── SOTTO-TAB BAR ── */}
+        <div style={{display:"flex", gap:6, padding:"0 24px", borderBottom:`1px solid ${t.border}`, background:t.surface, marginTop:1}}>
+          <PompeSubTab id="dosatrici" label="GESTIONE POMPE DOSATRICI" col={t.orange}/>
+          <PompeSubTab id="inverter"  label="GESTIONE POMPE INVERTER"  col={t.accent}/>
+          <PompeSubTab id="prodotti"  label="PRODOTTI / CISTERNE"      col={t.green}/>
+        </div>
+
         <div style={{padding:"24px 24px 40px"}}>
-          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20}}>
-            <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
-              GESTIONE POMPE
-            </div>
-            <div style={{display:"flex", gap:8}}>
-              <button onClick={addDefaults}
-                style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
-                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
-                  border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
-                ↻ Aggiungi predefiniti mancanti
-              </button>
-              <button onClick={addC}
-                style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
-                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
-                  border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
-                + Aggiungi prodotto
-              </button>
-            </div>
-          </div>
 
-          {consumabili.length === 0 ? (
-            <div style={{padding:"28px", textAlign:"center", color:t.textMuted,
-              fontFamily:"'Rajdhani',sans-serif", fontSize:14, background:t.surface2,
-              borderRadius:10, border:`1px dashed ${t.border}`}}>
-              Nessun prodotto configurato. Aggiungi un prodotto per iniziare.
-            </div>
-          ) : consumabili.map(c => {
-            const sens = consumabiliSensors[c.id] || {};
-            const hasAlert = sens.riordino || sens.vuoto;
-            const borderColor = sens.vuoto ? t.red : sens.riordino ? t.orange : t.border;
-            return (
-              <div key={c.id} style={{marginBottom:16, padding:"18px 20px", borderRadius:11,
-                background:t.surface2, border:`1px solid ${hasAlert ? borderColor : t.border}`}}>
+          {/* ════ SUB-TAB: POMPE DOSATRICI ════ */}
+          {activePompeTab === "dosatrici" && (
+            <>
+              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16}}>
+                <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.orange, letterSpacing:1.5}}>
+                  POMPE DOSATRICI
+                </div>
+                <button onClick={addD}
+                  style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
+                    fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                    border:`1px solid ${t.orange}`, background:`${t.orange}18`, color:t.orange}}>
+                  + Nuova pompa dosatrice
+                </button>
+              </div>
+              <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:16}}>
+                Ogni pompa dosatrice può essere collegata a un prodotto/cisterna (tab PRODOTTI) e poi linkata a uno stadio.
+              </div>
+              {pumpsRegistry.dosatrici.length === 0 ? (
+                <div style={{padding:"24px", textAlign:"center", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                  fontSize:14, background:t.surface2, borderRadius:10, border:`1px dashed ${t.border}`}}>
+                  Nessuna pompa dosatrice configurata.
+                </div>
+              ) : pumpsRegistry.dosatrici.map(p => {
+                const link = linkedStage(p.id, config, stages);
+                const linked = !!link;
+                return (
+                  <div key={p.id} style={{marginBottom:14, padding:"16px 18px", borderRadius:11,
+                    background:t.surface2, border:`1px solid ${linked ? t.orange+"55" : t.border}`}}>
+                    <div style={{display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", marginBottom:12}}>
+                      <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:220}}>
+                        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
+                        <input type="text" value={p.name || ""} placeholder="Nome pompa dosatrice"
+                          onChange={e => updateD(p.id, "name", e.target.value)}
+                          style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
+                            color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif",
+                            fontSize:14, fontWeight:700, outline:"none"}}/>
+                      </div>
+                      {linked ? (
+                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
+                          background:`${t.orange}18`, border:`1px solid ${t.orange}55`,
+                          color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>
+                          ↔ {link.stage.name}
+                        </span>
+                      ) : (
+                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
+                          background:t.surface3, border:`1px solid ${t.border}`,
+                          color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
+                          non collegata
+                        </span>
+                      )}
+                      <button onClick={() => removeD(p.id)} disabled={linked}
+                        style={{padding:"6px 14px", borderRadius:6, cursor: linked ? "not-allowed" : "pointer",
+                          fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
+                          border:`1px solid ${linked ? t.border : t.red+"66"}`,
+                          background: linked ? t.surface3 : `${t.red}14`,
+                          color: linked ? t.textMuted : t.red,
+                          opacity: linked ? 0.5 : 1}}>
+                        {linked ? "Scollega dallo stadio" : "Rimuovi"}
+                      </button>
+                    </div>
+                    <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
+                      <NumField label="Portata massima" value={p.flow_m3h} unit="m³/h"
+                        onChange={v => updateD(p.id, "flow_m3h", v)} t={t}/>
+                      <div style={{display:"flex", flexDirection:"column", gap:3}}>
+                        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Prodotto collegato</div>
+                        <select value={p.productId || ""}
+                          onChange={e => updateD(p.id, "productId", e.target.value || null)}
+                          style={{padding:"6px 10px", borderRadius:5, background:t.surface3,
+                            border:`1px solid ${t.border}`, color: p.productId ? t.text : t.textMuted,
+                            fontFamily:"'Rajdhani',sans-serif", fontSize:13, outline:"none", minWidth:180}}>
+                          <option value="">— nessun prodotto —</option>
+                          {consumabili.map(c => (
+                            <option key={c.id} value={c.id}>{c.nome}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
 
-                {/* ── HEADER CISTERNA ── */}
-                <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:16}}>
-                  <span style={{fontSize:20}}>🧴</span>
-                  <input type="text" value={c.nome}
-                    onChange={e => updateC(c.id, "nome", e.target.value)}
-                    style={{flex:1, background:"transparent", border:"none",
-                      borderBottom:`1px solid ${t.border}`, color:t.text,
-                      fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:17,
-                      outline:"none", padding:"2px 4px"}}/>
-                  {sens.vuoto && (
-                    <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
-                      background:`${t.red}1a`, border:`1px solid ${t.red}66`, color:t.red,
-                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>⚠ VUOTO</span>
-                  )}
-                  {!sens.vuoto && sens.riordino && (
-                    <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
-                      background:`${t.orange}1a`, border:`1px solid ${t.orange}66`, color:t.orange,
-                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>↓ RIORDINO</span>
-                  )}
-                  <button onClick={() => removeC(c.id)}
-                    style={{padding:"4px 12px", borderRadius:5, cursor:"pointer",
-                      fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
-                      border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
-                    Rimuovi
+          {/* ════ SUB-TAB: POMPE INVERTER ════ */}
+          {activePompeTab === "inverter" && (
+            <>
+              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16}}>
+                <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
+                  POMPE INVERTER
+                </div>
+                <button onClick={addI}
+                  style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
+                    fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                    border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
+                  + Nuova pompa inverter
+                </button>
+              </div>
+              <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:16}}>
+                Pompe a velocità variabile (VFD). Configura qui portata e soglia manutenzione, poi linkale agli stadi.
+              </div>
+              {pumpsRegistry.inverter.length === 0 ? (
+                <div style={{padding:"24px", textAlign:"center", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
+                  fontSize:14, background:t.surface2, borderRadius:10, border:`1px dashed ${t.border}`}}>
+                  Nessuna pompa inverter configurata.
+                </div>
+              ) : pumpsRegistry.inverter.map(p => {
+                const link = linkedStage(p.id, config, stages);
+                const linked = !!link;
+                const hrs = linked ? (pumpHours[pumpKey(link.stage.name, p.id)] || 0) : 0;
+                const thr = p.maintH || 0;
+                const due = thr > 0 && hrs >= thr;
+                const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
+                const barC = due ? t.red : pct >= 80 ? t.orange : t.green;
+                return (
+                  <div key={p.id} style={{marginBottom:14, padding:"16px 18px", borderRadius:11,
+                    background:t.surface2, border:`1px solid ${linked ? t.accent+"55" : t.border}`}}>
+                    <div style={{display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", marginBottom:12}}>
+                      <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:220}}>
+                        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
+                        <input type="text" value={p.name || ""} placeholder="Nome pompa inverter"
+                          onChange={e => updateI(p.id, "name", e.target.value)}
+                          style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
+                            color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif",
+                            fontSize:14, fontWeight:700, outline:"none"}}/>
+                      </div>
+                      {linked ? (
+                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
+                          background:`${t.accent}18`, border:`1px solid ${t.accent}55`,
+                          color:t.accent, fontFamily:"'Share Tech Mono',monospace"}}>
+                          ↔ {link.stage.name}
+                        </span>
+                      ) : (
+                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
+                          background:t.surface3, border:`1px solid ${t.border}`,
+                          color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
+                          non collegata
+                        </span>
+                      )}
+                      <button onClick={() => removeI(p.id)} disabled={linked}
+                        style={{padding:"6px 14px", borderRadius:6, cursor: linked ? "not-allowed" : "pointer",
+                          fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
+                          border:`1px solid ${linked ? t.border : t.red+"66"}`,
+                          background: linked ? t.surface3 : `${t.red}14`,
+                          color: linked ? t.textMuted : t.red,
+                          opacity: linked ? 0.5 : 1}}>
+                        {linked ? "Scollega dallo stadio" : "Rimuovi"}
+                      </button>
+                    </div>
+                    <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
+                      <NumField label="Portata" value={p.flow_m3h} unit="m³/h"
+                        onChange={v => updateI(p.id, "flow_m3h", v)} t={t}/>
+                      <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
+                        onChange={v => updateI(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
+                      {linked && thr > 0 && (
+                        <button onClick={() => onResetPumpHours?.(link.stage.name, p.id)}
+                          style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                            border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green, alignSelf:"flex-end"}}>
+                          ✓ Manutenzione effettuata
+                        </button>
+                      )}
+                    </div>
+                    {linked && thr > 0 && (
+                      <div style={{marginTop:12}}>
+                        <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                          <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                            Ore: <b style={{color: due ? t.red : t.text}}>{hrs.toFixed(1)}</b> / {thr} h
+                          </span>
+                          <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                            fontFamily:"'Share Tech Mono',monospace",
+                            background: due ? `${t.red}1a` : `${t.green}14`,
+                            color: due ? t.red : t.green,
+                            border:`1px solid ${(due ? t.red : t.green)}55`}}>
+                            {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
+                          </span>
+                        </div>
+                        <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                          <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3, transition:"width 0.5s"}}/>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          {/* ════ SUB-TAB: PRODOTTI / CISTERNE ════ */}
+          {activePompeTab === "prodotti" && (
+            <>
+              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20}}>
+                <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.green, letterSpacing:1.5}}>
+                  PRODOTTI / CISTERNE
+                </div>
+                <div style={{display:"flex", gap:8}}>
+                  <button onClick={addDefaults}
+                    style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
+                      fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                      border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
+                    ↻ Aggiungi predefiniti mancanti
+                  </button>
+                  <button onClick={addC}
+                    style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
+                      fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                      border:`1px solid ${t.green}`, background:`${t.green}18`, color:t.green}}>
+                    + Aggiungi prodotto
                   </button>
                 </div>
-
-                {/* ── NOTA SOSTANZA + STADI TIPICI ── */}
-                {(c.note || (c.stadiTipici && c.stadiTipici.length > 0)) && (
-                  <div style={{marginBottom:14, marginTop:-6}}>
-                    {c.note && (
-                      <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
-                        fontStyle:"italic", marginBottom:7}}>{c.note}</div>
+              </div>
+              {consumabili.length === 0 ? (
+                <div style={{padding:"28px", textAlign:"center", color:t.textMuted,
+                  fontFamily:"'Rajdhani',sans-serif", fontSize:14, background:t.surface2,
+                  borderRadius:10, border:`1px dashed ${t.border}`}}>
+                  Nessun prodotto configurato.
+                </div>
+              ) : consumabili.map(c => {
+                const sens = consumabiliSensors[c.id] || {};
+                const hasAlert = sens.riordino || sens.vuoto;
+                const borderColor = sens.vuoto ? t.red : sens.riordino ? t.orange : t.border;
+                return (
+                  <div key={c.id} style={{marginBottom:16, padding:"18px 20px", borderRadius:11,
+                    background:t.surface2, border:`1px solid ${hasAlert ? borderColor : t.border}`}}>
+                    <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:16}}>
+                      <span style={{fontSize:20}}>🧴</span>
+                      <input type="text" value={c.nome}
+                        onChange={e => updateC(c.id, "nome", e.target.value)}
+                        style={{flex:1, background:"transparent", border:"none",
+                          borderBottom:`1px solid ${t.border}`, color:t.text,
+                          fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:17,
+                          outline:"none", padding:"2px 4px"}}/>
+                      {sens.vuoto && (
+                        <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
+                          background:`${t.red}1a`, border:`1px solid ${t.red}66`, color:t.red,
+                          fontFamily:"'Share Tech Mono',monospace"}}>⚠ VUOTO</span>
+                      )}
+                      {!sens.vuoto && sens.riordino && (
+                        <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
+                          background:`${t.orange}1a`, border:`1px solid ${t.orange}66`, color:t.orange,
+                          fontFamily:"'Share Tech Mono',monospace"}}>↓ RIORDINO</span>
+                      )}
+                      <button onClick={() => removeC(c.id)}
+                        style={{padding:"4px 12px", borderRadius:5, cursor:"pointer",
+                          fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
+                          border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
+                        Rimuovi
+                      </button>
+                    </div>
+                    {(c.note || (c.stadiTipici && c.stadiTipici.length > 0)) && (
+                      <div style={{marginBottom:14, marginTop:-6}}>
+                        {c.note && <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontStyle:"italic", marginBottom:7}}>{c.note}</div>}
+                        {c.stadiTipici?.length > 0 && (
+                          <div style={{display:"flex", gap:6, flexWrap:"wrap", alignItems:"center"}}>
+                            <span style={{fontSize:10.5, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>STADI TIPICI</span>
+                            {c.stadiTipici.map(s => (
+                              <span key={s} style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                background:`${t.accent}14`, border:`1px solid ${t.accent}33`, color:t.accent,
+                                fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{s}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
-                    {c.stadiTipici && c.stadiTipici.length > 0 && (
-                      <div style={{display:"flex", gap:6, flexWrap:"wrap", alignItems:"center"}}>
-                        <span style={{fontSize:10.5, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
-                          letterSpacing:0.5, marginRight:2}}>STADI TIPICI</span>
-                        {c.stadiTipici.map(s => (
-                          <span key={s} style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                            background:`${t.accent}14`, border:`1px solid ${t.accent}33`, color:t.accent,
-                            fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{s}</span>
+                    <div style={{display:"flex", gap:12, flexWrap:"wrap", marginBottom:14}}>
+                      <TextField label="Fornitore" value={c.fornitore} onChange={v => updateC(c.id, "fornitore", v)} placeholder="Nome fornitore"/>
+                      <TextField label="Email fornitore" value={c.emailFornitore} onChange={v => updateC(c.id, "emailFornitore", v)} placeholder="ordini@fornitore.it"/>
+                      <TextField label="Email responsabile" value={c.emailResponsabile} onChange={v => updateC(c.id, "emailResponsabile", v)} placeholder="resp@impianto.it"/>
+                    </div>
+                    <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14, marginBottom:14}}>
+                      <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:10}}>SENSORI LIVELLO CISTERNA</div>
+                      <div style={{display:"flex", gap:16, flexWrap:"wrap"}}>
+                        {[["riordino","↓ Sensore riordino",t.orange,"livelloRiordino_mm"],["vuoto","⚠ Sensore vuoto",t.red,"livelloVuoto_mm"]].map(([tipo, label, col, field]) => (
+                          <div key={tipo} style={{flex:1, minWidth:200, padding:"12px 14px", borderRadius:8,
+                            background:t.surface3, border:`1px solid ${sens[tipo] ? col+"66" : t.border}`}}>
+                            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8}}>
+                              <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, color: sens[tipo] ? col : t.text}}>{label}</span>
+                              <div onClick={() => onToggleSensor?.(c.id, tipo)}
+                                style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative",
+                                  background: sens[tipo] ? col : t.surface2,
+                                  border:`1px solid ${sens[tipo] ? col : t.border}`, transition:"background 0.2s"}}>
+                                <div style={{position:"absolute", top:2, left: sens[tipo] ? 17 : 2,
+                                  width:14, height:14, borderRadius:"50%", background:"#fff",
+                                  transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                              </div>
+                            </div>
+                            <div style={{display:"flex", alignItems:"center", gap:8}}>
+                              <input type="number" value={c[field]}
+                                onChange={e => updateC(c.id, field, Math.max(0, parseInt(e.target.value)||0))}
+                                style={{width:80, background:t.surface, border:`1px solid ${t.border}`,
+                                  borderRadius:5, color:t.text, padding:"5px 8px",
+                                  fontFamily:"'Share Tech Mono',monospace", fontSize:14}}/>
+                              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>mm · quota galleggiante</span>
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ── DATI FORNITORE ── */}
-                <div style={{display:"flex", gap:12, flexWrap:"wrap", marginBottom:14}}>
-                  <TextField label="Fornitore" value={c.fornitore}
-                    onChange={v => updateC(c.id, "fornitore", v)} placeholder="Nome fornitore"/>
-                  <TextField label="Email fornitore" value={c.emailFornitore}
-                    onChange={v => updateC(c.id, "emailFornitore", v)} placeholder="ordini@fornitore.it"/>
-                  <TextField label="Email responsabile" value={c.emailResponsabile}
-                    onChange={v => updateC(c.id, "emailResponsabile", v)} placeholder="resp@impianto.it"/>
-                </div>
-
-                {/* ── SENSORI LIVELLO ── */}
-                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14, marginBottom:14}}>
-                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
-                    letterSpacing:1, marginBottom:10}}>SENSORI LIVELLO CISTERNA</div>
-                  <div style={{display:"flex", gap:16, flexWrap:"wrap"}}>
-                    {/* Sensore riordino */}
-                    <div style={{flex:1, minWidth:200, padding:"12px 14px", borderRadius:8,
-                      background:t.surface3, border:`1px solid ${sens.riordino ? t.orange+"66" : t.border}`}}>
-                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8}}>
-                        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
-                          color: sens.riordino ? t.orange : t.text}}>↓ Sensore riordino</span>
-                        <div onClick={() => onToggleSensor?.(c.id, "riordino")}
-                          style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative",
-                            background: sens.riordino ? t.orange : t.surface2,
-                            border:`1px solid ${sens.riordino ? t.orange : t.border}`, transition:"background 0.2s"}}>
-                          <div style={{position:"absolute", top:2, left: sens.riordino ? 17 : 2,
+                    </div>
+                    <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14}}>
+                      <div style={{display:"flex", alignItems:"center", gap:10}}>
+                        <div onClick={() => updateC(c.id, "autoEmailFornitore", !c.autoEmailFornitore)}
+                          style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative", flexShrink:0,
+                            background: c.autoEmailFornitore ? t.green : t.surface3,
+                            border:`1px solid ${c.autoEmailFornitore ? t.green : t.border}`, transition:"background 0.2s"}}>
+                          <div style={{position:"absolute", top:2, left: c.autoEmailFornitore ? 17 : 2,
                             width:14, height:14, borderRadius:"50%", background:"#fff",
                             transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
                         </div>
+                        <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13.5, color:t.text, fontWeight:600}}>
+                          Invio automatico ordine di riordino al fornitore
+                        </span>
+                        <InfoDot text="Quando il sensore di riordino si attiva, viene proposto l'invio di una mail di riordino al fornitore." t={t}/>
                       </div>
-                      <div style={{display:"flex", alignItems:"center", gap:8}}>
-                        <input type="number" value={c.livelloRiordino_mm}
-                          onChange={e => updateC(c.id, "livelloRiordino_mm", Math.max(0, parseInt(e.target.value)||0))}
-                          style={{width:80, background:t.surface, border:`1px solid ${t.border}`,
-                            borderRadius:5, color:t.text, padding:"5px 8px",
-                            fontFamily:"'Share Tech Mono',monospace", fontSize:14}}/>
-                        <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>mm</span>
-                        <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
-                          marginLeft:4}}>quota galleggiante</span>
-                      </div>
-                    </div>
-
-                    {/* Sensore vuoto */}
-                    <div style={{flex:1, minWidth:200, padding:"12px 14px", borderRadius:8,
-                      background:t.surface3, border:`1px solid ${sens.vuoto ? t.red+"66" : t.border}`}}>
-                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8}}>
-                        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
-                          color: sens.vuoto ? t.red : t.text}}>⚠ Sensore vuoto</span>
-                        <div onClick={() => onToggleSensor?.(c.id, "vuoto")}
-                          style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative",
-                            background: sens.vuoto ? t.red : t.surface2,
-                            border:`1px solid ${sens.vuoto ? t.red : t.border}`, transition:"background 0.2s"}}>
-                          <div style={{position:"absolute", top:2, left: sens.vuoto ? 17 : 2,
-                            width:14, height:14, borderRadius:"50%", background:"#fff",
-                            transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                      {c.autoEmailFornitore && !c.emailFornitore && (
+                        <div style={{fontSize:11.5, color:t.orange, fontFamily:"'Rajdhani',sans-serif", marginTop:6}}>
+                          ⚠ Configura l'email del fornitore qui sopra.
                         </div>
-                      </div>
-                      <div style={{display:"flex", alignItems:"center", gap:8}}>
-                        <input type="number" value={c.livelloVuoto_mm}
-                          onChange={e => updateC(c.id, "livelloVuoto_mm", Math.max(0, parseInt(e.target.value)||0))}
-                          style={{width:80, background:t.surface, border:`1px solid ${t.border}`,
-                            borderRadius:5, color:t.text, padding:"5px 8px",
-                            fontFamily:"'Share Tech Mono',monospace", fontSize:14}}/>
-                        <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>mm</span>
-                        <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
-                          marginLeft:4}}>quota galleggiante</span>
-                      </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                );
+              })}
+            </>
+          )}
 
-                {/* ── OPZIONI EMAIL ── */}
-                <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14}}>
-                  <div style={{display:"flex", alignItems:"center", gap:10}}>
-                    <div onClick={() => updateC(c.id, "autoEmailFornitore", !c.autoEmailFornitore)}
-                      style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative",
-                        flexShrink:0,
-                        background: c.autoEmailFornitore ? t.green : t.surface3,
-                        border:`1px solid ${c.autoEmailFornitore ? t.green : t.border}`, transition:"background 0.2s"}}>
-                      <div style={{position:"absolute", top:2, left: c.autoEmailFornitore ? 17 : 2,
-                        width:14, height:14, borderRadius:"50%", background:"#fff",
-                        transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
-                    </div>
-                    <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13.5, color:t.text, fontWeight:600}}>
-                      Invio automatico ordine di riordino al fornitore
-                    </span>
-                    <InfoDot text="Quando il sensore di riordino si attiva, viene proposto l'invio di una mail di riordino al fornitore. Con il server edge sarà completamente automatico senza intervento dell'operatore." t={t}/>
-                  </div>
-                  {c.autoEmailFornitore && !c.emailFornitore && (
-                    <div style={{fontSize:11.5, color:t.orange, fontFamily:"'Rajdhani',sans-serif", marginTop:6}}>
-                      ⚠ Configura l'email del fornitore qui sopra per abilitare questa funzione.
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            );
-          })}
-
-          {/* ── POMPE DOSATRICI COLLEGATE (riepilogo) ── */}
-          {consumabili.length > 0 && (() => {
-            const linked = [];
-            stages.forEach((st, si) => {
-              (config[si]?.pumps ?? []).forEach(p => {
-                if (!p.isDosatrice || !p.productId) return;
-                const prod = consumabili.find(c => c.id === p.productId);
-                linked.push({ stageName: st.name, pumpName: p.name, prodNome: prod?.nome || p.productId });
-              });
-            });
-            if (linked.length === 0) return (
-              <div style={{marginTop:24, padding:"14px 16px", borderRadius:8, background:t.surface2,
-                border:`1px dashed ${t.border}`, fontFamily:"'Rajdhani',sans-serif", fontSize:13,
-                color:t.textMuted}}>
-                Nessuna pompa dosatrice collegata. Vai in "Configurazione Stadi" e, dal menu
-                "+ Aggiungi pompa", scegli una pompa dosatrice per il prodotto desiderato.
-              </div>
-            );
-            return (
-              <div style={{marginTop:24}}>
-                <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
-                  letterSpacing:1, marginBottom:10}}>POMPE DOSATRICI COLLEGATE</div>
-                <div style={{display:"flex", flexDirection:"column", gap:6}}>
-                  {linked.map((l, i) => (
-                    <div key={i} style={{display:"flex", alignItems:"center", gap:12, padding:"9px 14px",
-                      borderRadius:7, background:t.surface2, border:`1px solid ${t.border}`}}>
-                      <span style={{fontSize:15}}>⚙️</span>
-                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14,
-                        color:t.text, flex:1}}>{l.pumpName}</span>
-                      <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{l.stageName}</span>
-                      <span style={{fontSize:11, padding:"2px 9px", borderRadius:4,
-                        background:`${t.orange}18`, border:`1px solid ${t.orange}44`,
-                        color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>→ {l.prodNome}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── POMPE PERSONALIZZATE ── */}
-          <div style={{marginTop:32, paddingTop:20, borderTop:`1px solid ${t.border}`}}>
-            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
-              <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
-                POMPE PERSONALIZZATE
-              </div>
-              <button onClick={addCP}
-                style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
-                  fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:0.5,
-                  border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
-                + Aggiungi pompa
-              </button>
-            </div>
-            <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:14}}>
-              Definisci qui pompe non presenti nel catalogo standard. Compaiono nel menu
-              "+ Aggiungi pompa" di ogni stadio (gruppo "Pompe personalizzate") con il nome scelto.
-            </div>
-
-            {customPumps.length === 0 ? (
-              <div style={{padding:"22px", textAlign:"center", color:t.textMuted,
-                fontFamily:"'Rajdhani',sans-serif", fontSize:14, background:t.surface2,
-                borderRadius:10, border:`1px dashed ${t.border}`}}>
-                Nessuna pompa personalizzata. Aggiungine una per renderla disponibile negli stadi.
-              </div>
-            ) : customPumps.map(cp => (
-              <div key={cp.id} style={{marginBottom:14, padding:"16px 18px", borderRadius:11,
-                background:t.surface2, border:`1px solid ${t.border}`}}>
-                <div style={{display:"flex", alignItems:"flex-end", gap:14, flexWrap:"wrap"}}>
-                  <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:220}}>
-                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
-                    <input type="text" value={cp.name || ""} placeholder="Nome pompa"
-                      onChange={e => updateCP(cp.id, "name", e.target.value)}
-                      style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
-                        color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif", fontSize:14,
-                        fontWeight:700, outline:"none", width:"100%", boxSizing:"border-box"}}/>
-                  </div>
-                  <button onClick={() => removeCP(cp.id)}
-                    style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
-                      fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5,
-                      border:`1px solid ${t.red}66`, background:`${t.red}14`, color:t.red, alignSelf:"flex-end"}}>
-                    Rimuovi
-                  </button>
-                </div>
-                <div style={{display:"flex", gap:18, flexWrap:"wrap", marginTop:14}}>
-                  <NumField label="Portata" value={cp.flow_m3h} unit="m³/h"
-                    onChange={v => updateCP(cp.id, "flow_m3h", v)} t={t}/>
-                  <div style={{display:"flex", alignItems:"center", gap:10, alignSelf:"flex-end", paddingBottom:4}}>
-                    <div onClick={() => updateCP(cp.id, "vfd", !cp.vfd)}
-                      style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative", flexShrink:0,
-                        background: cp.vfd ? t.accent : t.surface3,
-                        border:`1px solid ${cp.vfd ? t.accent : t.border}`, transition:"background 0.2s"}}>
-                      <div style={{position:"absolute", top:2, left: cp.vfd ? 17 : 2,
-                        width:14, height:14, borderRadius:"50%", background:"#fff",
-                        transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
-                    </div>
-                    <span style={{fontFamily:"'Rajdhani',sans-serif", fontSize:13.5, color:t.text, fontWeight:600}}>Inverter (VFD)</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     );
@@ -762,195 +790,129 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
                       POMPE E MOTORI
                     </div>
-                    <select value=""
-                      onChange={e => { addPumpFromCatalog(si, e.target.value); e.target.value = ""; }}
-                      style={{padding:"6px 12px", borderRadius:6, cursor:"pointer",
-                        fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
-                        border:`1px solid ${color}`, background:`${color}18`, color, outline:"none"}}>
-                      <option value="">+ Aggiungi pompa…</option>
-                      <optgroup label="Pompe di processo">
-                        {PUMP_CATALOG.map(c => (
-                          <option key={c.key} value={c.key}>{c.name}</option>
-                        ))}
-                      </optgroup>
-                      {consumabili.length > 0 && (
-                        <optgroup label="Pompe dosatrici">
-                          {consumabili.map(prod => (
-                            <option key={prod.id} value={`dose:${prod.id}`}>
-                              Pompa dosaggio {prod.nome}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                      {customPumps.length > 0 && (
-                        <optgroup label="Pompe personalizzate">
-                          {customPumps.map(cp => (
-                            <option key={cp.id} value={`model:${cp.id}`}>
-                              {cp.name || "Pompa personalizzata"}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
-                    </select>
+                    {(() => {
+                      const allLinkedIds = new Set(config.flatMap(s => (s.pumps||[]).map(l => l.registryId)));
+                      const availD = pumpsRegistry.dosatrici.filter(p => !allLinkedIds.has(p.id));
+                      const availI = pumpsRegistry.inverter.filter(p => !allLinkedIds.has(p.id));
+                      const hasAny = availD.length > 0 || availI.length > 0;
+                      return (
+                        <select value="" disabled={!hasAny}
+                          onChange={e => { linkPump(si, e.target.value); e.target.value = ""; }}
+                          style={{padding:"6px 12px", borderRadius:6, cursor: hasAny ? "pointer" : "not-allowed",
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                            border:`1px solid ${color}`, background:`${color}18`, color, outline:"none",
+                            opacity: hasAny ? 1 : 0.5}}>
+                          <option value="">+ Collega pompa…</option>
+                          {availD.length > 0 && (
+                            <optgroup label="Pompe dosatrici">
+                              {availD.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </optgroup>
+                          )}
+                          {availI.length > 0 && (
+                            <optgroup label="Pompe inverter">
+                              {availI.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                            </optgroup>
+                          )}
+                        </select>
+                      );
+                    })()}
                   </div>
 
                   {sc.pumps.length === 0 ? (
                     <div style={{padding:"16px", textAlign:"center", color:t.textMuted,
                       fontFamily:"'Rajdhani',sans-serif", fontSize:14,
                       background:t.surface2, borderRadius:8, border:`1px dashed ${t.border}`}}>
-                      Nessuna pompa installata in questo stadio
+                      Nessuna pompa collegata in questo stadio
                     </div>
                   ) : (
-                    sc.pumps.map((pump, pi) => (
-                      <div key={pump.id} style={{marginBottom:10, padding:"14px 16px", borderRadius:9,
-                        background: pump.enabled ? `${t.accent}08` : t.surface2,
-                        border:`1px solid ${pump.enabled ? t.accent+"44" : t.border}`}}>
-                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14, gap:8, minWidth:0}}>
-                          <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0, overflow:"hidden"}}>
-                            <div onClick={() => updatePump(si, pi, "enabled", !pump.enabled)}
-                              style={{flexShrink:0, width:36, height:20, borderRadius:10, cursor:"pointer",
-                                position:"relative", background: pump.enabled ? t.green : t.surface3,
-                                border:`1px solid ${pump.enabled ? t.green : t.border}`, transition:"background 0.2s"}}>
-                              <div style={{position:"absolute", top:2, left: pump.enabled ? 17 : 2,
-                                width:14, height:14, borderRadius:"50%", background:"#fff",
-                                transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                    resolveLinks(sc.pumps, pumpsRegistry).map(pump => {
+                      const isDos = pump.isDosatrice;
+                      const pumpColor = isDos ? t.orange : t.accent;
+                      const hrs = pump.vfd ? (pumpHours?.[pumpKey(stage.name, pump.id)] || 0) : 0;
+                      const thr = pump.vfd ? (pump.maintH || 0) : 0;
+                      const due = thr > 0 && hrs >= thr;
+                      const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
+                      const barColor = due ? t.red : pct >= 80 ? t.orange : t.green;
+                      return (
+                        <div key={pump.id} style={{marginBottom:10, padding:"14px 16px", borderRadius:9,
+                          background: pump.enabled ? `${pumpColor}08` : t.surface2,
+                          border:`1px solid ${pump.enabled ? pumpColor+"44" : t.border}`}}>
+                          <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginBottom:8}}>
+                            <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0, overflow:"hidden"}}>
+                              <div onClick={() => togglePumpEnabled(si, pump.id)}
+                                style={{flexShrink:0, width:36, height:20, borderRadius:10, cursor:"pointer",
+                                  position:"relative", background: pump.enabled ? t.green : t.surface3,
+                                  border:`1px solid ${pump.enabled ? t.green : t.border}`, transition:"background 0.2s"}}>
+                                <div style={{position:"absolute", top:2, left: pump.enabled ? 17 : 2,
+                                  width:14, height:14, borderRadius:"50%", background:"#fff",
+                                  transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.3)"}}/>
+                              </div>
+                              <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, color:t.text,
+                                whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", flex:1}}>
+                                {pump.name}
+                              </span>
+                              <span style={{fontSize:11, padding:"2px 9px", borderRadius:4, flexShrink:0,
+                                background:`${pumpColor}18`, border:`1px solid ${pumpColor}55`,
+                                color:pumpColor, fontFamily:"'Share Tech Mono',monospace", fontWeight:700, letterSpacing:0.5}}>
+                                {isDos ? "DOSATRICE" : "INVERTER"}
+                              </span>
                             </div>
-                            <input value={pump.name}
-                              onChange={e => updatePump(si, pi, "name", e.target.value)}
-                              style={{background:"transparent", border:"none", borderBottom:`1px solid ${t.border}`,
-                                color:t.text, fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
-                                fontSize:15, outline:"none", padding:"2px 4px", flex:1, minWidth:0}}/>
-                          </div>
-                          <div style={{display:"flex", alignItems:"center", gap:8, flexShrink:0}}>
-                            {/* Selettore modalità — Dosatrice e Inverter si escludono a vicenda */}
-                            <div style={{display:"flex", borderRadius:6, overflow:"hidden",
-                              border:`1px solid ${t.border}`}}>
-                              {[["dosatrice","DOSATRICE",t.orange],["inverter","INVERTER",t.accent]].map(([m, label, col], idx) => {
-                                const on = (pump.isDosatrice ? "dosatrice" : "inverter") === m;
-                                return (
-                                  <div key={m} onClick={() => setPumpMode(si, pi, m)}
-                                    style={{padding:"5px 14px", cursor:"pointer", fontSize:12,
-                                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, fontWeight:700,
-                                      position:"relative",
-                                      background: on ? col : "transparent",
-                                      color: on ? "#0a0e14" : t.textMuted,
-                                      opacity: on ? 1 : 0.55,
-                                      borderLeft: idx ? `1px solid ${t.border}` : "none",
-                                      boxShadow: on ? `inset 0 0 0 1px ${col}, 0 0 12px ${col}88` : "none",
-                                      textShadow: on ? "0 1px 1px rgba(0,0,0,0.25)" : "none",
-                                      transition:"all 0.15s"}}>
-                                    {label}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <button onClick={() => removePump(si, pi)}
-                              style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
+                            <button onClick={() => unlinkPump(si, pump.id)}
+                              style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", flexShrink:0,
                                 fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
                                 border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
-                              Rimuovi
+                              Scollega
                             </button>
                           </div>
-                        </div>
-                        {/* Parametri — variano in base alla modalità della pompa */}
-                        {pump.isDosatrice ? (
-                          <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
-                            <NumField label="Portata massima" value={pump.flow_m3h} unit="m³/h"
-                              onChange={v => updatePump(si, pi, "flow_m3h", v)} t={t}/>
-                          </div>
-                        ) : (
-                          <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
-                            <NumField label="Portata" value={pump.flow_m3h} unit="m³/h"
-                              onChange={v => updatePump(si, pi, "flow_m3h", v)} t={t}/>
-                          </div>
-                        )}
-
-                        {/* Badge livello cisterna (solo per pompe dosatrici con prodotto collegato) */}
-                        {pump.isDosatrice && pump.productId && (() => {
-                          const sens = consumabiliSensors[pump.productId] || {};
-                          return (
-                            <div style={{marginTop:10, display:"flex", gap:8, flexWrap:"wrap"}}>
-                              {sens.riordino && (
-                                <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                                  background:`${t.orange}1a`, border:`1px solid ${t.orange}55`,
-                                  color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>
-                                  ↓ RIORDINO
-                                </span>
-                              )}
-                              {sens.vuoto && (
-                                <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                                  background:`${t.red}1a`, border:`1px solid ${t.red}55`,
-                                  color:t.red, fontFamily:"'Share Tech Mono',monospace"}}>
-                                  ⚠ VUOTO
-                                </span>
-                              )}
-                              {!sens.riordino && !sens.vuoto && (
-                                <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                                  background:`${t.green}14`, border:`1px solid ${t.green}44`,
-                                  color:t.green, fontFamily:"'Share Tech Mono',monospace"}}>
-                                  ✓ LIVELLO OK
-                                </span>
-                              )}
+                          {pump.flow_m3h > 0 && (
+                            <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", marginBottom:6}}>
+                              {isDos ? "Portata max:" : "Portata:"} <b style={{color:t.text}}>{pump.flow_m3h} m³/h</b>
                             </div>
-                          );
-                        })()}
-
-                        {/* ── MANUTENZIONE PROGRAMMATA (solo modalità Inverter) ── */}
-                        {!pump.isDosatrice && (() => {
-                          const hrs = pumpHours?.[pumpKey(stage.name, pump.id)] || 0;
-                          const thr = pumpMaintH(pump);
-                          const due = thr > 0 && hrs >= thr;
-                          const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
-                          const barColor = due ? t.red : pct >= 80 ? t.orange : t.green;
-                          return (
-                            <div style={{marginTop:14, paddingTop:14, borderTop:`1px solid ${t.border}`}}>
-                              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
-                                <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
-                                  MANUTENZIONE PROGRAMMATA
-                                </span>
-                                {thr > 0 && (
-                                  <span style={{fontSize:11, padding:"2px 9px", borderRadius:4, fontFamily:"'Share Tech Mono',monospace",
-                                    background: due ? `${t.red}1a` : `${t.green}14`, color: due ? t.red : t.green,
-                                    border:`1px solid ${(due ? t.red : t.green)}55`}}>
-                                    {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
-                                  </span>
+                          )}
+                          {isDos && pump.productId && (() => {
+                            const sens = consumabiliSensors[pump.productId] || {};
+                            return (
+                              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                                {sens.riordino && (
+                                  <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                    background:`${t.orange}1a`, border:`1px solid ${t.orange}55`,
+                                    color:t.orange, fontFamily:"'Share Tech Mono',monospace"}}>↓ RIORDINO</span>
+                                )}
+                                {sens.vuoto && (
+                                  <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                    background:`${t.red}1a`, border:`1px solid ${t.red}55`,
+                                    color:t.red, fontFamily:"'Share Tech Mono',monospace"}}>⚠ VUOTO</span>
+                                )}
+                                {!sens.riordino && !sens.vuoto && (
+                                  <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                    background:`${t.green}14`, border:`1px solid ${t.green}44`,
+                                    color:t.green, fontFamily:"'Share Tech Mono',monospace"}}>✓ LIVELLO OK</span>
                                 )}
                               </div>
-                              <div style={{display:"flex", gap:18, flexWrap:"wrap", alignItems:"flex-end"}}>
-                                <div style={{display:"flex", flexDirection:"column", gap:3}}>
-                                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Ore di funzionamento</div>
-                                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color: due ? t.red : t.text, fontWeight:700}}>
-                                    {hrs.toFixed(1)} <span style={{fontSize:12, color:t.textMuted}}>h</span>
-                                  </div>
-                                </div>
-                                <NumField label="Soglia manutenzione" value={thr} unit="h"
-                                  onChange={v => updatePump(si, pi, "maintH", Math.max(0, Math.round(v)))} t={t}/>
-                                <button onClick={() => onResetPumpHours?.(stage.name, pump.id)}
-                                  style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
-                                    fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
-                                    border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green}}>
-                                  ✓ Manutenzione effettuata
-                                </button>
+                            );
+                          })()}
+                          {pump.vfd && thr > 0 && (
+                            <div style={{marginTop:10, paddingTop:10, borderTop:`1px solid ${t.border}`}}>
+                              <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4}}>
+                                <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                                  Ore: <b style={{color: due ? t.red : t.text}}>{hrs.toFixed(1)}</b> / {thr} h
+                                </span>
+                                <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                  fontFamily:"'Share Tech Mono',monospace",
+                                  background: due ? `${t.red}1a` : `${t.green}14`,
+                                  color: due ? t.red : t.green,
+                                  border:`1px solid ${(due ? t.red : t.green)}55`}}>
+                                  {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
+                                </span>
                               </div>
-                              {thr > 0 ? (
-                                <div style={{marginTop:10}}>
-                                  <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
-                                    <div style={{height:"100%", width:`${pct}%`, background:barColor, borderRadius:3, transition:"width 0.5s ease"}}/>
-                                  </div>
-                                  <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>
-                                    {hrs.toFixed(1)} / {thr} h ({Math.round(pct)}%) — {due ? "soglia superata: pianificare l'intervento." : `mancano ${Math.max(0, thr - hrs).toFixed(1)} h alla manutenzione.`}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:8}}>
-                                  Imposta una soglia di ore &gt; 0 per attivare la notifica di manutenzione programmata.
-                                </div>
-                              )}
+                              <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                                <div style={{height:"100%", width:`${pct}%`, background:barColor, borderRadius:3, transition:"width 0.5s"}}/>
+                              </div>
                             </div>
-                          );
-                        })()}
-                      </div>
-                    ))
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useBreakpoint } from "./hooks/useWindowSize";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
-import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
+import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig, PUMP_CATALOG } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
 import { limitsFromNorms } from "./constants/limits";
@@ -383,6 +383,22 @@ export default function App() {
   // initial migration in _init); it's dead data afterwards.
   useEffect(() => {
     try { localStorage.removeItem("aquapilot.customPumps.v1"); } catch { /* storage non disponibile */ }
+  }, []);
+
+  // One-time backfill: registries migrated before the energy fields existed lack
+  // power_kw/loadPct. Restore power from the pump catalog by name where possible
+  // so consumption isn't silently zero; default the average load to 75%.
+  useEffect(() => {
+    setPumpsRegistry(pr => {
+      let changed = false;
+      const inverter = pr.inverter.map(p => {
+        if (p.power_kw != null && p.loadPct != null) return p;
+        changed = true;
+        const cat = PUMP_CATALOG.find(c => c.name === p.name);
+        return { ...p, power_kw: p.power_kw ?? (cat?.power_kw ?? 0), loadPct: p.loadPct ?? 75 };
+      });
+      return changed ? { ...pr, inverter } : pr;
+    });
   }, []);
 
   const handleConsumabili = (updater) => {

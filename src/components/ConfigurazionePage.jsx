@@ -448,6 +448,10 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
                       <NumField label="Portata" value={p.flow_m3h} unit="m³/h"
                         onChange={v => updateI(p.id, "flow_m3h", v)} t={t}/>
+                      <NumField label="Potenza nominale" value={p.power_kw ?? 0} unit="kW"
+                        onChange={v => updateI(p.id, "power_kw", Math.max(0, v))} t={t}/>
+                      <NumField label="Carico medio" value={p.loadPct ?? 75} unit="%"
+                        onChange={v => updateI(p.id, "loadPct", Math.max(0, Math.min(100, Math.round(v))))} t={t}/>
                       <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
                         onChange={v => updateI(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
                       {thr > 0 && (
@@ -458,6 +462,12 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           ✓ Manutenzione effettuata
                         </button>
                       )}
+                    </div>
+                    <div style={{marginTop:8, fontSize:12.5, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
+                      Consumo stimato: <b style={{color:t.accent}}>
+                        {(((p.power_kw ?? 0) * (p.loadPct ?? 0)) / 100).toFixed(2)} kW
+                      </b>
+                      {!linked && <span style={{color:t.textMuted}}> · (non collegata a uno stadio → non conteggiata)</span>}
                     </div>
                     {thr > 0 && (
                       <div style={{marginTop:12}}>

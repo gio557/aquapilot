@@ -130,8 +130,8 @@ export const INIT_SIM = {
   qHistory: [],
   events: [],   // scenari/eventi attivi (vedi constants/events.js)
   output: { Q: 1245, COD: 22.4, BOD5: 8.1, TSS: 7.3, NH4: 0.80, pH: 7.2, T: 18.4, O2: 4.5 },
-  stageEnergy: [0.35, 0.55, 13.5, 0.42, 0.65, 0.32],
-  energy: { kw: 15.4, kwh: 128 },
+  stageEnergy: [0, 1.65, 15.38, 4.13, 3.0, 0],
+  energy: { kw: 24.2, kwh: 128 },
   trend: initTrend(),
   alarms: [],
   alarmState: {},
@@ -288,7 +288,16 @@ export function simTick(s) {
     stageOutputsArr.push(result.stageOutput);
     stageDetailsArr.push(result.stageDetail);
     stageEffArr.push(result.eff ?? 100);
-    stageEnergyArr.push(result.kw ?? 0);
+    // Energy/consumption is driven ONLY by inverter (VFD) pumps: each enabled
+    // inverter pump draws power_kw × loadPct/100, with a little jitter for a
+    // live feel. Dosing pumps and passive processes contribute nothing.
+    let stageKw = 0;
+    for (const p of (sc?.pumps ?? [])) {
+      if (!p.vfd || !p.enabled) continue;
+      const draw = (p.power_kw ?? 0) * ((p.loadPct ?? 0) / 100);
+      stageKw += draw * (1 + (Math.random() - 0.5) * 0.06);   // ±3% jitter
+    }
+    stageEnergyArr.push(+stageKw.toFixed(2));
     stageWaterArr.push({ ...water });
 
     // Biologico / Nitrificazione update global O2/MLSS

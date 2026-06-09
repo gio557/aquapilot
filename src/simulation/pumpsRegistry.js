@@ -23,7 +23,10 @@ export function newDosatriceEntry() {
 
 export function newInverterEntry() {
   return { id: `pi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    name: "Nuova pompa a inverter", flow_m3h: 0, maintH: 4000 };
+    name: "Nuova pompa a inverter", flow_m3h: 0,
+    // Energy: only inverter pumps contribute to the consumption calc.
+    // Consumo ≈ power_kw × loadPct/100.
+    power_kw: 0, loadPct: 75, maintH: 4000 };
 }
 
 // Resolve stage pump links [{registryId, enabled}] to full pump objects.
@@ -66,7 +69,7 @@ export function migrateToRegistry(stageConfigs, oldCustomPumps = []) {
         const e = { id: p.id, name: p.name || "Pompa",
           flow_m3h: p.flow_m3h ?? 0, maintH: p.maintH ?? 4000 };
         if (p.isDosatrice) dosatrici.push({ ...e, productId: p.productId ?? null });
-        else               inverter.push(e);
+        else               inverter.push({ ...e, power_kw: p.power_kw ?? 0, loadPct: p.loadPct ?? 75 });
       }
       return { registryId: p.id, enabled: p.enabled ?? true };
     }),
@@ -76,7 +79,7 @@ export function migrateToRegistry(stageConfigs, oldCustomPumps = []) {
     if (!seen.has(cp.id)) {
       seen.add(cp.id);
       inverter.push({ id: cp.id, name: cp.name || "Pompa personalizzata",
-        flow_m3h: cp.flow_m3h ?? 0, maintH: 4000 });
+        flow_m3h: cp.flow_m3h ?? 0, power_kw: cp.power_kw ?? 0, loadPct: cp.loadPct ?? 75, maintH: 4000 });
     }
   }
 

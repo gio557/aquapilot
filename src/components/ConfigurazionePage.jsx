@@ -843,7 +843,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                             fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                             border:`1px solid ${color}`, background:`${color}18`, color, outline:"none",
                             opacity: hasAny ? 1 : 0.5}}>
-                          <option value="">+ Collega pompa…</option>
+                          <option value="">+ Collega pompa dosatrice</option>
                           {availD.length > 0 && (
                             <optgroup label="Pompe dosatrici">
                               {availD.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}

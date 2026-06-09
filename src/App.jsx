@@ -325,6 +325,66 @@ export default function App() {
   // Persist pumpsRegistry on every change.
   useEffect(() => { savePumpsRegistry(pumpsRegistry); }, [pumpsRegistry]);
 
+  // ── Reconciliation registry ↔ stageConfig ↔ pumpHours ──────────────────────
+  // Keep the three stores consistent: drop stage links that point at a deleted
+  // registry pump (otherwise they linger as invisible zombies), prune run-hour
+  // counters for pumps no longer in the registry (and stale legacy keys from
+  // before the per-pump keying), and null dangling productId references.
+  const registryIdsJson = JSON.stringify([
+    ...pumpsRegistry.dosatrici.map(p => p.id),
+    ...pumpsRegistry.inverter.map(p => p.id),
+  ]);
+  useEffect(() => {
+    const validIds = new Set(JSON.parse(registryIdsJson));
+
+    setStageConfig(prev => {
+      let changed = false;
+      const next = prev.map(sc => {
+        const pumps = (sc.pumps || []).filter(l => validIds.has(l.registryId));
+        if (pumps.length !== (sc.pumps || []).length) { changed = true; return { ...sc, pumps }; }
+        return sc;
+      });
+      return changed ? next : prev;
+    });
+
+    setSim(prev => {
+      const hrs = prev.pumpHours || {};
+      let changed = false;
+      const next = {};
+      for (const [k, v] of Object.entries(hrs)) {
+        // Keep only well-formed "pump::<id>" keys for pumps still in the
+        // registry; this also drops legacy "stageName::id" entries.
+        if (k.startsWith("pump::") && validIds.has(k.slice(6))) next[k] = v;
+        else changed = true;
+      }
+      if (!changed) return prev;
+      savePumpHours(next);
+      return { ...prev, pumpHours: next };
+    });
+  }, [registryIdsJson]);
+
+  // Null out dosing-pump productId references to products that no longer exist
+  // (safety net for state loaded from storage; live deletes are handled by
+  // handleConsumabili).
+  const consumabiliIdsJson = JSON.stringify(consumabili.map(c => c.id));
+  useEffect(() => {
+    const valid = new Set(JSON.parse(consumabiliIdsJson));
+    setPumpsRegistry(pr => {
+      let changed = false;
+      const dosatrici = pr.dosatrici.map(p => {
+        if (p.productId && !valid.has(p.productId)) { changed = true; return { ...p, productId: null }; }
+        return p;
+      });
+      return changed ? { ...pr, dosatrici } : pr;
+    });
+  }, [consumabiliIdsJson]);
+
+  // One-time cleanup of the pre-registry localStorage key (consumed only by the
+  // initial migration in _init); it's dead data afterwards.
+  useEffect(() => {
+    try { localStorage.removeItem("aquapilot.customPumps.v1"); } catch { /* storage non disponibile */ }
+  }, []);
+
   const handleConsumabili = (updater) => {
     setConsumabili(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;

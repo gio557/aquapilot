@@ -317,13 +317,12 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
                         </select>
                       )}
-                      <button onClick={() => removeD(p.id)} disabled={linked}
-                        style={{padding:"6px 14px", borderRadius:6, cursor: linked ? "not-allowed" : "pointer",
+                      <button onClick={() => linked ? unlinkPump(link.idx, p.id) : removeD(p.id)}
+                        style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
                           fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
-                          border:`1px solid ${linked ? t.border : t.red+"66"}`,
-                          background: linked ? t.surface3 : `${t.red}14`,
-                          color: linked ? t.textMuted : t.red,
-                          opacity: linked ? 0.5 : 1}}>
+                          border:`1px solid ${linked ? t.orange+"66" : t.red+"66"}`,
+                          background: linked ? `${t.orange}14` : `${t.red}14`,
+                          color: linked ? t.orange : t.red}}>
                         {linked ? "Scollega dallo stadio" : "Rimuovi"}
                       </button>
                     </div>
@@ -437,13 +436,12 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
                         </select>
                       )}
-                      <button onClick={() => removeI(p.id)} disabled={linked}
-                        style={{padding:"6px 14px", borderRadius:6, cursor: linked ? "not-allowed" : "pointer",
+                      <button onClick={() => linked ? unlinkPump(link.idx, p.id) : removeI(p.id)}
+                        style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
                           fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
-                          border:`1px solid ${linked ? t.border : t.red+"66"}`,
-                          background: linked ? t.surface3 : `${t.red}14`,
-                          color: linked ? t.textMuted : t.red,
-                          opacity: linked ? 0.5 : 1}}>
+                          border:`1px solid ${linked ? t.accent+"66" : t.red+"66"}`,
+                          background: linked ? `${t.accent}14` : `${t.red}14`,
+                          color: linked ? t.accent : t.red}}>
                         {linked ? "Scollega dallo stadio" : "Rimuovi"}
                       </button>
                     </div>
@@ -877,7 +875,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                             fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                             border:`1px solid ${color}`, background:`${color}18`, color, outline:"none",
                             opacity: hasAny ? 1 : 0.5}}>
-                          <option value="">+ Collega pompa dosatrice</option>
+                          <option value="">+ Collega pompa</option>
                           {availD.length > 0 && (
                             <optgroup label="Pompe dosatrici">
                               {availD.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}

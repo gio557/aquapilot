@@ -90,6 +90,20 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     ));
   };
 
+  // Modalità della pompa: "dosatrice" e "inverter" si escludono a vicenda e
+  // determinano quali parametri vengono mostrati nella card. Manteniamo allineato
+  // anche `vfd` (= inverter attivo) usato altrove per il badge INVERTER.
+  const setPumpMode = (si, pi, mode) => {
+    onChange(prev => prev.map((sc, i) =>
+      i !== si ? sc : {
+        ...sc,
+        pumps: sc.pumps.map((p, j) => j !== pi ? p : {
+          ...p, isDosatrice: mode === "dosatrice", vfd: mode === "inverter",
+        })
+      }
+    ));
+  };
+
   // Se nello stadio esiste già una pompa con lo stesso nome base, aggiunge un
   // suffisso numerico progressivo ("Pompa X", "Pompa X 2", "Pompa X 3"…) così
   // ogni unità resta identificabile e configurabile singolarmente.
@@ -814,21 +828,24 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                                 fontSize:15, outline:"none", padding:"2px 4px", flex:1, minWidth:0}}/>
                           </div>
                           <div style={{display:"flex", alignItems:"center", gap:8, flexShrink:0}}>
-                            <div onClick={() => updatePump(si, pi, "vfd", !pump.vfd)}
-                              style={{padding:"4px 10px", borderRadius:5, cursor:"pointer", fontSize:12,
-                                fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
-                                background: pump.vfd ? `${t.accent}22` : t.surface3,
-                                border:`1px solid ${pump.vfd ? t.accent : t.border}`,
-                                color: pump.vfd ? t.accent : t.textMuted}}>
-                              INVERTER {pump.vfd ? "ON" : "OFF"}
+                            {/* Selettore modalità — Dosatrice e Inverter si escludono a vicenda */}
+                            <div style={{display:"flex", borderRadius:6, overflow:"hidden",
+                              border:`1px solid ${t.border}`}}>
+                              {[["dosatrice","DOSATRICE",t.orange],["inverter","INVERTER",t.accent]].map(([m, label, col], idx) => {
+                                const on = (pump.isDosatrice ? "dosatrice" : "inverter") === m;
+                                return (
+                                  <div key={m} onClick={() => setPumpMode(si, pi, m)}
+                                    style={{padding:"5px 13px", cursor:"pointer", fontSize:12,
+                                      fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, fontWeight:700,
+                                      background: on ? `${col}22` : t.surface3,
+                                      color: on ? col : t.textMuted,
+                                      borderLeft: idx ? `1px solid ${t.border}` : "none",
+                                      transition:"all 0.15s"}}>
+                                    {label}
+                                  </div>
+                                );
+                              })}
                             </div>
-                            {pump.isDosatrice && (
-                              <div style={{padding:"4px 10px", borderRadius:5, fontSize:12,
-                                fontFamily:"'Share Tech Mono',monospace", letterSpacing:1,
-                                background:`${t.orange}22`, border:`1px solid ${t.orange}`, color:t.orange}}>
-                                DOSATRICE
-                              </div>
-                            )}
                             <button onClick={() => removePump(si, pi)}
                               style={{padding:"4px 10px", borderRadius:5, cursor:"pointer",
                                 fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
@@ -837,16 +854,24 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                             </button>
                           </div>
                         </div>
-                        <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
-                          <NumField label="Potenza" value={pump.power_kw} unit="kW"
-                            onChange={v => updatePump(si, pi, "power_kw", v)} t={t}/>
-                          <NumField label="Portata" value={pump.flow_m3h} unit="m³/h"
-                            onChange={v => updatePump(si, pi, "flow_m3h", v)} t={t}/>
-                          <NumField label="Prevalenza" value={pump.head_m} unit="m"
-                            onChange={v => updatePump(si, pi, "head_m", v)} t={t}/>
-                          <NumField label="Velocità" value={pump.rpm} unit="RPM"
-                            onChange={v => updatePump(si, pi, "rpm", v)} t={t}/>
-                        </div>
+                        {/* Parametri — variano in base alla modalità della pompa */}
+                        {pump.isDosatrice ? (
+                          <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
+                            <NumField label="Portata massima" value={pump.flow_m3h} unit="m³/h"
+                              onChange={v => updatePump(si, pi, "flow_m3h", v)} t={t}/>
+                          </div>
+                        ) : (
+                          <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
+                            <NumField label="Potenza" value={pump.power_kw} unit="kW"
+                              onChange={v => updatePump(si, pi, "power_kw", v)} t={t}/>
+                            <NumField label="Portata" value={pump.flow_m3h} unit="m³/h"
+                              onChange={v => updatePump(si, pi, "flow_m3h", v)} t={t}/>
+                            <NumField label="Prevalenza" value={pump.head_m} unit="m"
+                              onChange={v => updatePump(si, pi, "head_m", v)} t={t}/>
+                            <NumField label="Velocità" value={pump.rpm} unit="RPM"
+                              onChange={v => updatePump(si, pi, "rpm", v)} t={t}/>
+                          </div>
+                        )}
 
                         {/* Badge livello cisterna (solo per pompe dosatrici con prodotto collegato) */}
                         {pump.isDosatrice && pump.productId && (() => {
@@ -878,8 +903,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           );
                         })()}
 
-                        {/* ── MANUTENZIONE PROGRAMMATA (contatore ore + soglia) ── */}
-                        {(() => {
+                        {/* ── MANUTENZIONE PROGRAMMATA (solo modalità Inverter) ── */}
+                        {!pump.isDosatrice && (() => {
                           const hrs = pumpHours?.[pumpKey(stage.name, pump.id)] || 0;
                           const thr = pumpMaintH(pump);
                           const due = thr > 0 && hrs >= thr;

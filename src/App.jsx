@@ -990,43 +990,51 @@ export default function App() {
             </div>
 
             {/* PORTATA */}
-            <div style={{...card, padding:"14px 16px", flex:"0 0 165px", minWidth:0}}>
-              <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:8}}>
+            <div style={{...card, padding:"14px 16px", flex:"1 1 230px", minWidth:0, display:"flex", flexDirection:"column"}}>
+              <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:10}}>
                 ▸ PORTATA <span style={{width:7,height:7,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
               </div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:30, fontWeight:700, color:t.accent, lineHeight:1}}>
-                {Math.round(d.Q ?? sim.inlet?.Q ?? 0)}
-              </div>
-              <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:10}}>m³/h · Portata attuale</div>
-              <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8}}>
-                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color:t.textSec}}>
-                  {sim.qHistory?.length > 0
-                    ? (sim.qHistory.reduce((a,b)=>a+b,0)/sim.qHistory.length).toFixed(3)
-                    : "—"}
+              <div style={{flex:1, display:"flex", alignItems:"center", gap:14}}>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:30, fontWeight:700, color:t.accent, lineHeight:1}}>
+                    {Math.round(d.Q ?? sim.inlet?.Q ?? 0)}
+                  </div>
+                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>m³/h · Portata attuale</div>
                 </div>
-                <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>m³/g · Medio mobile</div>
+                <div style={{flex:1, minWidth:0, borderLeft:`1px solid ${t.border}`, paddingLeft:14}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:20, color:t.textSec, lineHeight:1}}>
+                    {sim.qHistory?.length > 0
+                      ? (sim.qHistory.reduce((a,b)=>a+b,0)/sim.qHistory.length).toFixed(3)
+                      : "—"}
+                  </div>
+                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>m³/g · Medio mobile</div>
+                </div>
               </div>
             </div>
 
             {/* FANGHI */}
-            <div style={{...card, padding:"14px 16px", flex:"0 0 165px", minWidth:0}}>
-              <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:8}}>
+            <div style={{...card, padding:"14px 16px", flex:"1 1 230px", minWidth:0, display:"flex", flexDirection:"column"}}>
+              <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:10}}>
                 ▸ FANGHI <span style={{width:7,height:7,borderRadius:"50%",background:t.green,display:"inline-block",marginLeft:4,boxShadow:`0 0 5px ${t.green}`,animation:"blink 1.5s infinite"}}/>
               </div>
-              <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:30, fontWeight:700, color:t.purple, lineHeight:1}}>
-                {Math.round(d.MLSS ?? 0)}
-              </div>
-              <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:10}}>mg/L · MLSS biologico</div>
-              <div style={{borderTop:`1px solid ${t.border}`, paddingTop:8}}>
-                <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15,
-                  color: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green}}>
-                  {d.blower?.toFixed(0) ?? 0}%
+              <div style={{flex:1, display:"flex", alignItems:"center", gap:14}}>
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:30, fontWeight:700, color:t.purple, lineHeight:1}}>
+                    {Math.round(d.MLSS ?? 0)}
+                  </div>
+                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>mg/L · MLSS biologico</div>
                 </div>
-                <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>potenza · Soffianti</div>
-                <div style={{height:4, background:t.surface3, borderRadius:2, marginTop:6, overflow:"hidden"}}>
-                  <div style={{height:"100%", width:`${d.blower??0}%`,
-                    background: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green,
-                    borderRadius:2, transition:"width 0.5s"}}/>
+                <div style={{flex:1, minWidth:0, borderLeft:`1px solid ${t.border}`, paddingLeft:14}}>
+                  <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:20,
+                    color: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green, lineHeight:1}}>
+                    {d.blower?.toFixed(0) ?? 0}%
+                  </div>
+                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>potenza · Soffianti</div>
+                  <div style={{height:4, background:t.surface3, borderRadius:2, marginTop:6, overflow:"hidden"}}>
+                    <div style={{height:"100%", width:`${d.blower??0}%`,
+                      background: d.blower > 80 ? t.red : d.blower > 60 ? t.orange : t.green,
+                      borderRadius:2, transition:"width 0.5s"}}/>
+                  </div>
                 </div>
               </div>
             </div>

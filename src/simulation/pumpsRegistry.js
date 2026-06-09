@@ -23,7 +23,7 @@ export function newDosatriceEntry() {
 
 export function newInverterEntry() {
   return { id: `pi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    name: "Nuova pompa inverter", flow_m3h: 0, maintH: 4000 };
+    name: "Nuova pompa a inverter", flow_m3h: 0, maintH: 4000 };
 }
 
 // Resolve stage pump links [{registryId, enabled}] to full pump objects.

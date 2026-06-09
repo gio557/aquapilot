@@ -249,7 +249,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
           </div>
           <div style={{display:"inline-flex", gap:6, padding:6, marginLeft:14, borderRadius:12,
             background:t.surface2, border:`1px solid ${t.border}`}}>
-            {PompeSubTab({ id:"inverter",  label:"POMPE INVERTER",     col:t.accent })}
+            {PompeSubTab({ id:"inverter",  label:"POMPE A INVERTER",   col:t.accent })}
             {PompeSubTab({ id:"prodotti",  label:"PRODOTTI / CISTERNE", col:t.green })}
             {PompeSubTab({ id:"dosatrici", label:"POMPE DOSATRICI",    col:t.orange })}
           </div>
@@ -346,13 +346,13 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
             <>
               <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16}}>
                 <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.accent, letterSpacing:1.5}}>
-                  POMPE INVERTER
+                  POMPE A INVERTER
                 </div>
                 <button onClick={addI}
                   style={{padding:"7px 18px", borderRadius:7, cursor:"pointer",
                     fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
                     border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent}}>
-                  + Nuova pompa inverter
+                  + Nuova pompa a inverter
                 </button>
               </div>
               <div style={{fontSize:12.5, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:16}}>
@@ -361,7 +361,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
               {pumpsRegistry.inverter.length === 0 ? (
                 <div style={{padding:"24px", textAlign:"center", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
                   fontSize:14, background:t.surface2, borderRadius:10, border:`1px dashed ${t.border}`}}>
-                  Nessuna pompa inverter configurata.
+                  Nessuna pompa a inverter configurata.
                 </div>
               ) : pumpsRegistry.inverter.map(p => {
                 const link = linkedStage(p.id, config, stages);
@@ -377,7 +377,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                     <div style={{display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", marginBottom:12}}>
                       <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:220}}>
                         <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
-                        <input type="text" value={p.name || ""} placeholder="Nome pompa inverter"
+                        <input type="text" value={p.name || ""} placeholder="Nome pompa a inverter"
                           onChange={e => updateI(p.id, "name", e.target.value)}
                           style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
                             color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif",
@@ -823,7 +823,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                             </optgroup>
                           )}
                           {availI.length > 0 && (
-                            <optgroup label="Pompe inverter">
+                            <optgroup label="Pompe a inverter">
                               {availI.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </optgroup>
                           )}

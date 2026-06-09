@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useBreakpoint } from "../hooks/useWindowSize";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG, PUMP_CATALOG, DOSING_PUMP_SPEC, makePump } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
 import { pumpKey, pumpMaintH } from "../simulation/pumpHours";
@@ -53,6 +54,7 @@ function NumField({ label, value, unit, onChange, t }) {
 }
 
 export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC, consumabili = [], onConsumabili, consumabiliSensors = {}, onToggleSensor, customPumps = [], onCustomPumps }) {
+  const bp = useBreakpoint();
   const [activeTab, setActiveTab] = useState("stadi");
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
@@ -580,7 +582,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     return (
       <div>
         {TabBar({padded:true})}
-        <div style={{padding:"20px 24px 40px", maxWidth:680}}>
+        <div style={{padding:"20px 24px 40px", maxWidth: bp === "xl" ? 900 : 680}}>
           <div style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5, marginBottom:8}}>
             Definisci, per ogni segnale, come viene ottenuto il dato in impianto.
             L'etichetta scelta compare accanto al valore nel cruscotto, nello storico e nei dettagli di stadio.

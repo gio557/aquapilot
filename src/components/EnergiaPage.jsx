@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { STAGE_META } from "../constants/stages";
+import { useBreakpoint } from "../hooks/useWindowSize";
 
 const fmtEuro = (v, dec = 2) =>
   v == null || !Number.isFinite(v) ? "—" :
@@ -12,6 +13,7 @@ const fmtNum = (v, dec = 0) =>
 const PRICE_PRESETS = [0.12, 0.18, 0.22, 0.28, 0.35];
 
 export default function EnergiaPage({ t, sim, price, onPrice, stages: stagesProp }) {
+  const bp = useBreakpoint();
   const stages = stagesProp || STAGE_META;
 
   const kw  = sim.energy?.kw  ?? 0;
@@ -101,7 +103,7 @@ export default function EnergiaPage({ t, sim, price, onPrice, stages: stagesProp
       </div>
 
       {/* ── KPI PRINCIPALI ── */}
-      <div style={{display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14}}>
+      <div style={{display:"grid", gridTemplateColumns: bp === "sm" ? "repeat(2,1fr)" : "repeat(4,1fr)", gap:14}}>
         <KpiCard label="Potenza attuale"   value={fmtNum(kw,1)}        unit="kW"   sub="Assorbimento totale impianto" color={t.accent} />
         <KpiCard label="Costo orario"      value={fmtEuro(m.costHour)} unit="€/h"  sub="Al prezzo impostato"          color={t.orange} />
         <KpiCard label="Costo giornaliero" value={fmtEuro(m.costDay,0)} unit="€/g"  sub="Stima su carico costante"     color={t.red} />

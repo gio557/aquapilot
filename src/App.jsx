@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useBreakpoint } from "./hooks/useWindowSize";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig } from "./constants/stageConfig";
@@ -40,6 +41,7 @@ const TREND_KEYS = [
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const t = darkMode ? DARK : LIGHT;
+  const bp = useBreakpoint(); // "sm" | "md" | "lg" | "xl"
 
   const { sim, setSim } = useSimulation();
 
@@ -499,20 +501,24 @@ export default function App() {
       <header style={{
         position:"sticky", top:0, zIndex:100,
         background:t.surface, borderBottom:`1px solid ${t.border}`,
-        padding:"0 24px", height:76,
-        display:"grid", gridTemplateColumns:"1fr auto 1fr", alignItems:"center", gap:16,
+        padding: bp === "sm" ? "0 14px" : "0 24px",
+        height: bp === "sm" ? 60 : 76,
+        display:"grid", gridTemplateColumns:"1fr auto 1fr", alignItems:"center",
+        gap: bp === "sm" ? 8 : 16,
       }}>
         {/* LEFT: nav buttons */}
-        <div style={{display:"flex", gap:6}}>
+        <div style={{display:"flex", gap: bp === "sm" ? 4 : 6}}>
           {[
-            {id:"dashboard",      label:"DASHBOARD"},
-            {id:"configurazione", label:"CONFIGURAZIONE"},
+            {id:"dashboard",      label: bp === "sm" || bp === "md" ? "DASH" : "DASHBOARD"},
+            {id:"configurazione", label: bp === "sm" || bp === "md" ? "CONFIG" : "CONFIGURAZIONE"},
             {id:"energia",        label:"ENERGIA"},
             {id:"storica",        label:"STORICO"},
           ].map(p => (
             <button key={p.id} onClick={() => setPage(p.id)}
-              style={{padding:"7px 16px", borderRadius:7, cursor:"pointer",
-                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
+              style={{padding: bp === "sm" ? "6px 10px" : "7px 16px", borderRadius:7, cursor:"pointer",
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
+                fontSize: bp === "sm" ? 12 : 14,
+                letterSpacing: bp === "sm" ? 0.5 : 1,
                 border:`1px solid ${page===p.id?t.accent:t.border}`,
                 background:page===p.id?`${t.accent}18`:t.surface2,
                 color:page===p.id?t.accent:t.textSec,
@@ -527,34 +533,43 @@ export default function App() {
         </div>
 
         {/* CENTER: AQUAPILOT + GreenEco logo */}
-        <div style={{display:"flex", alignItems:"center", gap:14, justifyContent:"center"}}>
-          <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900, fontSize:34, color:t.accent, letterSpacing:4, whiteSpace:"nowrap", lineHeight:1}}>
+        <div style={{display:"flex", alignItems:"center", gap: bp === "sm" ? 8 : 14, justifyContent:"center"}}>
+          <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900,
+            fontSize: bp === "sm" ? 22 : 34,
+            color:t.accent, letterSpacing: bp === "sm" ? 2 : 4, whiteSpace:"nowrap", lineHeight:1}}>
             AQUA<span style={{color:t.textSec}}>PILOT</span>
           </div>
-          <div style={{display:"flex", alignItems:"center", gap:6}}>
-            <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, letterSpacing:1}}>by</span>
-            <GreenEcoLogo height={42} />
-          </div>
+          {bp !== "sm" && bp !== "md" && (
+            <div style={{display:"flex", alignItems:"center", gap:6}}>
+              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, letterSpacing:1}}>by</span>
+              <GreenEcoLogo height={42} />
+            </div>
+          )}
         </div>
 
         {/* RIGHT: clock, status, controls */}
-        <div style={{display:"flex", alignItems:"center", gap:12, justifyContent:"flex-end"}}>
-          <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color:t.textSec, letterSpacing:2}}>
-            {clock.toLocaleTimeString("it-IT")}
-          </div>
+        <div style={{display:"flex", alignItems:"center", gap: bp === "sm" ? 6 : 12, justifyContent:"flex-end"}}>
+          {bp !== "sm" && (
+            <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:15, color:t.textSec, letterSpacing:2}}>
+              {clock.toLocaleTimeString("it-IT")}
+            </div>
+          )}
 
-          <div style={{display:"flex", alignItems:"center", gap:7, padding:"5px 13px", borderRadius:7,
+          <div style={{display:"flex", alignItems:"center", gap:7,
+            padding: bp === "sm" ? "4px 8px" : "5px 13px", borderRadius:7,
             background:sim.running?`${t.green}15`:`${t.orange}15`,
             border:`1px solid ${sim.running?t.green:t.orange}44`}}>
             <span style={{width:8, height:8, borderRadius:"50%", background:sim.running?t.green:t.orange,
               animation:sim.running?"blink 1.4s infinite":"none", flexShrink:0}}/>
-            <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:sim.running?t.green:t.orange, letterSpacing:1}}>
-              {sim.running?"SIM ATTIVA":"SIM PAUSA"}
-            </span>
+            {bp !== "sm" && (
+              <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:sim.running?t.green:t.orange, letterSpacing:1}}>
+                {sim.running?"SIM ATTIVA":"SIM PAUSA"}
+              </span>
+            )}
           </div>
 
           <button onClick={() => setShowAlarms(p => !p)}
-            style={{position:"relative", padding:"6px 13px", borderRadius:7, cursor:"pointer",
+            style={{position:"relative", padding: bp === "sm" ? "5px 10px" : "6px 13px", borderRadius:7, cursor:"pointer",
               fontFamily:"'Share Tech Mono',monospace", fontSize:13, letterSpacing:1,
               border:`1px solid ${activeAlarms.length>0?t.red:t.border}`,
               background:activeAlarms.length>0?`${t.red}15`:t.surface2,
@@ -564,11 +579,11 @@ export default function App() {
           </button>
 
           <button onClick={openControlRoom} title="Apri la Control Room in una nuova scheda"
-            style={{padding:"6px 16px", borderRadius:7, cursor:"pointer",
-              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:1,
+            style={{padding: bp === "sm" ? "5px 10px" : "6px 16px", borderRadius:7, cursor:"pointer",
+              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize: bp === "sm" ? 12 : 14, letterSpacing:1,
               border:`1px solid ${t.accent}`, background:`${t.accent}18`, color:t.accent,
               display:"inline-flex", alignItems:"center", gap:6}}>
-            🎛️ CONTROL ROOM <span style={{fontSize:11, opacity:0.7}}>↗</span>
+            🎛️ {bp !== "sm" && "CONTROL ROOM"} <span style={{fontSize:11, opacity:0.7}}>↗</span>
           </button>
 
           <button onClick={() => setDarkMode(p => !p)}
@@ -636,10 +651,11 @@ export default function App() {
       ) : page === "storica" ? (
         <StoricaPage t={t} qualitySources={qualitySources} showMarkers={showMarkers} onShowMarkers={setShowMarkers} limits={qualityLimits} />
       ) : (
-        <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12}}>
+        <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12,
+          maxWidth: bp === "xl" ? 2200 : "100%", margin:"0 auto", width:"100%"}}>
 
           {/* ── STAGES ROW ── */}
-          <div style={{display:"flex", gap:8}}>
+          <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
             {stages.map((s, i) => (
               <StageCard key={s.id} stage={s} index={i}
                 stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
@@ -655,7 +671,9 @@ export default function App() {
           </div>
 
           {/* ── MAIN ROW: left sidebar | trend | right panel ── */}
-          <div style={{display:"grid", gridTemplateColumns:"195px 1fr 320px", gap:12, minHeight:300}}>
+          <div style={{display:"grid",
+            gridTemplateColumns: bp === "sm" ? "175px 1fr 280px" : bp === "xl" ? "220px 1fr 360px" : "195px 1fr 320px",
+            gap:12, minHeight:300}}>
 
             {/* ── LEFT SIDEBAR ── */}
             <div style={{display:"flex", flexDirection:"column", gap:8}}>
@@ -726,7 +744,7 @@ export default function App() {
             </div>
 
             {/* ── TREND LIVE ── */}
-            <div style={{...card, padding:14, display:"flex", flexDirection:"column"}}>
+            <div style={{...card, padding:14, display:"flex", flexDirection:"column", minWidth:0}}>
               <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, flexWrap:"wrap", gap:6}}>
                 <div style={{display:"flex", alignItems:"center", gap:8}}>
                   <span style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec}}>▸ TREND LIVE</span>
@@ -839,7 +857,7 @@ export default function App() {
             </div>
 
             {/* ── RIGHT COLUMN: QUALITÀ + AI ── */}
-            <div style={{display:"flex", flexDirection:"column", gap:8}}>
+            <div style={{display:"flex", flexDirection:"column", gap:8, minWidth:0, overflow:"hidden"}}>
 
               {/* QUALITÀ USCITA */}
               <div style={{...card, padding:"14px 16px"}}>
@@ -900,7 +918,7 @@ export default function App() {
           </div>
 
           {/* ── BOTTOM ROW ── */}
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12}}>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(320px, 1fr))", gap:12}}>
 
             {/* CONSUMI ENERGETICI */}
             <div style={{...card, padding:"16px 18px"}}>

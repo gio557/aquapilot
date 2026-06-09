@@ -110,10 +110,10 @@ function OsmosiCIPControl({ state, onStartCIP, t }) {
   const foulColor = foulPct >= 70 ? t.red : foulPct >= 45 ? t.orange : t.green;
   const cipDue    = !inCIP && (state.allarmi?.length > 0);
   return (
-    <div style={{width:"100%", display:"flex", flexDirection:"column", gap:6, padding:"4px 0"}}>
+    <div style={{width:"100%", display:"flex", flexDirection:"column", gap:6, padding:"4px 0", minWidth:0}}>
       <div style={{display:"flex", alignItems:"center", gap:8, padding:"8px 14px", borderRadius:10,
         background:bgDim, border:`2px solid ${color}55`, justifyContent:"space-between",
-        transition:"background 0.6s, border-color 0.6s"}}>
+        overflow:"hidden", transition:"background 0.6s, border-color 0.6s"}}>
         <div style={{display:"flex", alignItems:"center", gap:8}}>
           <span style={{fontSize:16, lineHeight:1}}>{ph.icon}</span>
           <span style={{fontFamily:"'Orbitron',sans-serif", fontSize:11, fontWeight:900, color, letterSpacing:1, transition:"color 0.6s"}}>{ph.label}</span>

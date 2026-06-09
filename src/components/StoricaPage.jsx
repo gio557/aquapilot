@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback, Component } from "react";
+import { useBreakpoint } from "../hooks/useWindowSize";
 import { loadHistory, loadInterventions } from "../simulation/learning";
 import { STAGE_META } from "../constants/stages";
 import { STAGE_TREND_DEFS } from "../constants/stageTrend";
@@ -283,6 +284,7 @@ class StoricaErrorBoundary extends Component {
 
 // ── Main page ─────────────────────────────────────────────────
 function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMarkers, limits }) {
+  const bp = useBreakpoint();
   const [history,       setHistory]       = useState([]);
   const [interventions, setInterventions] = useState([]);
   const [calMonth,      setCalMonth]      = useState(new Date());
@@ -535,7 +537,7 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
       </div>
 
       {/* ── NAVIGATION ROW ── */}
-      <div style={{display:"grid", gridTemplateColumns:"300px 1fr", gap:14}}>
+      <div style={{display:"grid", gridTemplateColumns: bp === "sm" ? "260px 1fr" : "300px 1fr", gap:14}}>
 
         {/* Calendar */}
         <div style={{...card, padding:"20px 18px"}}>
@@ -633,7 +635,7 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
 
       {/* ── DATA CARDS ── */}
       {snap && (
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14}}>
+        <div style={{display:"grid", gridTemplateColumns: bp === "sm" ? "1fr 1fr" : "1fr 1fr 1fr", gap:14}}>
 
           {/* QUALITÀ USCITA */}
           <div style={{...card, padding:"20px 22px"}}>
@@ -853,7 +855,7 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
 
       {/* ── INTERVENTI VICINI + CONSUMI ── */}
       {snap && (
-      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, alignItems:"stretch"}}>
+      <div style={{display:"grid", gridTemplateColumns: bp === "sm" ? "1fr 1fr" : "1fr 1fr 1fr", gap:14, alignItems:"stretch"}}>
         <div style={{...card, padding:"20px 22px", display:"flex", flexDirection:"column"}}>
           <div style={{...secHd}}>
             <span style={{color:t.yellow}}>▸</span>
@@ -1013,7 +1015,7 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
             </div>
           ) : (
             <>
-              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:14, marginBottom:18}}>
+              <div style={{display:"grid", gridTemplateColumns: bp === "sm" ? "1fr 1fr" : "1fr 1fr 1fr", gap:14, marginBottom:18}}>
                 {[
                   { label:"Potenza",   val:snap.kw != null ? snap.kw.toFixed(1) : "—", unit:"kW",   sub:"Totale impianto", color:t.accent },
                   { label:"Energia",   val:snap.kwh != null ? snap.kwh : "—",          unit:"kWh",  sub:"Sessione",         color:t.accent },

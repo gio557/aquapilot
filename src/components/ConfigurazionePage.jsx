@@ -522,14 +522,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                   </button>
                 </div>
                 <div style={{display:"flex", gap:18, flexWrap:"wrap", marginTop:14}}>
-                  <NumField label="Potenza" value={cp.power_kw} unit="kW"
-                    onChange={v => updateCP(cp.id, "power_kw", v)} t={t}/>
                   <NumField label="Portata" value={cp.flow_m3h} unit="m³/h"
                     onChange={v => updateCP(cp.id, "flow_m3h", v)} t={t}/>
-                  <NumField label="Prevalenza" value={cp.head_m} unit="m"
-                    onChange={v => updateCP(cp.id, "head_m", v)} t={t}/>
-                  <NumField label="Velocità" value={cp.rpm} unit="RPM"
-                    onChange={v => updateCP(cp.id, "rpm", v)} t={t}/>
                   <div style={{display:"flex", alignItems:"center", gap:10, alignSelf:"flex-end", paddingBottom:4}}>
                     <div onClick={() => updateCP(cp.id, "vfd", !cp.vfd)}
                       style={{width:36, height:20, borderRadius:10, cursor:"pointer", position:"relative", flexShrink:0,
@@ -862,14 +856,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           </div>
                         ) : (
                           <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
-                            <NumField label="Potenza" value={pump.power_kw} unit="kW"
-                              onChange={v => updatePump(si, pi, "power_kw", v)} t={t}/>
                             <NumField label="Portata" value={pump.flow_m3h} unit="m³/h"
                               onChange={v => updatePump(si, pi, "flow_m3h", v)} t={t}/>
-                            <NumField label="Prevalenza" value={pump.head_m} unit="m"
-                              onChange={v => updatePump(si, pi, "head_m", v)} t={t}/>
-                            <NumField label="Velocità" value={pump.rpm} unit="RPM"
-                              onChange={v => updatePump(si, pi, "rpm", v)} t={t}/>
                           </div>
                         )}
 

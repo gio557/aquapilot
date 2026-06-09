@@ -291,10 +291,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
                     </div>
                     <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
                       {[
-                        {l:"Potenza", v:`${pump.power_kw} kW`},
                         pump.flow_m3h > 0 && {l:"Portata", v:`${pump.flow_m3h} m³/h`},
-                        pump.head_m > 0   && {l:"Prevalenza", v:`${pump.head_m} m`},
-                        {l:"Velocità", v:`${pump.rpm} RPM`},
                       ].filter(Boolean).map(x => (
                         <div key={x.l}>
                           <span style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.l}: </span>

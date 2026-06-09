@@ -303,11 +303,14 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           collegata con: {link.stage.name}
                         </span>
                       ) : (
-                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
-                          background:t.surface3, border:`1px solid ${t.border}`,
-                          color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>
-                          non collegata con alcun stadio
-                        </span>
+                        <select value=""
+                          onChange={e => { if (e.target.value !== "") linkPump(parseInt(e.target.value, 10), p.id); }}
+                          style={{fontSize:12, padding:"5px 10px", borderRadius:5, alignSelf:"flex-end", cursor:"pointer",
+                            background:t.surface3, border:`1px solid ${t.orange}55`,
+                            color:t.orange, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, outline:"none"}}>
+                          <option value="">↔ Collega a uno stadio…</option>
+                          {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
+                        </select>
                       )}
                       <button onClick={() => removeD(p.id)} disabled={linked}
                         style={{padding:"6px 14px", borderRadius:6, cursor: linked ? "not-allowed" : "pointer",
@@ -391,11 +394,14 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                           collegata con: {link.stage.name}
                         </span>
                       ) : (
-                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
-                          background:t.surface3, border:`1px solid ${t.border}`,
-                          color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>
-                          non collegata con alcun stadio
-                        </span>
+                        <select value=""
+                          onChange={e => { if (e.target.value !== "") linkPump(parseInt(e.target.value, 10), p.id); }}
+                          style={{fontSize:12, padding:"5px 10px", borderRadius:5, alignSelf:"flex-end", cursor:"pointer",
+                            background:t.surface3, border:`1px solid ${t.accent}55`,
+                            color:t.accent, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, outline:"none"}}>
+                          <option value="">↔ Collega a uno stadio…</option>
+                          {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
+                        </select>
                       )}
                       <button onClick={() => removeI(p.id)} disabled={linked}
                         style={{padding:"6px 14px", borderRadius:6, cursor: linked ? "not-allowed" : "pointer",

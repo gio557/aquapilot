@@ -387,6 +387,11 @@ export default function App() {
     if (page === "dashboard") setTrendNode("plant");
   }, [page]);
 
+  // Always open a page scrolled to the top, never mid-way or at the bottom.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page]);
+
   // Available metric definitions for the selected node
   const nodeMetricDefs = trendNode === "plant"
     ? TREND_KEYS

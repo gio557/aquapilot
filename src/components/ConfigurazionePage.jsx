@@ -59,6 +59,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   const [activePompeTab, setActivePompeTab] = useState("dosatrici");
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
+  const [expandedProd, setExpandedProd] = useState(null);
   const stages = stagesProp || STAGE_META;
 
   const availableTypes = (stageTypes || []).filter(st => !stages.some(s => s.name === st.name));
@@ -477,33 +478,51 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                 const sens = consumabiliSensors[c.id] || {};
                 const hasAlert = sens.riordino || sens.vuoto;
                 const borderColor = sens.vuoto ? t.red : sens.riordino ? t.orange : t.border;
+                const isOpen = expandedProd === c.id;
                 return (
-                  <div key={c.id} style={{marginBottom:16, padding:"18px 20px", borderRadius:11,
-                    background:t.surface2, border:`1px solid ${hasAlert ? borderColor : t.border}`}}>
+                  <div key={c.id} style={{marginBottom:10, borderRadius:11,
+                    background:t.surface2, border:`1px solid ${hasAlert ? borderColor : t.border}`, overflow:"hidden"}}>
+                    {/* Header compatto — riga unica, cliccabile per espandere/comprimere */}
+                    <div role="button" tabIndex={0}
+                      onClick={() => setExpandedProd(isOpen ? null : c.id)}
+                      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedProd(isOpen ? null : c.id); } }}
+                      style={{display:"flex", alignItems:"center", gap:10, padding:"13px 18px", cursor:"pointer"}}>
+                      <span style={{fontSize:18, flexShrink:0}}>🧴</span>
+                      <span style={{flex:1, minWidth:0, color:t.text, fontFamily:"'Rajdhani',sans-serif",
+                        fontWeight:700, fontSize:16, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+                        {c.nome || "Senza nome"}
+                      </span>
+                      {sens.vuoto && (
+                        <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700, flexShrink:0,
+                          background:`${t.red}1a`, border:`1px solid ${t.red}66`, color:t.red,
+                          fontFamily:"'Share Tech Mono',monospace"}}>⚠ VUOTO</span>
+                      )}
+                      {!sens.vuoto && sens.riordino && (
+                        <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700, flexShrink:0,
+                          background:`${t.orange}1a`, border:`1px solid ${t.orange}66`, color:t.orange,
+                          fontFamily:"'Share Tech Mono',monospace"}}>↓ RIORDINO</span>
+                      )}
+                      <button onClick={e => { e.stopPropagation(); removeC(c.id); }}
+                        style={{padding:"4px 12px", borderRadius:5, cursor:"pointer", flexShrink:0,
+                          fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
+                          border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
+                        Rimuovi
+                      </button>
+                      <span style={{color:t.textMuted, fontSize:13, flexShrink:0,
+                        transform:isOpen?"rotate(180deg)":"rotate(0deg)", transition:"transform 0.2s"}}>▼</span>
+                    </div>
+
+                    {/* Corpo espandibile */}
+                    {isOpen && (
+                    <div style={{padding:"4px 20px 18px"}}>
                     <div style={{display:"flex", alignItems:"center", gap:10, marginBottom:16}}>
-                      <span style={{fontSize:20}}>🧴</span>
+                      <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, flexShrink:0}}>Nome</span>
                       <input type="text" value={c.nome}
                         onChange={e => updateC(c.id, "nome", e.target.value)}
                         style={{flex:1, background:"transparent", border:"none",
                           borderBottom:`1px solid ${t.border}`, color:t.text,
                           fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:17,
                           outline:"none", padding:"2px 4px"}}/>
-                      {sens.vuoto && (
-                        <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
-                          background:`${t.red}1a`, border:`1px solid ${t.red}66`, color:t.red,
-                          fontFamily:"'Share Tech Mono',monospace"}}>⚠ VUOTO</span>
-                      )}
-                      {!sens.vuoto && sens.riordino && (
-                        <span style={{fontSize:11, padding:"3px 9px", borderRadius:4, fontWeight:700,
-                          background:`${t.orange}1a`, border:`1px solid ${t.orange}66`, color:t.orange,
-                          fontFamily:"'Share Tech Mono',monospace"}}>↓ RIORDINO</span>
-                      )}
-                      <button onClick={() => removeC(c.id)}
-                        style={{padding:"4px 12px", borderRadius:5, cursor:"pointer",
-                          fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13,
-                          border:`1px solid ${t.red}66`, background:`${t.red}12`, color:t.red}}>
-                        Rimuovi
-                      </button>
                     </div>
                     {(c.note || (c.stadiTipici && c.stadiTipici.length > 0)) && (
                       <div style={{marginBottom:14, marginTop:-6}}>
@@ -575,6 +594,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         </div>
                       )}
                     </div>
+                    </div>
+                    )}
                   </div>
                 );
               })}

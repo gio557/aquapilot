@@ -452,6 +452,12 @@ export default function App() {
     if (cfg) setSim(prev => ({ ...prev, grigliaturaConfig: { ...prev.grigliaturaConfig, ...cfg } }));
   }, [grCfgJson]);
 
+  const stagesJson = JSON.stringify(stages);
+  useEffect(() => {
+    setSim(prev => ({ ...prev, stages }));
+    try { localStorage.setItem("aquapilot.stages.v3", stagesJson); } catch { /* storage non disponibile */ }
+  }, [stagesJson]);
+
   const stageConfigJson = JSON.stringify(stageConfig);
   // Save raw (link format) stageConfig to localStorage
   useEffect(() => {
@@ -463,12 +469,6 @@ export default function App() {
     setSim(prev => ({ ...prev, stageConfig: resolvedStageConfig, stages }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedJson, stagesJson]);
-
-  const stagesJson = JSON.stringify(stages);
-  useEffect(() => {
-    setSim(prev => ({ ...prev, stages }));
-    try { localStorage.setItem("aquapilot.stages.v3", stagesJson); } catch { /* storage non disponibile */ }
-  }, [stagesJson]);
 
   useEffect(() => {
     try { localStorage.setItem("aquapilot.norms.v1", JSON.stringify(norms)); } catch { /* storage non disponibile */ }

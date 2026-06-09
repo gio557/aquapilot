@@ -58,6 +58,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   const [activeTab, setActiveTab] = useState("stadi");
   const [activePompeTab, setActivePompeTab] = useState("dosatrici");
   const [expanded, setExpanded] = useState(null);
+  const [showAddPopup, setShowAddPopup] = useState(false);
   const stages = stagesProp || STAGE_META;
 
   const availableTypes = (stageTypes || []).filter(st => !stages.some(s => s.name === st.name));

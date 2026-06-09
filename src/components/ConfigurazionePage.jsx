@@ -249,9 +249,9 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
           </div>
           <div style={{display:"inline-flex", gap:6, padding:6, marginLeft:14, borderRadius:12,
             background:t.surface2, border:`1px solid ${t.border}`}}>
-            <PompeSubTab id="dosatrici" label="POMPE DOSATRICI"   col={t.orange}/>
-            <PompeSubTab id="inverter"  label="POMPE INVERTER"    col={t.accent}/>
-            <PompeSubTab id="prodotti"  label="PRODOTTI / CISTERNE" col={t.green}/>
+            {PompeSubTab({ id:"dosatrici", label:"POMPE DOSATRICI",    col:t.orange })}
+            {PompeSubTab({ id:"inverter",  label:"POMPE INVERTER",     col:t.accent })}
+            {PompeSubTab({ id:"prodotti",  label:"PRODOTTI / CISTERNE", col:t.green })}
           </div>
         </div>
 
@@ -521,9 +521,9 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                       </div>
                     )}
                     <div style={{display:"flex", gap:12, flexWrap:"wrap", marginBottom:14}}>
-                      <TextField label="Fornitore" value={c.fornitore} onChange={v => updateC(c.id, "fornitore", v)} placeholder="Nome fornitore"/>
-                      <TextField label="Email fornitore" value={c.emailFornitore} onChange={v => updateC(c.id, "emailFornitore", v)} placeholder="ordini@fornitore.it"/>
-                      <TextField label="Email responsabile" value={c.emailResponsabile} onChange={v => updateC(c.id, "emailResponsabile", v)} placeholder="resp@impianto.it"/>
+                      {TextField({ label:"Fornitore", value:c.fornitore, onChange:v => updateC(c.id, "fornitore", v), placeholder:"Nome fornitore" })}
+                      {TextField({ label:"Email fornitore", value:c.emailFornitore, onChange:v => updateC(c.id, "emailFornitore", v), placeholder:"ordini@fornitore.it" })}
+                      {TextField({ label:"Email responsabile", value:c.emailResponsabile, onChange:v => updateC(c.id, "emailResponsabile", v), placeholder:"resp@impianto.it" })}
                     </div>
                     <div style={{borderTop:`1px solid ${t.border}`, paddingTop:14, marginBottom:14}}>
                       <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:10}}>SENSORI LIVELLO CISTERNA</div>

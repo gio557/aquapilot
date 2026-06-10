@@ -708,6 +708,7 @@ function processOsmosIInversa(water, cfg, prevState, g) {
   const permQ = round1(feedQ * oCfg.RECOVERY / 100);
   const concQ = round1(feedQ - permQ);
   const dpTrip = +(oCfg.DP_CLEAN * (1 + oCfg.DP_TRIGGER)).toFixed(2);
+  o.dp_trip = dpTrip;   // soglia ΔP per avvio CIP — usata dal gauge ΔP membrana
 
   // L'energia cresce con lo sporcamento (serve più pressione). Durante il CIP
   // l'alta pressione è esclusa: lavora la pompa di ricircolo del lavaggio.

@@ -177,14 +177,26 @@ export const INIT_SIM = {
 };
 
 // ── sensorGauge: computes gauge data for a given sensor type at a given stage ──
-function sensorGauge(si, sensorId, stageWater, tgt, O2, MLSS, s3TSS, iQ, inlet, grigliaturaState, noise, round1, round2) {
+function sensorGauge(si, sensorId, stageWater, tgt, O2, MLSS, s3TSS, iQ, inlet, stageState, noise, round1, round2) {
   const w = stageWater[Math.min(si, stageWater.length - 1)];
   const redoxVal = Math.round(-50 + (O2 / 8) * 350 + noise(800));
   const sblVal   = round2(Math.max(0.05, Math.min(2.5, 0.3 + (s3TSS / 2000) * 2.5 + noise(4))));
   switch (sensorId) {
     case "flow":   return { value: round1(iQ), target: round1((inlet?.Q ?? 1000) * 1.2), unit: "m³/h", label: "Portata" };
     case "level":
-    case "diff_p": return { value: round2(+(grigliaturaState?.delta_h || 0)), target: 0.35, unit: "m", label: "ΔH livello" };
+    case "diff_p":
+      // Pressione differenziale / livello: SEMPRE riferita allo stadio corrente
+      // (mai a un altro stadio). Su una membrana (osmosi) il differenziale è il
+      // ΔP transmembrana in bar, con soglia di avvio CIP; su griglia/dissabbiatura
+      // è la perdita di carico idraulica ΔH in metri. Prima il gauge leggeva
+      // sempre il delta_h della grigliatura, mostrando un dato di un altro stadio
+      // (falso "fuori limite" sull'osmosi).
+      if (stageState?.dp != null)
+        return { value: round2(stageState.dp), target: stageState.dp_trip ?? round2(stageState.dp),
+                 unit: "bar", label: "ΔP membrana" };
+      if (stageState?.delta_h != null)
+        return { value: round2(stageState.delta_h), target: 0.35, unit: "m", label: "ΔH livello" };
+      return { value: 0, target: 0.35, unit: "m", label: "ΔH livello" };
     case "o2":     return { value: round2(O2),    target: 2,              unit: "mg/L", label: "O₂ disciolto", higherIsBetter: true };
     case "ph":     return { value: round2(w.pH),  target: 8.0,            unit: "",     label: "pH" };
     case "tss": {
@@ -331,7 +343,7 @@ export function simTick(s) {
   for (let si = 0; si < stageCfgs.length; si++) {
     const ref = stageCfgs[si]?.referenceSensor;
     if (ref) {
-      const g = sensorGauge(si, ref, stageWaterArr, tgt, O2, MLSS, s3TSS, iQ, s.inlet, grigliaturaState, noise, round1, round2);
+      const g = sensorGauge(si, ref, stageWaterArr, tgt, O2, MLSS, s3TSS, iQ, s.inlet, newStageStates[si], noise, round1, round2);
       if (g) stageOutputsArr[si] = g;
     }
   }

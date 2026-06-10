@@ -105,7 +105,7 @@ export const PUMP_CATALOG = [
   { key:"ric_miscela",     name:"Pompa ricircolo miscela (MLR)",         power_kw:5.5,  flow_m3h:300, head_m:5,   rpm:1450, vfd:true },
   { key:"classificatore",  name:"Pompa classificatore sabbie",           power_kw:2.2,  flow_m3h:45,  head_m:5,   rpm:1450, vfd:true },
   { key:"rilancio",        name:"Pompa di rilancio",                     power_kw:5.5,  flow_m3h:100, head_m:10,  rpm:1450, vfd:true },
-  { key:"sollevamento",    name:"Pompa di sollevamento liquami",         power_kw:7.5,  flow_m3h:120, head_m:8,   rpm:1450, vfd:true },
+  { key:"sollevamento",    name:"Pompa di sollevamento effluenti",       power_kw:7.5,  flow_m3h:120, head_m:8,   rpm:1450, vfd:true },
   { key:"soffiante_diss",  name:"Soffiante insufflazione aerato",        power_kw:3.0,  flow_m3h:0,   head_m:0,   rpm:2900, vfd:true },
   { key:"rilancio_eq",     name:"Pompa di rilancio/alimentazione",       power_kw:5.5,  flow_m3h:100, head_m:10,  rpm:1450, vfd:true },
   { key:"mixer_eq",        name:"Mixer equalizzazione",                   power_kw:2.2,  flow_m3h:0,   head_m:0,   rpm:960,  vfd:true },
@@ -218,7 +218,7 @@ const dos = (id, name, flow_m3h, productId) =>
 
 export const DEFAULT_PUMPS_REGISTRY = {
   inverter: [
-    inv("pi_def_sollev",    "Pompa di sollevamento liquami",   7.5, 120, 70),  // Grigliatura
+    inv("pi_def_sollev",    "Pompa di sollevamento effluenti", 7.5, 120, 70),  // Grigliatura
     inv("pi_def_soffdiss",  "Soffiante dissabbiatore",         3.0,   0, 60),  // Dissabbiatura
     inv("pi_def_classif",   "Pompa classificatore sabbie",     2.2,  45, 35),  // Dissabbiatura
     inv("pi_def_soffianti", "Soffianti aria",                 15.0,   0, 75),  // Biologico

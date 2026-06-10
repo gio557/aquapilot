@@ -230,8 +230,14 @@ export const DEFAULT_PUMPS_REGISTRY = {
     inv("pi_def_osmoboost", "Pompa booster osmosi",            3.0,  30, 70),  // Osmosi Inversa
   ],
   dosatrici: [
-    dos("pd_def_carbonio",  "Pompa dosaggio fonte di carbonio", 0.4, "carbonio"),  // Denitrificazione
-    dos("pd_def_coagulante","Pompa dosaggio coagulante",        0.5, "coagulante"), // Sedimentazione
+    dos("pd_def_carbonio",   "Pompa dosaggio fonte di carbonio", 0.4, "carbonio"),     // Denitrificazione
+    dos("pd_def_naoh",       "Pompa dosaggio NaOH (soda)",       0.3, "naoh"),         // Biologico
+    dos("pd_def_antischiuma","Pompa dosaggio antischiuma",       0.2, "antischiuma"),  // Biologico
+    dos("pd_def_coagulante", "Pompa dosaggio coagulante",        0.5, "coagulante"),   // Sedimentazione
+    dos("pd_def_poly",       "Pompa dosaggio polielettrolita",   0.4, "polielettrolita"), // Sedimentazione
+    dos("pd_def_antiscal",   "Pompa dosaggio antiscalante",      0.3, "antiscalante"), // Osmosi Inversa
+    dos("pd_def_h2so4",      "Pompa dosaggio H₂SO₄ (acido)",     0.3, "h2so4"),        // Osmosi Inversa
+    dos("pd_def_metabi",     "Pompa dosaggio metabisolfito",     0.2, "metabisolfito"), // Osmosi Inversa
   ],
 };
 
@@ -267,7 +273,7 @@ export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 2,
     ...fromPreset("Biologico"),
-    pumps: [ link("pi_def_soffianti") ],
+    pumps: [ link("pi_def_soffianti"), link("pd_def_naoh"), link("pd_def_antischiuma") ],
   },
   {
     stageIndex: 3,
@@ -277,12 +283,12 @@ export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 4,
     ...fromPreset("Sedimentazione"),
-    pumps: [ link("pi_def_ras"), link("pi_def_was"), link("pd_def_coagulante") ],
+    pumps: [ link("pi_def_ras"), link("pi_def_was"), link("pd_def_coagulante"), link("pd_def_poly") ],
   },
   {
     stageIndex: 5,
     ...fromPreset("Osmosi Inversa"),
-    pumps: [ link("pi_def_osmohp"), link("pi_def_osmoboost") ],
+    pumps: [ link("pi_def_osmohp"), link("pi_def_osmoboost"), link("pd_def_antiscal"), link("pd_def_h2so4"), link("pd_def_metabi") ],
   },
 ];
 

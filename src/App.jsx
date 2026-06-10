@@ -91,19 +91,19 @@ export default function App() {
   const seDisp = stageEnergyDisp ?? (sim.stageEnergy || []);
 
   // Initial stageConfig + pumpsRegistry + stages, computed together so the three
-  // parallel stores stay aligned. v4 is the registry-first model: the default
+  // parallel stores stay aligned. v5 is the registry-first model: the default
   // plant is a clean link-based config (DEFAULT_STAGE_CONFIG) backed by an
   // explicit pump registry (DEFAULT_PUMPS_REGISTRY) — no inline pumps, no
-  // migration. Absence of the v4 key means a fresh start (or upgrade from the
-  // legacy v3 inline-pump format): seed the realistic default plant.
+  // migration. Absence of the v5 key means a fresh start (or upgrade from an
+  // older layout): seed the realistic default plant.
   const [_init] = useState(() => {
     const savedSc = (() => {
-      try { return JSON.parse(localStorage.getItem("aquapilot.stageConfig.v4") || "null"); }
+      try { return JSON.parse(localStorage.getItem("aquapilot.stageConfig.v5") || "null"); }
       catch { return null; }
     })();
     if (savedSc) {
       const savedStages = (() => {
-        try { return JSON.parse(localStorage.getItem("aquapilot.stages.v4") || "null"); }
+        try { return JSON.parse(localStorage.getItem("aquapilot.stages.v5") || "null"); }
         catch { return null; }
       })();
       return { sc: savedSc, pr: loadPumpsRegistry(), stages: savedStages || STAGE_META };
@@ -551,13 +551,13 @@ export default function App() {
   const stagesJson = JSON.stringify(stages);
   useEffect(() => {
     setSim(prev => ({ ...prev, stages }));
-    try { localStorage.setItem("aquapilot.stages.v4", stagesJson); } catch { /* storage non disponibile */ }
+    try { localStorage.setItem("aquapilot.stages.v5", stagesJson); } catch { /* storage non disponibile */ }
   }, [stagesJson]);
 
   const stageConfigJson = JSON.stringify(stageConfig);
   // Save raw (link format) stageConfig to localStorage
   useEffect(() => {
-    try { localStorage.setItem("aquapilot.stageConfig.v4", stageConfigJson); } catch { /* storage non disponibile */ }
+    try { localStorage.setItem("aquapilot.stageConfig.v5", stageConfigJson); } catch { /* storage non disponibile */ }
   }, [stageConfigJson]);
   // Push resolved (full pump objects) stageConfig to sim engine
   const resolvedJson = JSON.stringify(resolvedStageConfig);

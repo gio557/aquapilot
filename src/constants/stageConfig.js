@@ -90,9 +90,11 @@ export const PARAM_SENSOR_MAP = {
   },
 };
 
-const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>
-  ({ id, name, enabled: true, power_kw, flow_m3h, head_m, rpm, vfd, maintH: DEFAULT_MAINT_H,
-     isDosatrice: false, productId: null });
+// A stage references a pump by LINK ({registryId, enabled}); the pump itself
+// lives in the registry (DEFAULT_PUMPS_REGISTRY below). This enforces the
+// "registry first" rule: a stage can never carry a pump that wasn't created in
+// the Pompe a Inverter / Pompe Dosatrici registry first.
+const link = (registryId, enabled = true) => ({ registryId, enabled });
 
 // Catalogo delle pompe di PROCESSO (non dosatrici) selezionabili quando si
 // aggiunge una pompa a uno stadio. Le pompe dosatrici NON stanno qui: vengono
@@ -101,12 +103,13 @@ export const PUMP_CATALOG = [
   { key:"soffianti",       name:"Soffianti aria",                        power_kw:15.0, flow_m3h:0,   head_m:0,   rpm:2900, vfd:true },
   { key:"ric_fanghi",      name:"Pompa ricircolo fanghi",                power_kw:5.5,  flow_m3h:200, head_m:6,   rpm:1450, vfd:true },
   { key:"ric_miscela",     name:"Pompa ricircolo miscela (MLR)",         power_kw:5.5,  flow_m3h:300, head_m:5,   rpm:1450, vfd:true },
-  { key:"classificatore",  name:"Pompa classificatore sabbie",           power_kw:2.2,  flow_m3h:45,  head_m:5,   rpm:1450 },
-  { key:"rilancio",        name:"Pompa di rilancio",                     power_kw:5.5,  flow_m3h:100, head_m:10,  rpm:1450 },
+  { key:"classificatore",  name:"Pompa classificatore sabbie",           power_kw:2.2,  flow_m3h:45,  head_m:5,   rpm:1450, vfd:true },
+  { key:"rilancio",        name:"Pompa di rilancio",                     power_kw:5.5,  flow_m3h:100, head_m:10,  rpm:1450, vfd:true },
   { key:"sollevamento",    name:"Pompa di sollevamento liquami",         power_kw:7.5,  flow_m3h:120, head_m:8,   rpm:1450, vfd:true },
   { key:"soffiante_diss",  name:"Soffiante insufflazione aerato",        power_kw:3.0,  flow_m3h:0,   head_m:0,   rpm:2900, vfd:true },
   { key:"rilancio_eq",     name:"Pompa di rilancio/alimentazione",       power_kw:5.5,  flow_m3h:100, head_m:10,  rpm:1450, vfd:true },
   { key:"mixer_eq",        name:"Mixer equalizzazione",                   power_kw:2.2,  flow_m3h:0,   head_m:0,   rpm:960,  vfd:true },
+  { key:"mixer_anossico",  name:"Mixer anossico",                         power_kw:2.2,  flow_m3h:0,   head_m:0,   rpm:960,  vfd:true },
   { key:"spurgo_fanghi",   name:"Pompa spurgo fanghi (WAS)",             power_kw:3.0,  flow_m3h:30,  head_m:8,   rpm:1450, vfd:true },
   { key:"press_daf",       name:"Pompa pressurizzazione/ricircolo DAF",  power_kw:5.5,  flow_m3h:80,  head_m:30,  rpm:1450, vfd:true },
   { key:"controlavaggio",  name:"Pompa controlavaggio filtrazione",       power_kw:4.0,  flow_m3h:60,  head_m:15,  rpm:1450, vfd:true },
@@ -200,13 +203,43 @@ const fromPreset = (name) => ({
   sensors: { ...STAGE_SENSOR_PRESETS[name].sensors },
 });
 
+// ── Registro pompe di default ────────────────────────────────────────────────
+// Setup tipico di un depuratore reale a fanghi attivi con pre-denitrificazione
+// (schema MLE) seguito da affinamento a osmosi inversa. Ogni pompa qui è una
+// voce di registro (visibile nella pagina "Pompe a Inverter" / "Pompe Dosatrici")
+// e gli stadi la richiamano per LINK. Gli id sono stabili: i link in
+// DEFAULT_STAGE_CONFIG e le config salvate vi fanno riferimento.
+//   inverter:  { id, name, flow_m3h, power_kw, loadPct, maintH }
+//   dosatrici: { id, name, flow_m3h, productId, maintH }
+const inv = (id, name, power_kw, flow_m3h, loadPct) =>
+  ({ id, name, flow_m3h, power_kw, loadPct, maintH: DEFAULT_MAINT_H });
+const dos = (id, name, flow_m3h, productId) =>
+  ({ id, name, flow_m3h, productId, maintH: DEFAULT_MAINT_H });
+
+export const DEFAULT_PUMPS_REGISTRY = {
+  inverter: [
+    inv("pi_def_sollev",    "Pompa di sollevamento liquami",   7.5, 120, 70),  // Grigliatura
+    inv("pi_def_soffdiss",  "Soffiante dissabbiatore",         3.0,   0, 60),  // Dissabbiatura
+    inv("pi_def_classif",   "Pompa classificatore sabbie",     2.2,  45, 35),  // Dissabbiatura
+    inv("pi_def_soffianti", "Soffianti aria",                 15.0,   0, 75),  // Biologico
+    inv("pi_def_mlr",       "Pompa ricircolo miscela (MLR)",   5.5, 300, 80),  // Denitrificazione
+    inv("pi_def_mixerden",  "Mixer anossico",                  2.2,   0, 60),  // Denitrificazione
+    inv("pi_def_ras",       "Pompa ricircolo fanghi (RAS)",    5.5, 200, 70),  // Sedimentazione
+    inv("pi_def_was",       "Pompa spurgo fanghi (WAS)",       3.0,  30, 25),  // Sedimentazione
+    inv("pi_def_osmohp",    "Pompa alta pressione membrana",  11.0,  20, 85),  // Osmosi Inversa
+    inv("pi_def_osmoboost", "Pompa booster osmosi",            3.0,  30, 70),  // Osmosi Inversa
+  ],
+  dosatrici: [
+    dos("pd_def_carbonio",  "Pompa dosaggio fonte di carbonio", 0.4, "carbonio"),  // Denitrificazione
+    dos("pd_def_coagulante","Pompa dosaggio coagulante",        0.5, "coagulante"), // Sedimentazione
+  ],
+};
+
 export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 0,
     ...fromPreset("Grigliatura"),
-    pumps: [
-      pump("pgr_sollevamento", "Pompa di sollevamento liquami", 7.5, 120, 8, 1450, true),
-    ],
+    pumps: [ link("pi_def_sollev") ],
     grigliatura: {
       DH_AVVIO_PULIZIA:        0.15,
       DH_STOP_PULIZIA:         0.05,
@@ -221,10 +254,7 @@ export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 1,
     ...fromPreset("Dissabbiatura"),
-    pumps: [
-      pump("pd_classif",      "Pompa classificatore sabbie",    2.2,   45, 5, 1450),
-      pump("pdiss_soffiante", "Soffiante insufflazione aerato", 3.0,    0, 0, 2900, true),
-    ],
+    pumps: [ link("pi_def_soffdiss"), link("pi_def_classif") ],
     classifier: {
       mode: "timed",    // "timed" | "continuous"
       timeOn: 10,       // minutes
@@ -237,34 +267,22 @@ export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 2,
     ...fromPreset("Biologico"),
-    pumps: [
-      pump("pb_soffianti", "Soffianti aria",        15.0,   0,  0, 2900, true),
-      pump("pb_ricircolo", "Pompa ricircolo fanghi", 5.5, 200,  6, 1450, true),
-    ],
+    pumps: [ link("pi_def_soffianti") ],
   },
   {
     stageIndex: 3,
     ...fromPreset("Denitrificazione"),
-    pumps: [
-      pump("pden_mlr", "Pompa ricircolo miscela (MLR)", 5.5, 300, 5, 1450, true),
-      { ...pump("pden_carbonio", "Pompa dosaggio Fonte di carbonio", 0.37, 0.4, 15, 1450), isDosatrice: true, productId: "carbonio" },
-    ],
+    pumps: [ link("pi_def_mlr"), link("pi_def_mixerden"), link("pd_def_carbonio") ],
   },
   {
     stageIndex: 4,
     ...fromPreset("Sedimentazione"),
-    pumps: [
-      pump("psed_ricircolo", "Pompa ricircolo fanghi",    4.0, 120, 7, 1450),
-      pump("psed_spurgo",    "Pompa spurgo fanghi (WAS)", 3.0,  30, 8, 1450, true),
-    ],
+    pumps: [ link("pi_def_ras"), link("pi_def_was"), link("pd_def_coagulante") ],
   },
   {
     stageIndex: 5,
     ...fromPreset("Osmosi Inversa"),
-    pumps: [
-      pump("posm_hp",    "Pompa alta pressione membrana", 11.0, 20, 100, 2900, true),
-      pump("posm_boost", "Pompa booster osmosi",            3.0, 30,  50, 1450, true),
-    ],
+    pumps: [ link("pi_def_osmohp"), link("pi_def_osmoboost") ],
   },
 ];
 
@@ -291,12 +309,12 @@ export function makeDefaultStageConfig(stageIndex, stageName) {
 // VFD pump keys (from PUMP_CATALOG) to auto-create when a stage type is added to the plant.
 export const STAGE_DEFAULT_PUMPS = {
   "Grigliatura":       ["sollevamento"],
-  "Dissabbiatura":     ["soffiante_diss"],
+  "Dissabbiatura":     ["soffiante_diss", "classificatore"],
   "Degrassatore":      [],
   "Equalizzazione":    ["rilancio_eq", "mixer_eq"],
-  "Biologico":         ["soffianti", "ric_fanghi"],
+  "Biologico":         ["soffianti"],
   "Nitrificazione":    ["soffianti"],
-  "Denitrificazione":  ["ric_miscela"],
+  "Denitrificazione":  ["ric_miscela", "mixer_anossico"],
   "Sedimentazione":    ["ric_fanghi", "spurgo_fanghi"],
   "Flottazione DAF":   ["press_daf"],
   "Filtrazione":       ["controlavaggio"],

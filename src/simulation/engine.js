@@ -1,7 +1,8 @@
 import { applyAutoCorrect } from "./autoCorrect";
 import { STAGE_PROCESSORS, initStageState } from "./stageProcessors";
 import { STAGE_META } from "../constants/stages";
-import { DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
+import { DEFAULT_STAGE_CONFIG, DEFAULT_PUMPS_REGISTRY } from "../constants/stageConfig";
+import { resolveLinks } from "./pumpsRegistry";
 import { EVENT_TYPES } from "../constants/events";
 import { QUALITY_LIMITS, MLSS_LIMITS } from "../constants/limits";
 
@@ -129,7 +130,9 @@ export const INIT_SIM = {
     { param:"NH4", value:7.9, target:8,   unit:"mg/L", label:"NH4 uscita" },
   ],
   stageDetails: null,
-  stageConfig:  JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)),
+  // Resolve the link-based default config to full pump objects so the first
+  // engine tick has real pump data before App pushes its resolved config.
+  stageConfig:  DEFAULT_STAGE_CONFIG.map(sc => ({ ...sc, pumps: resolveLinks(sc.pumps, DEFAULT_PUMPS_REGISTRY) })),
   stages:       STAGE_META,
   stageStates:  null,   // per-stage persistent state (array parallel to stageConfig)
   pumpHours: {},        // "StageName::pumpId" → ore di funzionamento accumulate

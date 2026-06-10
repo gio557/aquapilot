@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useBreakpoint } from "./hooks/useWindowSize";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
-import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig, PUMP_CATALOG, makeStagePumps } from "./constants/stageConfig";
+import { DEFAULT_STAGE_CONFIG, DEFAULT_PUMPS_REGISTRY, makeDefaultStageConfig, PUMP_CATALOG, makeStagePumps } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
 import { limitsFromNorms } from "./constants/limits";
@@ -12,7 +12,7 @@ import { useSimulation } from "./hooks/useSimulation";
 import { requestOsmosiCIP } from "./simulation/commands";
 import { savePumpHours, pumpKey, pumpMaintH } from "./simulation/pumpHours";
 import { loadConsumabili, saveConsumabili } from "./simulation/consumabili";
-import { loadPumpsRegistry, savePumpsRegistry, resolveLinks, migrateToRegistry } from "./simulation/pumpsRegistry";
+import { loadPumpsRegistry, savePumpsRegistry, resolveLinks } from "./simulation/pumpsRegistry";
 import MaintenancePopup from "./components/ui/MaintenancePopup";
 import ConsumabiliPopup from "./components/ui/ConsumabiliPopup";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -90,35 +90,33 @@ export default function App() {
   }, [sim.stageEnergy]);
   const seDisp = stageEnergyDisp ?? (sim.stageEnergy || []);
 
-  // Compute initial stageConfig + pumpsRegistry together so migration (old
-  // inline pump objects → link format + separate registry) runs exactly once.
+  // Initial stageConfig + pumpsRegistry + stages, computed together so the three
+  // parallel stores stay aligned. v4 is the registry-first model: the default
+  // plant is a clean link-based config (DEFAULT_STAGE_CONFIG) backed by an
+  // explicit pump registry (DEFAULT_PUMPS_REGISTRY) — no inline pumps, no
+  // migration. Absence of the v4 key means a fresh start (or upgrade from the
+  // legacy v3 inline-pump format): seed the realistic default plant.
   const [_init] = useState(() => {
-    const sc = (() => {
-      try {
-        const saved = localStorage.getItem("aquapilot.stageConfig.v3");
-        return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG));
-      } catch { return JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)); }
+    const savedSc = (() => {
+      try { return JSON.parse(localStorage.getItem("aquapilot.stageConfig.v4") || "null"); }
+      catch { return null; }
     })();
-    const pr = loadPumpsRegistry();
-    const needsMigration =
-      pr.dosatrici.length === 0 && pr.inverter.length === 0 &&
-      sc.some(s => (s.pumps || []).some(p => p.name !== undefined));
-    if (!needsMigration) return { sc, pr };
-    const cp = (() => {
-      try { return JSON.parse(localStorage.getItem("aquapilot.customPumps.v1") || "[]") || []; }
-      catch { return []; }
-    })();
-    const { registry, configs } = migrateToRegistry(sc, cp);
-    return { sc: configs, pr: registry };
+    if (savedSc) {
+      const savedStages = (() => {
+        try { return JSON.parse(localStorage.getItem("aquapilot.stages.v4") || "null"); }
+        catch { return null; }
+      })();
+      return { sc: savedSc, pr: loadPumpsRegistry(), stages: savedStages || STAGE_META };
+    }
+    return {
+      sc: JSON.parse(JSON.stringify(DEFAULT_STAGE_CONFIG)),
+      pr: JSON.parse(JSON.stringify(DEFAULT_PUMPS_REGISTRY)),
+      stages: JSON.parse(JSON.stringify(STAGE_META)),
+    };
   });
   const [stageConfig, setStageConfig] = useState(_init.sc);
   const [pumpsRegistry, setPumpsRegistry] = useState(_init.pr);
-  const [stages, setStages] = useState(() => {
-    try {
-      const saved = localStorage.getItem("aquapilot.stages.v3");
-      return saved ? JSON.parse(saved) : STAGE_META;
-    } catch { return STAGE_META; }
-  });
+  const [stages, setStages] = useState(_init.stages);
   const [norms, setNorms] = useState(() => {
     try {
       const saved = localStorage.getItem("aquapilot.norms.v1");
@@ -553,13 +551,13 @@ export default function App() {
   const stagesJson = JSON.stringify(stages);
   useEffect(() => {
     setSim(prev => ({ ...prev, stages }));
-    try { localStorage.setItem("aquapilot.stages.v3", stagesJson); } catch { /* storage non disponibile */ }
+    try { localStorage.setItem("aquapilot.stages.v4", stagesJson); } catch { /* storage non disponibile */ }
   }, [stagesJson]);
 
   const stageConfigJson = JSON.stringify(stageConfig);
   // Save raw (link format) stageConfig to localStorage
   useEffect(() => {
-    try { localStorage.setItem("aquapilot.stageConfig.v3", stageConfigJson); } catch { /* storage non disponibile */ }
+    try { localStorage.setItem("aquapilot.stageConfig.v4", stageConfigJson); } catch { /* storage non disponibile */ }
   }, [stageConfigJson]);
   // Push resolved (full pump objects) stageConfig to sim engine
   const resolvedJson = JSON.stringify(resolvedStageConfig);

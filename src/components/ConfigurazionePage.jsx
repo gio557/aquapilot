@@ -56,7 +56,7 @@ function NumField({ label, value, unit, onChange, t }) {
 export default function ConfigurazionePage({ t, config, onChange, dosageMax, onDosageMax, stages: stagesProp, stageTypes, onAddStage, onRemoveStage, norms, setNorms, normativaSets, qualitySources = {}, onQualitySources, pumpHours = {}, onResetPumpHours, ac, onAC, consumabili = [], onConsumabili, consumabiliSensors = {}, onToggleSensor, pumpsRegistry = { dosatrici: [], inverter: [] }, onPumpsRegistry }) {
   const bp = useBreakpoint();
   const [activeTab, setActiveTab] = useState("stadi");
-  const [activePompeTab, setActivePompeTab] = useState("dosatrici");
+  const [activePompeTab, setActivePompeTab] = useState("inverter");
   const [expandedPumpId, setExpandedPumpId] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);

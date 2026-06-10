@@ -13,7 +13,7 @@ export function loadPumpsRegistry() {
 }
 
 export function savePumpsRegistry(reg) {
-  try { localStorage.setItem(KEY, JSON.stringify(reg)); } catch {}
+  try { localStorage.setItem(KEY, JSON.stringify(reg)); } catch { /* storage non disponibile */ }
 }
 
 export function newDosatriceEntry() {

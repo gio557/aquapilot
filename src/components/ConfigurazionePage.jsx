@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useBreakpoint } from "../hooks/useWindowSize";
 import { SENSOR_TYPES, DEFAULT_STAGE_CONFIG } from "../constants/stageConfig";
 import { PC } from "../constants/processConstants";
-import { pumpKey, pumpMaintH } from "../simulation/pumpHours";
+import { pumpKey } from "../simulation/pumpHours";
 import { newConsumabile, mergeDefaults } from "../simulation/consumabili";
 import { newDosatriceEntry, newInverterEntry, resolveLinks, linkedStage } from "../simulation/pumpsRegistry";
 import { STAGE_META } from "../constants/stages";

@@ -53,7 +53,17 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     // Minimum setpoint is 2.5 (not 2.0 = warn) so there is always a margin above
     // the regulatory floor. With sp=2.0 and O2=1.92 the error rounds to 0 and the
     // blower never responds; sp=2.5 guarantees delta≥1 whenever O2≤2.33.
-    const O2I = clamp((s.acO2I ?? 0) + err * 0.12, 0, 6);
+    // Anti-windup (conditional integration): the blower has a hard 20–100% range.
+    // Integrating a positive error while the blower is already pinned at 100% (or a
+    // negative error while pinned at 20%) just inflates acO2I with no actuator
+    // effect, so when the load later drops the integral has to bleed off before the
+    // blower can come down — a recovery lag that is exactly the kind of "inertia"
+    // the controller is supposed to respect, not create. Freeze the integral in the
+    // saturating direction; let it relax in the other.
+    const atMax = s.blower >= 100;
+    const atMin = s.blower <= 20;
+    const integrate = !((atMax && err > 0) || (atMin && err < 0));
+    const O2I = integrate ? clamp((s.acO2I ?? 0) + err * 0.12, 0, 6) : (s.acO2I ?? 0);
     ch.acO2I = O2I;
     const O2sp = clamp(2.5 + O2sp_nh4 + O2sp_cod + O2sp_bod + O2I, 2.5, 8.0);
     const errO2 = O2sp - O2;
@@ -130,7 +140,12 @@ export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
     const pHsev = (out.pH < LIM.pH.low_c || out.pH > LIM.pH.high_c) ? "ALTO"
                 : (out.pH < LIM.pH.low_w || out.pH > LIM.pH.high_w) ? "MEDIO" : "OK";
 
-    if (Math.abs(errpH) > 0.20 && delta >= 2) {
+    // Gate: actuate when pH is off by more than the 0.20 dead-band. The previous
+    // `delta >= 2` gate needed |err| ≳ 0.5 to fire, so the 0.20–0.5 band did
+    // nothing at all — dosing could strand a stale NaOH/H2SO4 value with pH parked
+    // just outside the dead-band. `delta >= 1` (|err| ≳ 0.17 at unit gain) makes
+    // the actuation region contiguous with the bleed-off region below.
+    if (Math.abs(errpH) > 0.20 && delta >= 1) {
       if (errpH > 0) {
         ch.naoh   = clamp(s.naoh + delta, 0, 100);
         ch.h2so4  = 0;

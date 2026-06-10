@@ -11,6 +11,13 @@ import { QUALITY_LIMITS, MLSS_LIMITS } from "../constants/limits";
 // diagnostic. ~40 ticks ≈ 20 s of real time, enough to rule out a normal ramp.
 const DIAG_PERSIST_TICKS = 40;
 
+// Alarm hysteresis: once a parameter has raised a level, it only clears after the
+// value crosses back past the threshold by this margin — relative for ceiling /
+// floor params, absolute (pH units) for the pH band. Stops boundary flapping from
+// spamming the alarm history while a noisy signal hovers on a limit.
+const ALARM_HYST = 0.04;      // 4% of the threshold
+const ALARM_HYST_PH = 0.10;   // pH units
+
 // Builds the list of active probable-cause diagnostics and the per-actuator
 // persistence counters. A diagnostic fires only when correction is clearly
 // unable to recover a parameter — i.e. the relevant actuator can give no more.
@@ -369,15 +376,33 @@ export function simTick(s) {
   const newEvents = [];
   const hhmm = new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 
+  // Hysteresis: a parameter that sits on a threshold while noise jitters the
+  // inputs would otherwise flap OK↔MEDIO every tick, pushing a fresh alarm into
+  // the history on each up-crossing. Escalation is immediate (safety), but a
+  // level is only *cleared* once the value crosses back past the threshold by
+  // ALARM_HYST (relative) / ALARM_HYST_PH (absolute, pH band).
+  const HY = ALARM_HYST;
   CHECKS.forEach(c => {
+    const prev = prevAS[c.p] || "OK";
+    const wasMed = prev === "MEDIO" || prev === "ALTO";
     let sev = "OK";
     let limit = null;   // threshold actually breached (for the alarm message)
     if (c.inv) {
-      sev = c.v < c.crit ? "ALTO" : c.v < c.warn ? "MEDIO" : "OK";
+      // Floors (O₂): lower is worse. Clear upward past threshold·(1+HY).
+      if (c.v < c.crit) sev = "ALTO";
+      else if (c.v < c.crit * (1 + HY) && prev === "ALTO") sev = "ALTO";
+      else if (c.v < c.warn) sev = "MEDIO";
+      else if (c.v < c.warn * (1 + HY) && wasMed) sev = "MEDIO";
       limit = sev === "ALTO" ? c.crit : sev === "MEDIO" ? c.warn : null;
     } else if (c.low_w !== undefined) {
-      if (c.v < c.low_c || c.v > c.high_c) sev = "ALTO";
-      else if (c.v < c.low_w || c.v > c.high_w) sev = "MEDIO";
+      // pH band: clear inward by an absolute margin before dropping a level.
+      const m = ALARM_HYST_PH;
+      const outCrit = c.v < c.low_c || c.v > c.high_c;
+      const outCritHold = prev === "ALTO" && (c.v < c.low_c + m || c.v > c.high_c - m);
+      const outWarn = c.v < c.low_w || c.v > c.high_w;
+      const outWarnHold = wasMed && (c.v < c.low_w + m || c.v > c.high_w - m);
+      if (outCrit || outCritHold) sev = "ALTO";
+      else if (outWarn || outWarnHold) sev = "MEDIO";
       if (sev !== "OK") {
         const tooHigh = c.v > c.high_w;
         limit = tooHigh
@@ -385,7 +410,11 @@ export function simTick(s) {
           : (sev === "ALTO" ? c.low_c  : c.low_w);
       }
     } else {
-      sev = c.v > c.crit ? "ALTO" : c.v > c.warn ? "MEDIO" : "OK";
+      // Ceilings: higher is worse. Clear downward past threshold·(1−HY).
+      if (c.v > c.crit) sev = "ALTO";
+      else if (c.v > c.crit * (1 - HY) && prev === "ALTO") sev = "ALTO";
+      else if (c.v > c.warn) sev = "MEDIO";
+      else if (c.v > c.warn * (1 - HY) && wasMed) sev = "MEDIO";
       limit = sev === "ALTO" ? c.crit : sev === "MEDIO" ? c.warn : null;
     }
     newAS[c.p] = sev;

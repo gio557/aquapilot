@@ -322,11 +322,11 @@ export default function AIPanel({ sim, autoOn, t }) {
           <span>{modeIcon}</span>{modeLabel}
         </span>
         <div style={{display:"flex", gap:5, flexShrink:0}}>
-          <button onClick={() => { if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn, engine); } }}
+          <button onClick={() => { if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn); } }}
             title="Reset apprendimento" style={iconBtn}>
             ⟲
           </button>
-          <button onClick={() => doRefresh(sim, autoOn, engine)} disabled={msg.loading}
+          <button onClick={() => doRefresh(sim, autoOn)} disabled={msg.loading}
             title="Aggiorna analisi"
             style={{...iconBtn, width:"auto", padding:"0 12px", gap:5, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13, cursor:msg.loading?"wait":"pointer", color:msg.loading?t.textMuted:t.textSec}}>
             <span style={{fontSize:13, display:"inline-block", animation:msg.loading?"spin 0.8s linear infinite":"none"}}>↻</span>
@@ -340,7 +340,7 @@ export default function AIPanel({ sim, autoOn, t }) {
         {msg.loading ? (
           <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"28px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:14}}>
             <span style={{animation:"blink 0.7s infinite", fontSize:14, color:modeColor}}>●</span>
-            {engine==="online" ? "Interrogazione Claude API..." : "Analisi in corso..."}
+            Analisi in corso...
           </div>
         ) : (
           <AIMessage text={msg.text} t={t} modeColor={modeColor} />

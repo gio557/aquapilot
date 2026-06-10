@@ -332,23 +332,57 @@ export const STAGE_DEFAULT_PUMPS = {
   "Post-trattamento":  ["rilancio_finale"],
 };
 
-// Creates inverter-registry entries and link objects for a stage's default VFD pumps.
-// Call when adding a new stage to the plant; add returned entries to pumpsRegistry.inverter
-// and use links as the stage's pumps array.
+// Default dosing pumps per stage type — same realistic flows as the default
+// plant (~120 m³/h, ~10–50 L/h). productId must be a valid DEFAULT_CONSUMABILI id.
+// Stages absent here (Grigliatura, Dissabbiatura, Disinfezione UV) have no chemical dosing.
+export const STAGE_DEFAULT_DOSING = {
+  "Degrassatore":       [["antischiuma",     "Pompa dosaggio antischiuma",       0.01]],
+  "Equalizzazione":     [["naoh",            "Pompa dosaggio NaOH (soda)",       0.05],
+                         ["h2so4",           "Pompa dosaggio H₂SO₄ (acido)",     0.02],
+                         ["antischiuma",     "Pompa dosaggio antischiuma",       0.01]],
+  "Biologico":          [["naoh",            "Pompa dosaggio NaOH (soda)",       0.05],
+                         ["antischiuma",     "Pompa dosaggio antischiuma",       0.01]],
+  "Nitrificazione":     [["bicarbonato",     "Pompa dosaggio bicarbonato",       0.05]],
+  "Denitrificazione":   [["carbonio",        "Pompa dosaggio fonte di carbonio", 0.03]],
+  "Sedimentazione":     [["coagulante",      "Pompa dosaggio coagulante",        0.04],
+                         ["polielettrolita", "Pompa dosaggio polielettrolita",   0.02]],
+  "Flottazione DAF":    [["coagulante",      "Pompa dosaggio coagulante",        0.04],
+                         ["polielettrolita", "Pompa dosaggio polielettrolita",   0.02]],
+  "Filtrazione":        [["coagulante",      "Pompa dosaggio coagulante",        0.03]],
+  "Osmosi Inversa":     [["antiscalante",    "Pompa dosaggio antiscalante",      0.01],
+                         ["h2so4",           "Pompa dosaggio H₂SO₄ (acido)",     0.02],
+                         ["metabisolfito",   "Pompa dosaggio metabisolfito",     0.01]],
+  "Disinfezione Cloro": [["ipoclorito",      "Pompa dosaggio ipoclorito",        0.05],
+                         ["metabisolfito",   "Pompa dosaggio metabisolfito",     0.01]],
+  "Post-trattamento":   [["naoh",            "Pompa dosaggio NaOH (soda)",       0.03],
+                         ["calce",           "Pompa dosaggio calce",             0.03]],
+};
+
+// Creates registry entries (inverter + dosatrici) and link objects for a stage's
+// default pumps. Call when adding a new stage to the plant: append newInverter to
+// pumpsRegistry.inverter, newDosatrici to pumpsRegistry.dosatrici, and use links
+// as the stage's pumps array.
 export function makeStagePumps(stageName) {
-  const keys = STAGE_DEFAULT_PUMPS[stageName] || [];
-  const newRegistryEntries = [];
+  const newInverter = [];
+  const newDosatrici = [];
   const links = [];
-  for (const key of keys) {
+  const uid = (pfx, i) => `${pfx}_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+
+  (STAGE_DEFAULT_PUMPS[stageName] || []).forEach((key, i) => {
     const cat = PUMP_CATALOG.find(c => c.key === key);
-    if (!cat || !cat.vfd) continue;
-    const id = `pi_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    newRegistryEntries.push({
-      id, name: cat.name, flow_m3h: cat.flow_m3h,
-      power_kw: cat.power_kw, loadPct: 75, maintH: DEFAULT_MAINT_H,
-    });
+    if (!cat || !cat.vfd) return;
+    const id = uid("pi", i);
+    newInverter.push({ id, name: cat.name, flow_m3h: cat.flow_m3h,
+      power_kw: cat.power_kw, loadPct: 75, maintH: DEFAULT_MAINT_H });
     links.push({ registryId: id, enabled: true });
-  }
-  return { newRegistryEntries, links };
+  });
+
+  (STAGE_DEFAULT_DOSING[stageName] || []).forEach(([productId, name, flow_m3h], i) => {
+    const id = uid("pd", i);
+    newDosatrici.push({ id, name, flow_m3h, productId, maintH: DEFAULT_MAINT_H });
+    links.push({ registryId: id, enabled: true });
+  });
+
+  return { newInverter, newDosatrici, links };
 }
 

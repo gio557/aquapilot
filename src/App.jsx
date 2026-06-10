@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useBreakpoint } from "./hooks/useWindowSize";
 import { DARK, LIGHT } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
-import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig, PUMP_CATALOG } from "./constants/stageConfig";
+import { DEFAULT_STAGE_CONFIG, makeDefaultStageConfig, PUMP_CATALOG, makeStagePumps } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
 import { NORMATIVA_TAB4, NORMATIVA_SETS } from "./constants/normativa";
 import { limitsFromNorms } from "./constants/limits";
@@ -501,13 +501,30 @@ export default function App() {
       const idx = stages.findIndex(s => STAGE_TYPES.findIndex(st => st.name === s.name) > typeOrder);
       return idx === -1 ? stages.length : idx;
     })();
-    const newStage  = { id: Date.now(), name: stageType.name, sub: stageType.sub };
-    const newConfig = makeDefaultStageConfig(insertIdx, stageType.name);
-    setStages(prev => { const a = [...prev]; a.splice(insertIdx, 0, newStage);  return a; });
+    const newStage = { id: Date.now(), name: stageType.name, sub: stageType.sub };
+    const { newRegistryEntries, links } = makeStagePumps(stageType.name);
+    const newConfig = { ...makeDefaultStageConfig(insertIdx, stageType.name), pumps: links };
+    if (newRegistryEntries.length > 0) {
+      setPumpsRegistry(prev => ({ ...prev, inverter: [...prev.inverter, ...newRegistryEntries] }));
+    }
+    setStages(prev => { const a = [...prev]; a.splice(insertIdx, 0, newStage); return a; });
     setStageConfig(prev => { const a = [...prev]; a.splice(insertIdx, 0, newConfig); return a; });
   };
 
   const handleRemoveStage = (si) => {
+    // Collect IDs linked only to this stage (shared with other stages are kept)
+    const toRemove = new Set((stageConfig[si]?.pumps || []).map(l => l.registryId));
+    stageConfig.forEach((sc, i) => {
+      if (i === si) return;
+      (sc.pumps || []).forEach(l => toRemove.delete(l.registryId));
+    });
+    if (toRemove.size > 0) {
+      setPumpsRegistry(prev => ({
+        ...prev,
+        inverter:  prev.inverter.filter(p => !toRemove.has(p.id)),
+        dosatrici: prev.dosatrici.filter(p => !toRemove.has(p.id)),
+      }));
+    }
     setStages(prev => prev.filter((_, i) => i !== si));
     setStageConfig(prev => prev.filter((_, i) => i !== si));
   };

@@ -98,11 +98,21 @@ const pump = (id, name, power_kw, flow_m3h, head_m, rpm, vfd = false) =>
 // aggiunge una pompa a uno stadio. Le pompe dosatrici NON stanno qui: vengono
 // generate dinamicamente, una per ogni prodotto consumabile, dalla UI.
 export const PUMP_CATALOG = [
-  { key:"soffianti",     name:"Soffianti aria",                power_kw:15.0, flow_m3h:0,   head_m:0,  rpm:2900, vfd:true },
-  { key:"ric_fanghi",    name:"Pompa ricircolo fanghi",        power_kw:5.5,  flow_m3h:200, head_m:6,  rpm:1450, vfd:true },
-  { key:"ric_miscela",   name:"Pompa ricircolo miscela (MLR)", power_kw:5.5,  flow_m3h:300, head_m:5,  rpm:1450, vfd:true },
-  { key:"classificatore",name:"Pompa classificatore sabbie",   power_kw:2.2,  flow_m3h:45,  head_m:5,  rpm:1450 },
-  { key:"rilancio",      name:"Pompa di rilancio",             power_kw:5.5,  flow_m3h:100, head_m:10, rpm:1450 },
+  { key:"soffianti",       name:"Soffianti aria",                        power_kw:15.0, flow_m3h:0,   head_m:0,   rpm:2900, vfd:true },
+  { key:"ric_fanghi",      name:"Pompa ricircolo fanghi",                power_kw:5.5,  flow_m3h:200, head_m:6,   rpm:1450, vfd:true },
+  { key:"ric_miscela",     name:"Pompa ricircolo miscela (MLR)",         power_kw:5.5,  flow_m3h:300, head_m:5,   rpm:1450, vfd:true },
+  { key:"classificatore",  name:"Pompa classificatore sabbie",           power_kw:2.2,  flow_m3h:45,  head_m:5,   rpm:1450 },
+  { key:"rilancio",        name:"Pompa di rilancio",                     power_kw:5.5,  flow_m3h:100, head_m:10,  rpm:1450 },
+  { key:"sollevamento",    name:"Pompa di sollevamento liquami",         power_kw:7.5,  flow_m3h:120, head_m:8,   rpm:1450, vfd:true },
+  { key:"soffiante_diss",  name:"Soffiante insufflazione aerato",        power_kw:3.0,  flow_m3h:0,   head_m:0,   rpm:2900, vfd:true },
+  { key:"rilancio_eq",     name:"Pompa di rilancio/alimentazione",       power_kw:5.5,  flow_m3h:100, head_m:10,  rpm:1450, vfd:true },
+  { key:"mixer_eq",        name:"Mixer equalizzazione",                   power_kw:2.2,  flow_m3h:0,   head_m:0,   rpm:960,  vfd:true },
+  { key:"spurgo_fanghi",   name:"Pompa spurgo fanghi (WAS)",             power_kw:3.0,  flow_m3h:30,  head_m:8,   rpm:1450, vfd:true },
+  { key:"press_daf",       name:"Pompa pressurizzazione/ricircolo DAF",  power_kw:5.5,  flow_m3h:80,  head_m:30,  rpm:1450, vfd:true },
+  { key:"controlavaggio",  name:"Pompa controlavaggio filtrazione",       power_kw:4.0,  flow_m3h:60,  head_m:15,  rpm:1450, vfd:true },
+  { key:"alta_pressione",  name:"Pompa alta pressione membrana",         power_kw:11.0, flow_m3h:20,  head_m:100, rpm:2900, vfd:true },
+  { key:"booster_osmosi",  name:"Pompa booster osmosi",                   power_kw:3.0,  flow_m3h:30,  head_m:50,  rpm:1450, vfd:true },
+  { key:"rilancio_finale", name:"Pompa di rilancio finale",               power_kw:3.0,  flow_m3h:100, head_m:10,  rpm:1450, vfd:true },
 ];
 
 // Caratteristiche di default per una pompa dosatrice (piccola portata, alta
@@ -194,7 +204,9 @@ export const DEFAULT_STAGE_CONFIG = [
   {
     stageIndex: 0,
     ...fromPreset("Grigliatura"),
-    pumps: [],
+    pumps: [
+      pump("pgr_sollevamento", "Pompa di sollevamento liquami", 7.5, 120, 8, 1450, true),
+    ],
     grigliatura: {
       DH_AVVIO_PULIZIA:        0.15,
       DH_STOP_PULIZIA:         0.05,
@@ -210,7 +222,8 @@ export const DEFAULT_STAGE_CONFIG = [
     stageIndex: 1,
     ...fromPreset("Dissabbiatura"),
     pumps: [
-      pump("pd_classif", "Pompa classificatore sabbie", 2.2, 45, 5, 1450),
+      pump("pd_classif",      "Pompa classificatore sabbie",    2.2,   45, 5, 1450),
+      pump("pdiss_soffiante", "Soffiante insufflazione aerato", 3.0,    0, 0, 2900, true),
     ],
     classifier: {
       mode: "timed",    // "timed" | "continuous"
@@ -241,13 +254,17 @@ export const DEFAULT_STAGE_CONFIG = [
     stageIndex: 4,
     ...fromPreset("Sedimentazione"),
     pumps: [
-      pump("psed_ricircolo", "Pompa ricircolo fanghi", 4.0, 120, 7, 1450),
+      pump("psed_ricircolo", "Pompa ricircolo fanghi",    4.0, 120, 7, 1450),
+      pump("psed_spurgo",    "Pompa spurgo fanghi (WAS)", 3.0,  30, 8, 1450, true),
     ],
   },
   {
     stageIndex: 5,
     ...fromPreset("Osmosi Inversa"),
-    pumps: [],
+    pumps: [
+      pump("posm_hp",    "Pompa alta pressione membrana", 11.0, 20, 100, 2900, true),
+      pump("posm_boost", "Pompa booster osmosi",            3.0, 30,  50, 1450, true),
+    ],
   },
 ];
 
@@ -269,5 +286,43 @@ export function makeDefaultStageConfig(stageIndex, stageName) {
     },
     pumps: [],
   };
+}
+
+// VFD pump keys (from PUMP_CATALOG) to auto-create when a stage type is added to the plant.
+export const STAGE_DEFAULT_PUMPS = {
+  "Grigliatura":       ["sollevamento"],
+  "Dissabbiatura":     ["soffiante_diss"],
+  "Degrassatore":      [],
+  "Equalizzazione":    ["rilancio_eq", "mixer_eq"],
+  "Biologico":         ["soffianti", "ric_fanghi"],
+  "Nitrificazione":    ["soffianti"],
+  "Denitrificazione":  ["ric_miscela"],
+  "Sedimentazione":    ["ric_fanghi", "spurgo_fanghi"],
+  "Flottazione DAF":   ["press_daf"],
+  "Filtrazione":       ["controlavaggio"],
+  "Osmosi Inversa":    ["alta_pressione", "booster_osmosi"],
+  "Disinfezione UV":   [],
+  "Disinfezione Cloro":[],
+  "Post-trattamento":  ["rilancio_finale"],
+};
+
+// Creates inverter-registry entries and link objects for a stage's default VFD pumps.
+// Call when adding a new stage to the plant; add returned entries to pumpsRegistry.inverter
+// and use links as the stage's pumps array.
+export function makeStagePumps(stageName) {
+  const keys = STAGE_DEFAULT_PUMPS[stageName] || [];
+  const newRegistryEntries = [];
+  const links = [];
+  for (const key of keys) {
+    const cat = PUMP_CATALOG.find(c => c.key === key);
+    if (!cat || !cat.vfd) continue;
+    const id = `pi_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    newRegistryEntries.push({
+      id, name: cat.name, flow_m3h: cat.flow_m3h,
+      power_kw: cat.power_kw, loadPct: 75, maintH: DEFAULT_MAINT_H,
+    });
+    links.push({ registryId: id, enabled: true });
+  }
+  return { newRegistryEntries, links };
 }
 

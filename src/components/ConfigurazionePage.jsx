@@ -12,7 +12,7 @@ import NormativaPage from "./NormativaPage";
 const CONFIG_TABS = [
   { id: "stadi",       label: "CONFIGURAZIONE STADI" },
   { id: "consumabili", label: "POMPE" },
-  { id: "provenienza", label: "SEGNALI" },
+  { id: "provenienza", label: "SEGNALI I/O" },
   { id: "normativa",   label: "NORMATIVA" },
 ];
 

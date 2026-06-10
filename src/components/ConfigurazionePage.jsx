@@ -575,9 +575,15 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
           )}
 
           {/* ════ SUB-TAB: PRODOTTI / CISTERNE ════ */}
-          {activePompeTab === "prodotti" && (
+          {activePompeTab === "prodotti" && (() => {
+            const activeProductIds = new Set(
+              pumpsRegistry.dosatrici.map(p => p.productId).filter(Boolean)
+            );
+            const visibleConsumabili = consumabili.filter(c => activeProductIds.has(c.id));
+            const hiddenCount = consumabili.length - visibleConsumabili.length;
+            return (
             <>
-              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20}}>
+              <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:hiddenCount > 0 ? 10 : 20}}>
                 <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:13, color:t.green, letterSpacing:1.5}}>
                   PRODOTTI / CISTERNE
                 </div>
@@ -596,13 +602,20 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                   </button>
                 </div>
               </div>
-              {consumabili.length === 0 ? (
+              {hiddenCount > 0 && (
+                <div style={{marginBottom:16, padding:"8px 14px", borderRadius:7,
+                  background:`${t.accent}10`, border:`1px solid ${t.accent}33`,
+                  color:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontSize:13}}>
+                  {hiddenCount} {hiddenCount === 1 ? "prodotto non utilizzato nascosto" : "prodotti non utilizzati nascosti"} — vengono mostrati solo i prodotti collegati alle pompe dosatrici degli stadi configurati.
+                </div>
+              )}
+              {visibleConsumabili.length === 0 ? (
                 <div style={{padding:"28px", textAlign:"center", color:t.textMuted,
                   fontFamily:"'Rajdhani',sans-serif", fontSize:14, background:t.surface2,
                   borderRadius:10, border:`1px dashed ${t.border}`}}>
-                  Nessun prodotto configurato.
+                  Nessun prodotto collegato agli stadi configurati.
                 </div>
-              ) : consumabili.map(c => {
+              ) : visibleConsumabili.map(c => {
                 const sens = consumabiliSensors[c.id] || {};
                 const hasAlert = sens.riordino || sens.vuoto;
                 const borderColor = sens.vuoto ? t.red : sens.riordino ? t.orange : t.border;
@@ -728,7 +741,8 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                 );
               })}
             </>
-          )}
+            );
+          })()}
 
         </div>
       </div>

@@ -57,6 +57,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
   const bp = useBreakpoint();
   const [activeTab, setActiveTab] = useState("stadi");
   const [activePompeTab, setActivePompeTab] = useState("dosatrici");
+  const [expandedPumpId, setExpandedPumpId] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [expandedProd, setExpandedProd] = useState(null);
@@ -219,7 +220,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
     const PompeSubTab = ({ id, label, col }) => {
       const on = activePompeTab === id;
       return (
-        <button onClick={() => setActivePompeTab(id)}
+        <button onClick={() => { setActivePompeTab(id); setExpandedPumpId(null); }}
           style={{padding:"9px 20px", borderRadius:8, cursor:"pointer",
             fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, letterSpacing:1,
             border:`1px solid ${on ? col : "transparent"}`,
@@ -289,87 +290,125 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                 const due = thr > 0 && hrs >= thr;
                 const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
                 const barC = due ? t.red : pct >= 80 ? t.orange : t.green;
+                const isOpen = expandedPumpId === p.id;
                 return (
-                  <div key={p.id} style={{marginBottom:14, padding:"16px 18px", borderRadius:11,
-                    background:t.surface2, border:`1px solid ${linked ? t.orange+"55" : t.border}`}}>
-                    <div style={{display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", marginBottom:12}}>
-                      <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:220}}>
-                        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
-                        <input type="text" value={p.name || ""} placeholder="Nome pompa dosatrice"
-                          onChange={e => updateD(p.id, "name", e.target.value)}
-                          style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
-                            color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif",
-                            fontSize:14, fontWeight:700, outline:"none"}}/>
-                      </div>
-                      {linked ? (
-                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
-                          background:`${t.orange}18`, border:`1px solid ${t.orange}55`,
-                          color:t.orange, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>
-                          collegata con: {link.stage.name}
-                        </span>
-                      ) : (
-                        <select value=""
-                          onChange={e => { if (e.target.value !== "") linkPump(parseInt(e.target.value, 10), p.id); }}
-                          style={{fontSize:12, padding:"5px 10px", borderRadius:5, alignSelf:"flex-end", cursor:"pointer",
-                            background:t.surface3, border:`1px solid ${t.orange}55`,
-                            color:t.orange, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, outline:"none"}}>
-                          <option value="">↔ Collega a uno stadio…</option>
-                          {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
-                        </select>
-                      )}
-                      <button onClick={() => linked ? unlinkPump(link.idx, p.id) : removeD(p.id)}
-                        style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
-                          fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
-                          border:`1px solid ${linked ? t.orange+"66" : t.red+"66"}`,
-                          background: linked ? `${t.orange}14` : `${t.red}14`,
-                          color: linked ? t.orange : t.red}}>
-                        {linked ? "Scollega dallo stadio" : "Rimuovi"}
-                      </button>
-                    </div>
-                    <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
-                      <NumField label="Portata massima" value={p.flow_m3h} unit="m³/h"
-                        onChange={v => updateD(p.id, "flow_m3h", v)} t={t}/>
-                      <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
-                        onChange={v => updateD(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
-                      <div style={{display:"flex", flexDirection:"column", gap:3}}>
-                        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Prodotto collegato</div>
-                        <select value={p.productId || ""}
-                          onChange={e => updateD(p.id, "productId", e.target.value || null)}
-                          style={{padding:"6px 10px", borderRadius:5, background:t.surface3,
-                            border:`1px solid ${t.border}`, color: p.productId ? t.text : t.textMuted,
-                            fontFamily:"'Rajdhani',sans-serif", fontSize:13, outline:"none", minWidth:180}}>
-                          <option value="">— nessun prodotto —</option>
-                          {consumabili.map(c => (
-                            <option key={c.id} value={c.id}>{c.nome}</option>
-                          ))}
-                        </select>
-                      </div>
+                  <div key={p.id} style={{marginBottom:6, borderRadius:10,
+                    background: isOpen ? `${t.orange}08` : t.surface2,
+                    border:`1px solid ${isOpen ? t.orange+"55" : linked ? t.orange+"33" : t.border}`,
+                    overflow:"hidden", transition:"border-color 0.15s"}}>
+                    {/* ── compact header ── */}
+                    <div onClick={() => setExpandedPumpId(isOpen ? null : p.id)}
+                      style={{display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+                        cursor:"pointer", userSelect:"none"}}>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14,
+                        color:t.text, flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                        {p.name || "Pompa senza nome"}
+                      </span>
+                      {linked
+                        ? <span style={{fontSize:11, padding:"2px 8px", borderRadius:4, flexShrink:0,
+                            background:`${t.orange}18`, border:`1px solid ${t.orange}44`,
+                            color:t.orange, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>
+                            {link.stage.name}
+                          </span>
+                        : <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                            flexShrink:0, letterSpacing:0.5}}>non collegata</span>
+                      }
                       {thr > 0 && (
-                        <button onClick={() => onResetPumpHours?.(p.id)}
-                          style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
-                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
-                            border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green, alignSelf:"flex-end"}}>
-                          ✓ Manutenzione effettuata
-                        </button>
+                        <span style={{fontSize:10, padding:"2px 7px", borderRadius:4, flexShrink:0,
+                          background: due ? `${t.red}1a` : `${t.green}14`,
+                          color: due ? t.red : t.green,
+                          fontFamily:"'Share Tech Mono',monospace",
+                          border:`1px solid ${(due ? t.red : t.green)}44`}}>
+                          {due ? "⚠" : "✓"}
+                        </span>
                       )}
+                      <span style={{fontSize:12, color:t.textMuted, flexShrink:0, lineHeight:1}}>
+                        {isOpen ? "▲" : "▼"}
+                      </span>
                     </div>
-                    {thr > 0 && (
-                      <div style={{marginTop:12}}>
-                        <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                          <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
-                            Ore: <b style={{color: due ? t.red : t.text}}>{hrs.toFixed(1)}</b> / {thr} h
-                          </span>
-                          <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                            fontFamily:"'Share Tech Mono',monospace",
-                            background: due ? `${t.red}1a` : `${t.green}14`,
-                            color: due ? t.red : t.green,
-                            border:`1px solid ${(due ? t.red : t.green)}55`}}>
-                            {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
-                          </span>
+                    {/* ── expanded detail ── */}
+                    {isOpen && (
+                      <div style={{padding:"0 14px 14px", borderTop:`1px solid ${t.border}`}}>
+                        <div style={{display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", marginTop:12, marginBottom:12}}>
+                          <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:200}}>
+                            <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
+                            <input type="text" value={p.name || ""} placeholder="Nome pompa dosatrice"
+                              onChange={e => updateD(p.id, "name", e.target.value)}
+                              style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
+                                color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif",
+                                fontSize:14, fontWeight:700, outline:"none"}}/>
+                          </div>
+                          {linked ? (
+                            <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
+                              background:`${t.orange}18`, border:`1px solid ${t.orange}55`,
+                              color:t.orange, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>
+                              collegata con: {link.stage.name}
+                            </span>
+                          ) : (
+                            <select value=""
+                              onChange={e => { if (e.target.value !== "") linkPump(parseInt(e.target.value, 10), p.id); }}
+                              style={{fontSize:12, padding:"5px 10px", borderRadius:5, alignSelf:"flex-end", cursor:"pointer",
+                                background:t.surface3, border:`1px solid ${t.orange}55`,
+                                color:t.orange, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, outline:"none"}}>
+                              <option value="">↔ Collega a uno stadio…</option>
+                              {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
+                            </select>
+                          )}
+                          <button onClick={() => linked ? unlinkPump(link.idx, p.id) : removeD(p.id)}
+                            style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
+                              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
+                              border:`1px solid ${linked ? t.orange+"66" : t.red+"66"}`,
+                              background: linked ? `${t.orange}14` : `${t.red}14`,
+                              color: linked ? t.orange : t.red}}>
+                            {linked ? "Scollega dallo stadio" : "Rimuovi"}
+                          </button>
                         </div>
-                        <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
-                          <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3, transition:"width 0.5s"}}/>
+                        <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
+                          <NumField label="Portata massima" value={p.flow_m3h} unit="m³/h"
+                            onChange={v => updateD(p.id, "flow_m3h", v)} t={t}/>
+                          <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
+                            onChange={v => updateD(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
+                          <div style={{display:"flex", flexDirection:"column", gap:3}}>
+                            <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Prodotto collegato</div>
+                            <select value={p.productId || ""}
+                              onChange={e => updateD(p.id, "productId", e.target.value || null)}
+                              style={{padding:"6px 10px", borderRadius:5, background:t.surface3,
+                                border:`1px solid ${t.border}`, color: p.productId ? t.text : t.textMuted,
+                                fontFamily:"'Rajdhani',sans-serif", fontSize:13, outline:"none", minWidth:180}}>
+                              <option value="">— nessun prodotto —</option>
+                              {consumabili.map(c => (
+                                <option key={c.id} value={c.id}>{c.nome}</option>
+                              ))}
+                            </select>
+                          </div>
+                          {thr > 0 && (
+                            <button onClick={() => onResetPumpHours?.(p.id)}
+                              style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
+                                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                                border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green, alignSelf:"flex-end"}}>
+                              ✓ Manutenzione effettuata
+                            </button>
+                          )}
                         </div>
+                        {thr > 0 && (
+                          <div style={{marginTop:12}}>
+                            <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                                Ore: <b style={{color: due ? t.red : t.text}}>{hrs.toFixed(1)}</b> / {thr} h
+                              </span>
+                              <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                fontFamily:"'Share Tech Mono',monospace",
+                                background: due ? `${t.red}1a` : `${t.green}14`,
+                                color: due ? t.red : t.green,
+                                border:`1px solid ${(due ? t.red : t.green)}55`}}>
+                                {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
+                              </span>
+                            </div>
+                            <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                              <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3, transition:"width 0.5s"}}/>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -408,84 +447,125 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                 const due = thr > 0 && hrs >= thr;
                 const pct = thr > 0 ? Math.min(100, (hrs / thr) * 100) : 0;
                 const barC = due ? t.red : pct >= 80 ? t.orange : t.green;
+                const isOpen = expandedPumpId === p.id;
+                const kw = (((p.power_kw ?? 0) * (p.loadPct ?? 0)) / 100).toFixed(2);
                 return (
-                  <div key={p.id} style={{marginBottom:14, padding:"16px 18px", borderRadius:11,
-                    background:t.surface2, border:`1px solid ${linked ? t.accent+"55" : t.border}`}}>
-                    <div style={{display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", marginBottom:12}}>
-                      <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:220}}>
-                        <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
-                        <input type="text" value={p.name || ""} placeholder="Nome pompa a inverter"
-                          onChange={e => updateI(p.id, "name", e.target.value)}
-                          style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
-                            color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif",
-                            fontSize:14, fontWeight:700, outline:"none"}}/>
-                      </div>
-                      {linked ? (
-                        <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
-                          background:`${t.accent}18`, border:`1px solid ${t.accent}55`,
-                          color:t.accent, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>
-                          collegata con: {link.stage.name}
-                        </span>
-                      ) : (
-                        <select value=""
-                          onChange={e => { if (e.target.value !== "") linkPump(parseInt(e.target.value, 10), p.id); }}
-                          style={{fontSize:12, padding:"5px 10px", borderRadius:5, alignSelf:"flex-end", cursor:"pointer",
-                            background:t.surface3, border:`1px solid ${t.accent}55`,
-                            color:t.accent, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, outline:"none"}}>
-                          <option value="">↔ Collega a uno stadio…</option>
-                          {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
-                        </select>
-                      )}
-                      <button onClick={() => linked ? unlinkPump(link.idx, p.id) : removeI(p.id)}
-                        style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
-                          fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
-                          border:`1px solid ${linked ? t.accent+"66" : t.red+"66"}`,
-                          background: linked ? `${t.accent}14` : `${t.red}14`,
-                          color: linked ? t.accent : t.red}}>
-                        {linked ? "Scollega dallo stadio" : "Rimuovi"}
-                      </button>
-                    </div>
-                    <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
-                      <NumField label="Portata" value={p.flow_m3h} unit="m³/h"
-                        onChange={v => updateI(p.id, "flow_m3h", v)} t={t}/>
-                      <NumField label="Potenza nominale" value={p.power_kw ?? 0} unit="kW"
-                        onChange={v => updateI(p.id, "power_kw", Math.max(0, v))} t={t}/>
-                      <NumField label="Carico medio" value={p.loadPct ?? 75} unit="%"
-                        onChange={v => updateI(p.id, "loadPct", Math.max(0, Math.min(100, Math.round(v))))} t={t}/>
-                      <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
-                        onChange={v => updateI(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
+                  <div key={p.id} style={{marginBottom:6, borderRadius:10,
+                    background: isOpen ? `${t.accent}08` : t.surface2,
+                    border:`1px solid ${isOpen ? t.accent+"55" : linked ? t.accent+"33" : t.border}`,
+                    overflow:"hidden", transition:"border-color 0.15s"}}>
+                    {/* ── compact header ── */}
+                    <div onClick={() => setExpandedPumpId(isOpen ? null : p.id)}
+                      style={{display:"flex", alignItems:"center", gap:10, padding:"10px 14px",
+                        cursor:"pointer", userSelect:"none"}}>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14,
+                        color:t.text, flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>
+                        {p.name || "Pompa senza nome"}
+                      </span>
+                      <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                        flexShrink:0, letterSpacing:0.5}}>
+                        {kw} kW
+                      </span>
+                      {linked
+                        ? <span style={{fontSize:11, padding:"2px 8px", borderRadius:4, flexShrink:0,
+                            background:`${t.accent}18`, border:`1px solid ${t.accent}44`,
+                            color:t.accent, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>
+                            {link.stage.name}
+                          </span>
+                        : <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
+                            flexShrink:0, letterSpacing:0.5}}>non collegata</span>
+                      }
                       {thr > 0 && (
-                        <button onClick={() => onResetPumpHours?.(p.id)}
-                          style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
-                            fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
-                            border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green, alignSelf:"flex-end"}}>
-                          ✓ Manutenzione effettuata
-                        </button>
+                        <span style={{fontSize:10, padding:"2px 7px", borderRadius:4, flexShrink:0,
+                          background: due ? `${t.red}1a` : `${t.green}14`,
+                          color: due ? t.red : t.green,
+                          fontFamily:"'Share Tech Mono',monospace",
+                          border:`1px solid ${(due ? t.red : t.green)}44`}}>
+                          {due ? "⚠" : "✓"}
+                        </span>
                       )}
+                      <span style={{fontSize:12, color:t.textMuted, flexShrink:0, lineHeight:1}}>
+                        {isOpen ? "▲" : "▼"}
+                      </span>
                     </div>
-                    <div style={{marginTop:8, fontSize:12.5, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
-                      Consumo stimato: <b style={{color:t.accent}}>
-                        {(((p.power_kw ?? 0) * (p.loadPct ?? 0)) / 100).toFixed(2)} kW
-                      </b>
-                      {!linked && <span style={{color:t.textMuted}}> · (non collegata a uno stadio → non conteggiata)</span>}
-                    </div>
-                    {thr > 0 && (
-                      <div style={{marginTop:12}}>
-                        <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                          <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
-                            Ore: <b style={{color: due ? t.red : t.text}}>{hrs.toFixed(1)}</b> / {thr} h
-                          </span>
-                          <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
-                            fontFamily:"'Share Tech Mono',monospace",
-                            background: due ? `${t.red}1a` : `${t.green}14`,
-                            color: due ? t.red : t.green,
-                            border:`1px solid ${(due ? t.red : t.green)}55`}}>
-                            {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
-                          </span>
+                    {/* ── expanded detail ── */}
+                    {isOpen && (
+                      <div style={{padding:"0 14px 14px", borderTop:`1px solid ${t.border}`}}>
+                        <div style={{display:"flex", alignItems:"flex-end", gap:12, flexWrap:"wrap", marginTop:12, marginBottom:12}}>
+                          <div style={{display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:200}}>
+                            <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>Nome pompa</div>
+                            <input type="text" value={p.name || ""} placeholder="Nome pompa a inverter"
+                              onChange={e => updateI(p.id, "name", e.target.value)}
+                              style={{background:t.surface3, border:`1px solid ${t.border}`, borderRadius:5,
+                                color:t.text, padding:"6px 9px", fontFamily:"'Rajdhani',sans-serif",
+                                fontSize:14, fontWeight:700, outline:"none"}}/>
+                          </div>
+                          {linked ? (
+                            <span style={{fontSize:12, padding:"4px 10px", borderRadius:5, alignSelf:"flex-end",
+                              background:`${t.accent}18`, border:`1px solid ${t.accent}55`,
+                              color:t.accent, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>
+                              collegata con: {link.stage.name}
+                            </span>
+                          ) : (
+                            <select value=""
+                              onChange={e => { if (e.target.value !== "") linkPump(parseInt(e.target.value, 10), p.id); }}
+                              style={{fontSize:12, padding:"5px 10px", borderRadius:5, alignSelf:"flex-end", cursor:"pointer",
+                                background:t.surface3, border:`1px solid ${t.accent}55`,
+                                color:t.accent, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, outline:"none"}}>
+                              <option value="">↔ Collega a uno stadio…</option>
+                              {stages.map((s, i) => <option key={i} value={i}>{s.name}</option>)}
+                            </select>
+                          )}
+                          <button onClick={() => linked ? unlinkPump(link.idx, p.id) : removeI(p.id)}
+                            style={{padding:"6px 14px", borderRadius:6, cursor:"pointer",
+                              fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:12.5, alignSelf:"flex-end",
+                              border:`1px solid ${linked ? t.accent+"66" : t.red+"66"}`,
+                              background: linked ? `${t.accent}14` : `${t.red}14`,
+                              color: linked ? t.accent : t.red}}>
+                            {linked ? "Scollega dallo stadio" : "Rimuovi"}
+                          </button>
                         </div>
-                        <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
-                          <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3, transition:"width 0.5s"}}/>
+                        <div style={{display:"flex", gap:16, flexWrap:"wrap", alignItems:"flex-end"}}>
+                          <NumField label="Portata" value={p.flow_m3h} unit="m³/h"
+                            onChange={v => updateI(p.id, "flow_m3h", v)} t={t}/>
+                          <NumField label="Potenza nominale" value={p.power_kw ?? 0} unit="kW"
+                            onChange={v => updateI(p.id, "power_kw", Math.max(0, v))} t={t}/>
+                          <NumField label="Carico medio" value={p.loadPct ?? 75} unit="%"
+                            onChange={v => updateI(p.id, "loadPct", Math.max(0, Math.min(100, Math.round(v))))} t={t}/>
+                          <NumField label="Soglia manutenzione" value={p.maintH} unit="h"
+                            onChange={v => updateI(p.id, "maintH", Math.max(0, Math.round(v)))} t={t}/>
+                          {thr > 0 && (
+                            <button onClick={() => onResetPumpHours?.(p.id)}
+                              style={{padding:"7px 14px", borderRadius:6, cursor:"pointer",
+                                fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13,
+                                border:`1px solid ${t.green}66`, background:`${t.green}14`, color:t.green, alignSelf:"flex-end"}}>
+                              ✓ Manutenzione effettuata
+                            </button>
+                          )}
                         </div>
+                        <div style={{marginTop:8, fontSize:12.5, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
+                          Consumo stimato: <b style={{color:t.accent}}>{kw} kW</b>
+                          {!linked && <span style={{color:t.textMuted}}> · (non collegata a uno stadio → non conteggiata)</span>}
+                        </div>
+                        {thr > 0 && (
+                          <div style={{marginTop:12}}>
+                            <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>
+                                Ore: <b style={{color: due ? t.red : t.text}}>{hrs.toFixed(1)}</b> / {thr} h
+                              </span>
+                              <span style={{fontSize:11, padding:"2px 8px", borderRadius:4,
+                                fontFamily:"'Share Tech Mono',monospace",
+                                background: due ? `${t.red}1a` : `${t.green}14`,
+                                color: due ? t.red : t.green,
+                                border:`1px solid ${(due ? t.red : t.green)}55`}}>
+                                {due ? "⚠ DA EFFETTUARE" : "✓ OK"}
+                              </span>
+                            </div>
+                            <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
+                              <div style={{height:"100%", width:`${pct}%`, background:barC, borderRadius:3, transition:"width 0.5s"}}/>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { DARK, LIGHT } from "../constants/theme";
 import { useControlMirror } from "../hooks/useControlChannel";
 import SimSlider from "./ui/SimSlider";
@@ -32,8 +33,10 @@ export default function ControlRoomPage() {
   const { sim, darkMode, onSim, sendCommand, connected } = useControlMirror();
   const t = darkMode ? DARK : LIGHT;
 
-  // Set tab title for the Control Room window only
-  document.title = "AquaPilot - Control Room";
+  useEffect(() => {
+    document.title = "AquaPilot - Control Room";
+    return () => { document.title = "AquaPilot"; };
+  }, []);
 
   const fontImport = (
     <style>{`

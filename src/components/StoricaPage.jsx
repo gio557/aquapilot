@@ -190,10 +190,10 @@ function CalendarWidget({ calMonth, onNav, byDate, selectedKey, onSelect, t }) {
 }
 
 // ── Quality badge ─────────────────────────────────────────────
-function QBadge({ v, lim, warn, phCheck, o2Check, t, unit, decimals=1 }) {
+function QBadge({ v, lim, warn, phCheck, o2Check, t, unit, decimals=1, limits=QL }) {
   let ok, fuori;
-  if (phCheck)  { ok = v >= QL.pH.low_w && v <= QL.pH.high_w; fuori = v < QL.pH.low_c || v > QL.pH.high_c; }
-  else if (o2Check) { ok = v >= QL.O2.warn; fuori = v < QL.O2.crit; }
+  if (phCheck)  { ok = v >= limits.pH.low_w && v <= limits.pH.high_w; fuori = v < limits.pH.low_c || v > limits.pH.high_c; }
+  else if (o2Check) { ok = v >= limits.O2.warn; fuori = v < limits.O2.crit; }
   else { ok = v < (warn ?? lim); fuori = lim != null && v >= lim; }
   const c = fuori ? t.red : ok ? t.green : t.orange;
   const label = fuori ? "✗ FUORI" : ok ? "✓ OK" : "⚠ ATT";
@@ -283,7 +283,7 @@ class StoricaErrorBoundary extends Component {
 }
 
 // ── Main page ─────────────────────────────────────────────────
-function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMarkers, limits }) {
+function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMarkers, limits = QL }) {
   const bp = useBreakpoint();
   const [history,       setHistory]       = useState([]);
   const [interventions, setInterventions] = useState([]);
@@ -641,12 +641,12 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
           <div style={{...card, padding:"20px 22px"}}>
             <div style={{...secHd}}><span style={{color:t.green}}>▸</span>QUALITÀ USCITA</div>
             {[
-              { key:"COD",  label:"COD",  v:snap.COD,  unit:"mg/L", lim:QL.COD.warn,  warn:QL.COD.pre  },
-              { key:"BOD5", label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:QL.BOD5.warn, warn:QL.BOD5.pre },
-              { key:"TSS",  label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:QL.TSS.warn,  warn:QL.TSS.pre  },
-              { key:"NH4",  label:"NH4",  v:snap.NH4,  unit:"mg/L", lim:QL.NH4.warn,  warn:QL.NH4.pre, decimals:2 },
-              { key:"pH",   label:"pH",   v:snap.pH,   unit:"",     phCheck:true,      decimals:2 },
-              { key:"O2",   label:"O₂",   v:snap.O2,   unit:"mg/L", o2Check:true,      decimals:2 },
+              { key:"COD",  label:"COD",  v:snap.COD,  unit:"mg/L", lim:limits.COD.warn,  warn:limits.COD.pre  },
+              { key:"BOD5", label:"BOD5", v:snap.BOD5, unit:"mg/L", lim:limits.BOD5.warn, warn:limits.BOD5.pre },
+              { key:"TSS",  label:"TSS",  v:snap.TSS,  unit:"mg/L", lim:limits.TSS.warn,  warn:limits.TSS.pre  },
+              { key:"NH4",  label:"NH4",  v:snap.NH4,  unit:"mg/L", lim:limits.NH4.warn,  warn:limits.NH4.pre, decimals:2 },
+              { key:"pH",   label:"pH",   v:snap.pH,   unit:"",     phCheck:true,          decimals:2 },
+              { key:"O2",   label:"O₂",   v:snap.O2,   unit:"mg/L", o2Check:true,          decimals:2 },
             ].map(q => (
               <div key={q.label} style={{display:"flex", justifyContent:"space-between", alignItems:"center",
                 padding:"12px 0", borderBottom:`1px solid ${t.border}`}}>
@@ -666,7 +666,7 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
                     );
                   })()}
                 </div>
-                <QBadge {...q} t={t} />
+                <QBadge {...q} t={t} limits={limits} />
               </div>
             ))}
           </div>
@@ -1045,14 +1045,14 @@ function StoricaPageInner({ t, qualitySources = {}, showMarkers = true, onShowMa
                   {snap.stageEnergy.map((kw, i) => {
                     const total = snap.stageEnergy.reduce((a,b)=>a+b,0) || 1;
                     const pct = Math.round(kw / total * 100);
-                    const name = STAGE_META[i]?.name ?? `ST-0${i+1}`;
-                    const barC = i===2 ? t.accent : i===3 ? t.orange : t.green;
+                    const name = STAGE_META[i]?.name ?? `ST-${String(i+1).padStart(2,"0")}`;
+                    const barC = [t.accent, t.green, t.purple, t.orange, t.yellow, t.red][i % 6] ?? t.green;
                     return (
                       <div key={i}>
                         <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                          <span style={{fontSize:14, color:i===2?t.accent:t.textSec,
-                            fontFamily:"'Rajdhani',sans-serif", fontWeight:i===2?700:500}}>
-                            ST-0{i+1} {name}
+                          <span style={{fontSize:14, color:barC,
+                            fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>
+                            ST-{String(i+1).padStart(2,"0")} {name}
                           </span>
                           <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barC}}>
                             {kw} kW ({pct}%)

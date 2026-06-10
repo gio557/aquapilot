@@ -252,6 +252,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
     if (pendingRef.current) clearTimeout(pendingRef.current.timer);
     const timer = setTimeout(() => { setStable(buildMsg(action)); pendingRef.current = null; }, HOLD_MS);
     pendingRef.current = { text: nextText, timer };
+    return () => { if (pendingRef.current) { clearTimeout(pendingRef.current.timer); pendingRef.current = null; } };
   }, [action, autoEnabled]);
 
   const sc = stage.status === "ok" ? t.green : stage.status === "warn" ? t.orange : t.red;

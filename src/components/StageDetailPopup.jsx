@@ -160,6 +160,7 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
     if (pendingPopup.current) clearTimeout(pendingPopup.current.timer);
     const timer = setTimeout(() => { setStableAction(action); pendingPopup.current = null; }, HOLD_MS);
     pendingPopup.current = { text: nextText, timer };
+    return () => { if (pendingPopup.current) { clearTimeout(pendingPopup.current.timer); pendingPopup.current = null; } };
   }, [action]);
 
   if (!stageDetail) return null;

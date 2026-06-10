@@ -175,10 +175,10 @@ export default function App() {
   // commands back over a BroadcastChannel.
   const openControlRoom = () => {
     const url = `${window.location.pathname}?view=controlroom`;
-    window.open(url, "aquapilot-controlroom", "noopener");
+    window.open(url, "aquapilot-controlroom");
   };
   const [selectedStage, setSelectedStage] = useState(null);
-  const [timeRange, setTimeRange] = useState("1h");
+  const [timeRange, setTimeRange] = useState("60");
   const [activeTrends, setActiveTrends] = useState(["COD","O2"]);
   const [trendNode, setTrendNode] = useState("plant"); // "plant" | stage index
   // Mostra/nascondi i marker di anomalia su TUTTI i grafici (live + storico).
@@ -486,7 +486,7 @@ export default function App() {
   }, [nodeKey]);
 
   const trendData = (() => {
-    const pts = { "15m":15, "1h":60, "6h":72, "24h":96 }[timeRange] || 60;
+    const pts = { "15":15, "30":30, "60":60, "MAX":80 }[timeRange] || 60;
     const win = (sim.trend || []).slice(-pts);
     if (trendNode === "plant") return win;
     return win.map(pt => {
@@ -971,13 +971,13 @@ export default function App() {
               {seDisp.map((kw, i) => {
                 const total = seDisp.reduce((a,b)=>a+b,0)||1;
                 const pct = Math.round(kw/total*100);
-                const stageName = stages[i]?.name ?? `ST-0${i+1}`;
-                const barC = i===2 ? t.accent : i===3 ? t.orange : t.green;
+                const stageName = stages[i]?.name ?? `ST-${String(i+1).padStart(2,"0")}`;
+                const barC = [t.accent, t.green, t.purple, t.orange, t.yellow, t.red][i % 6] ?? t.green;
                 return (
                   <div key={i} style={{marginBottom:11}}>
                     <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                      <span style={{fontSize:14, color: i===2?t.accent:t.textSec, fontFamily:"'Rajdhani',sans-serif", fontWeight:i===2?700:500}}>
-                        ST-0{i+1} {stageName}
+                      <span style={{fontSize:14, color:barC, fontFamily:"'Rajdhani',sans-serif", fontWeight:500}}>
+                        ST-{String(i+1).padStart(2,"0")} {stageName}
                       </span>
                       <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barC}}>{kw.toFixed(2)} kW ({pct}%)</span>
                     </div>
@@ -1088,10 +1088,10 @@ export default function App() {
                   <div style={{flex:1, minWidth:0, borderLeft:`1px solid ${t.border}`, paddingLeft:14}}>
                     <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:20, color:t.textSec, lineHeight:1}}>
                       {sim.qHistory?.length > 0
-                        ? (sim.qHistory.reduce((a,b)=>a+b,0)/sim.qHistory.length).toFixed(3)
+                        ? Math.round(sim.qHistory.reduce((a,b)=>a+b,0)/sim.qHistory.length)
                         : "—"}
                     </div>
-                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>m³/g · Medio mobile</div>
+                    <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:4}}>m³/h · Media mobile</div>
                   </div>
                 </div>
               </div>

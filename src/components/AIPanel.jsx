@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getTrendStats, getInterventionSummary, loadGains, resetLearning } from "../simulation/learning";
 import { QUALITY_LIMITS as QL, MLSS_LIMITS } from "../constants/limits";
 
@@ -171,36 +171,6 @@ function generateAIOffline(sim, autoOn) {
   }
 }
 
-async function generateAIOnline(sim, autoOn) {
-  const out = sim.output;
-  const actions = Object.values(sim.stageActions || {}).filter(a => a && a.sev !== "OK").map(a => a.text).join("; ") || "nessuna";
-  const alarmList = Object.entries(sim.alarmState || {}).filter(([,v]) => v!=="OK").map(([p,s]) => p+":"+s).join(", ") || "nessuno";
-  const modeInstr = autoOn
-    ? "Il sistema di auto-correzione è ATTIVO. Spiega le azioni automatiche in corso e fornisci previsioni di ripristino. Massimo 4 punti concisi in italiano."
-    : "Il sistema è in MODALITÀ MANUALE. Fornisci suggerimenti prioritari e quantificati per l'operatore. Massimo 4 azioni ordinate per urgenza in italiano.";
-
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      model:"claude-sonnet-4-6",
-      max_tokens:400,
-      system:"Sei un sistema esperto di supporto decisionale per impianti di depurazione acque reflue industriali. Rispondi SEMPRE in italiano. Sii conciso e professionale. Usa solo testo semplice senza markdown.",
-      messages:[{ role:"user", content:
-        "Stato impianto (" + new Date().toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}) + "):\n"
-        +"COD: "+out.COD.toFixed(1)+" mg/L | BOD5: "+out.BOD5.toFixed(1)+" mg/L | TSS: "+out.TSS.toFixed(1)+" mg/L\n"
-        +"NH4: "+out.NH4.toFixed(2)+" mg/L | NO3: "+(out.NO3??0).toFixed(1)+" mg/L | N-tot: "+(out.NTOT??0).toFixed(1)+" mg/L\n"
-        +"pH: "+out.pH.toFixed(2)+" | O2: "+out.O2.toFixed(1)+" mg/L\n"
-        +"MLSS: "+sim.MLSS+" mg/L | Soffianti: "+sim.blower+"% | Coagulante: "+sim.coagulant+"% | RAS: "+sim.sludgeRecycle+"%\n"
-        +"Allarmi: "+alarmList+"\nAzioni automatiche: "+actions+"\n\n"+modeInstr
-      }]
-    })
-  });
-  if (!resp.ok) throw new Error("HTTP " + resp.status);
-  const data = await resp.json();
-  return data.content[0]?.text || "Nessuna risposta ricevuta.";
-}
-
 // Renders the plain-text advisor message with a clear visual hierarchy:
 // heading, bullet/numbered items, metric line, and an "apprendimento" footer.
 function AIMessage({ text, t, modeColor }) {
@@ -288,7 +258,6 @@ function AIMessage({ text, t, modeColor }) {
 }
 
 export default function AIPanel({ sim, autoOn, t }) {
-  const [engine, setEngine] = useState("offline");
   const [msg, setMsg] = useState({text:"", loading:true, ts:null});
   const lastAutoOn = useRef(autoOn);
   const lastAlarmKey = useRef("");
@@ -296,35 +265,29 @@ export default function AIPanel({ sim, autoOn, t }) {
   // Always-current refs — prevents stale closure in setInterval/setTimeout callbacks
   const simRef    = useRef(sim);
   const autoOnRef = useRef(autoOn);
-  const engineRef = useRef(engine);
   simRef.current    = sim;
   autoOnRef.current = autoOn;
-  engineRef.current = engine;
 
-  const doRefresh = async (s, ao, eng) => {
+  const doRefresh = async (s, ao) => {
     setMsg(prev => ({...prev, loading:true}));
-    try {
-      const text = eng==="online" ? await generateAIOnline(s, ao) : generateAIOffline(s, ao);
-      setMsg({text, loading:false, ts:new Date()});
-    } catch {
-      setMsg({text: generateAIOffline(s, ao) + "\n\n[Claude API non disponibile — modalità offline attiva]", loading:false, ts:new Date()});
-    }
+    const text = generateAIOffline(s, ao);
+    setMsg({text, loading:false, ts:new Date()});
   };
 
-  const scheduleRefresh = (s, ao, eng) => {
+  const scheduleRefresh = (s, ao) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doRefresh(s, ao, eng), 400);
+    debounceRef.current = setTimeout(() => doRefresh(s, ao), 400);
   };
 
-  useEffect(() => { doRefresh(sim, autoOn, engine); }, []);
-  useEffect(() => { if (lastAutoOn.current !== autoOn) { lastAutoOn.current = autoOn; scheduleRefresh(sim, autoOn, engine); } }, [autoOn]);
-  useEffect(() => { scheduleRefresh(sim, autoOn, engine); }, [engine]);
+  useEffect(() => { doRefresh(sim, autoOn); }, []);
+  useEffect(() => { return () => { if (debounceRef.current) clearTimeout(debounceRef.current); }; }, []);
+  useEffect(() => { if (lastAutoOn.current !== autoOn) { lastAutoOn.current = autoOn; scheduleRefresh(sim, autoOn); } }, [autoOn]);
   useEffect(() => {
     const key = Object.entries(sim.alarmState||{}).filter(([,v]) => v!=="OK").map(([p,v]) => p+v).join("");
-    if (key !== lastAlarmKey.current) { lastAlarmKey.current = key; scheduleRefresh(sim, autoOn, engine); }
+    if (key !== lastAlarmKey.current) { lastAlarmKey.current = key; scheduleRefresh(sim, autoOn); }
   }, [sim.alarmState]);
   useEffect(() => {
-    const id = setInterval(() => scheduleRefresh(simRef.current, autoOnRef.current, engineRef.current), 30000);
+    const id = setInterval(() => scheduleRefresh(simRef.current, autoOnRef.current), 30000);
     return () => clearInterval(id);
   }, []);
 
@@ -343,23 +306,14 @@ export default function AIPanel({ sim, autoOn, t }) {
       <div style={{position:"absolute", inset:0, opacity:0.03, background:`radial-gradient(ellipse at top,${modeColor},transparent 60%)`, pointerEvents:"none"}}/>
 
       {/* ── HEADER ── */}
-      {/* Row 1: titolo + selezione motore */}
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:9}}>
         <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:2, textTransform:"uppercase", color:t.textSec, display:"flex", alignItems:"center", gap:6}}>
           <span style={{color:modeColor}}>▸</span>AI ADVISOR
         </div>
-        <div style={{display:"flex", gap:0, border:`1px solid ${t.border}`, borderRadius:6, overflow:"hidden", flexShrink:0}}>
-          <button onClick={() => setEngine("offline")}
-            style={{padding:"4px 11px", cursor:"pointer", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:"none", borderRight:`1px solid ${t.border}`, background:engine==="offline"?`${modeColor}22`:"transparent", color:engine==="offline"?modeColor:t.textMuted, fontWeight:engine==="offline"?700:400}}>
-            LOCAL
-          </button>
-          <button
-            title="Richiede backend server (prossimamente)"
-            onClick={() => alert("Funzione CLOUD richiede un server backend.\nDisponibile nella prossima versione.")}
-            style={{padding:"4px 11px", cursor:"not-allowed", fontFamily:"'Share Tech Mono',monospace", fontSize:11, letterSpacing:1, border:"none", background:"transparent", color:t.textMuted, opacity:0.55, display:"flex", alignItems:"center", gap:3}}>
-            CLOUD <span style={{fontSize:9}}>🔒</span>
-          </button>
-        </div>
+        <span style={{padding:"3px 10px", borderRadius:5, fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:1,
+          color:t.green, background:`${t.green}14`, border:`1px solid ${t.green}33`}}>
+          LOCAL
+        </span>
       </div>
 
       {/* Row 2: badge modalità + azioni */}
@@ -397,9 +351,9 @@ export default function AIPanel({ sim, autoOn, t }) {
       {msg.ts && !msg.loading && (
         <div style={{marginTop:10, paddingTop:8, borderTop:`1px solid ${t.border}`, display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>
           <span>Aggiornato {msg.ts.toLocaleTimeString("it-IT")}</span>
-          <span style={{display:"inline-flex", alignItems:"center", gap:5, color:engine==="online"?t.accent:t.textMuted}}>
-            <span style={{width:6, height:6, borderRadius:"50%", background:engine==="online"?t.accent:t.green, display:"inline-block"}}/>
-            {engine==="online"?"CLAUDE API":"OFFLINE"}
+          <span style={{display:"inline-flex", alignItems:"center", gap:5, color:t.textMuted}}>
+            <span style={{width:6, height:6, borderRadius:"50%", background:t.green, display:"inline-block"}}/>
+            OFFLINE
           </span>
         </div>
       )}

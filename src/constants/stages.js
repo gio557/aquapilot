@@ -24,4 +24,4 @@ export const STAGE_TYPES = [
   { name:"Post-trattamento",   sub:"Trattamento finale di affinamento" },
 ];
 
-export const TIME_RANGES = ["15m","1h","6h","24h"];
+export const TIME_RANGES = ["15","30","60","MAX"];

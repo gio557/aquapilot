@@ -308,7 +308,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         ? <span style={{fontSize:11, padding:"2px 8px", borderRadius:4, flexShrink:0,
                             background:`${t.orange}18`, border:`1px solid ${t.orange}44`,
                             color:t.orange, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>
-                            {link.stage.name}
+                            collegata con: {link.stage.name}
                           </span>
                         : <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
                             flexShrink:0, letterSpacing:0.5}}>non collegata</span>
@@ -470,7 +470,7 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, onD
                         ? <span style={{fontSize:11, padding:"2px 8px", borderRadius:4, flexShrink:0,
                             background:`${t.accent}18`, border:`1px solid ${t.accent}44`,
                             color:t.accent, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5}}>
-                            {link.stage.name}
+                            collegata con: {link.stage.name}
                           </span>
                         : <span style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace",
                             flexShrink:0, letterSpacing:0.5}}>non collegata</span>

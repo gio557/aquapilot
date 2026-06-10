@@ -230,14 +230,16 @@ export const DEFAULT_PUMPS_REGISTRY = {
     inv("pi_def_osmoboost", "Pompa booster osmosi",            3.0,  30, 70),  // Osmosi Inversa
   ],
   dosatrici: [
-    dos("pd_def_carbonio",   "Pompa dosaggio fonte di carbonio", 0.4, "carbonio"),     // Denitrificazione
-    dos("pd_def_naoh",       "Pompa dosaggio NaOH (soda)",       0.3, "naoh"),         // Biologico
-    dos("pd_def_antischiuma","Pompa dosaggio antischiuma",       0.2, "antischiuma"),  // Biologico
-    dos("pd_def_coagulante", "Pompa dosaggio coagulante",        0.5, "coagulante"),   // Sedimentazione
-    dos("pd_def_poly",       "Pompa dosaggio polielettrolita",   0.4, "polielettrolita"), // Sedimentazione
-    dos("pd_def_antiscal",   "Pompa dosaggio antiscalante",      0.3, "antiscalante"), // Osmosi Inversa
-    dos("pd_def_h2so4",      "Pompa dosaggio H₂SO₄ (acido)",     0.3, "h2so4"),        // Osmosi Inversa
-    dos("pd_def_metabi",     "Pompa dosaggio metabisolfito",     0.2, "metabisolfito"), // Osmosi Inversa
+    // Portate massime tipiche per impianto ~120 m³/h (≈3.000 m³/g). Le dosatrici
+    // lavorano nell'ordine dei 10–50 L/h (= 0,01–0,05 m³/h).
+    dos("pd_def_carbonio",   "Pompa dosaggio fonte di carbonio", 0.03, "carbonio"),     // Denitrif. — metanolo/acetato
+    dos("pd_def_naoh",       "Pompa dosaggio NaOH (soda)",       0.05, "naoh"),         // Biologico — alcalinità nitrificazione
+    dos("pd_def_antischiuma","Pompa dosaggio antischiuma",       0.01, "antischiuma"),  // Biologico — antifoam, intermittente
+    dos("pd_def_coagulante", "Pompa dosaggio coagulante",        0.04, "coagulante"),   // Sediment. — FeCl₃ defosfatazione
+    dos("pd_def_poly",       "Pompa dosaggio polielettrolita",   0.02, "polielettrolita"), // Sediment. — flocculante
+    dos("pd_def_antiscal",   "Pompa dosaggio antiscalante",      0.01, "antiscalante"), // Osmosi — ~3-5 ppm sul feed
+    dos("pd_def_h2so4",      "Pompa dosaggio H₂SO₄ (acido)",     0.02, "h2so4"),        // Osmosi — controllo pH/scaling
+    dos("pd_def_metabi",     "Pompa dosaggio metabisolfito",     0.01, "metabisolfito"), // Osmosi — declorazione
   ],
 };
 

@@ -343,8 +343,8 @@ export default function AIPanel({ sim, autoOn, t }) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{flex:1, paddingRight:4,
-        ...(compact ? {overflow:"hidden", maxHeight:220} : {overflowY:"auto"})}}>
+      <div style={{flex:1, paddingRight:4, overflowY:"auto",
+        ...(compact ? {maxHeight:220, pointerEvents:"none"} : {})}}>
         {msg.loading ? (
           <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"28px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:14}}>
             <span style={{animation:"blink 0.7s infinite", fontSize:14, color:modeColor}}>●</span>

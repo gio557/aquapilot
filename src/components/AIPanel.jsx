@@ -343,7 +343,8 @@ export default function AIPanel({ sim, autoOn, t }) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{flex:1, overflowY:"auto", paddingRight:4, ...(compact ? {maxHeight:220} : {})}}>
+      <div style={{flex:1, paddingRight:4,
+        ...(compact ? {overflow:"hidden", maxHeight:220} : {overflowY:"auto"})}}>
         {msg.loading ? (
           <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"28px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:14}}>
             <span style={{animation:"blink 0.7s infinite", fontSize:14, color:modeColor}}>●</span>
@@ -385,12 +386,9 @@ export default function AIPanel({ sim, autoOn, t }) {
       </div>
     )}
 
-    {/* ── CARD COMPATTA (cliccabile) ── */}
-    <div role="button" tabIndex={0}
-      onClick={() => setPopupOpen(true)}
-      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setPopupOpen(true); }}
-      title="Clicca per espandere"
-      style={{background:t.surface, border:`2px solid ${modeColor}66`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", flex:1, minHeight:180, position:"relative", overflow:"hidden", boxShadow:t.cardShadow, cursor:"pointer"}}>
+    {/* ── CARD COMPATTA ── */}
+    <div style={{background:t.surface, border:`2px solid ${modeColor}66`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", flex:1, minHeight:180, position:"relative", overflow:"hidden", boxShadow:t.cardShadow, cursor:"pointer"}}
+      onClick={() => setPopupOpen(true)}>
       <div style={{position:"absolute", inset:0, opacity:0.03, background:`radial-gradient(ellipse at top,${modeColor},transparent 60%)`, pointerEvents:"none"}}/>
       <PanelContent compact={true}/>
     </div>

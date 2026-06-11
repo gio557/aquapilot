@@ -259,6 +259,7 @@ function AIMessage({ text, t, modeColor }) {
 
 export default function AIPanel({ sim, autoOn, t }) {
   const [msg, setMsg] = useState({text:"", loading:true, ts:null});
+  const [popupOpen, setPopupOpen] = useState(false);
   const lastAutoOn = useRef(autoOn);
   const lastAlarmKey = useRef("");
   const debounceRef = useRef(null);
@@ -301,19 +302,25 @@ export default function AIPanel({ sim, autoOn, t }) {
     border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec,
   };
 
-  return (
-    <div style={{background:t.surface, border:`2px solid ${modeColor}66`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", flex:1, minHeight:180, position:"relative", overflow:"hidden", boxShadow:t.cardShadow}}>
-      <div style={{position:"absolute", inset:0, opacity:0.03, background:`radial-gradient(ellipse at top,${modeColor},transparent 60%)`, pointerEvents:"none"}}/>
-
+  const PanelContent = ({ compact }) => (
+    <>
       {/* ── HEADER ── */}
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:9}}>
         <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, letterSpacing:2, textTransform:"uppercase", color:t.textSec, display:"flex", alignItems:"center", gap:6}}>
           <span style={{color:modeColor}}>▸</span>AI ADVISOR
         </div>
-        <span style={{padding:"3px 10px", borderRadius:5, fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:1,
-          color:t.green, background:`${t.green}14`, border:`1px solid ${t.green}33`}}>
-          LOCAL
-        </span>
+        <div style={{display:"flex", alignItems:"center", gap:8}}>
+          <span style={{padding:"3px 10px", borderRadius:5, fontFamily:"'Share Tech Mono',monospace", fontSize:10, letterSpacing:1,
+            color:t.green, background:`${t.green}14`, border:`1px solid ${t.green}33`}}>
+            LOCAL
+          </span>
+          {!compact && (
+            <button onClick={e => { e.stopPropagation(); setPopupOpen(false); }}
+              style={{width:28, height:28, display:"flex", alignItems:"center", justifyContent:"center",
+                borderRadius:6, cursor:"pointer", border:`1px solid ${t.border}`,
+                background:t.surface2, color:t.textSec, fontSize:16}}>×</button>
+          )}
+        </div>
       </div>
 
       {/* Row 2: badge modalità + azioni */}
@@ -322,11 +329,11 @@ export default function AIPanel({ sim, autoOn, t }) {
           <span>{modeIcon}</span>{modeLabel}
         </span>
         <div style={{display:"flex", gap:5, flexShrink:0}}>
-          <button onClick={() => { if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn); } }}
+          <button onClick={e => { e.stopPropagation(); if (confirm("Cancellare lo storico di apprendimento (snapshot + gain adattivi)?")) { resetLearning(); doRefresh(sim, autoOn); } }}
             title="Reset apprendimento" style={iconBtn}>
             ⟲
           </button>
-          <button onClick={() => doRefresh(sim, autoOn)} disabled={msg.loading}
+          <button onClick={e => { e.stopPropagation(); doRefresh(sim, autoOn); }} disabled={msg.loading}
             title="Aggiorna analisi"
             style={{...iconBtn, width:"auto", padding:"0 12px", gap:5, fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:13, cursor:msg.loading?"wait":"pointer", color:msg.loading?t.textMuted:t.textSec}}>
             <span style={{fontSize:13, display:"inline-block", animation:msg.loading?"spin 0.8s linear infinite":"none"}}>↻</span>
@@ -336,7 +343,7 @@ export default function AIPanel({ sim, autoOn, t }) {
       </div>
 
       {/* ── BODY ── */}
-      <div style={{flex:1, overflowY:"auto", maxHeight:220, paddingRight:4}}>
+      <div style={{flex:1, overflowY:"auto", paddingRight:4, ...(compact ? {maxHeight:220} : {})}}>
         {msg.loading ? (
           <div style={{display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"28px 0", color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontSize:14}}>
             <span style={{animation:"blink 0.7s infinite", fontSize:14, color:modeColor}}>●</span>
@@ -357,6 +364,36 @@ export default function AIPanel({ sim, autoOn, t }) {
           </span>
         </div>
       )}
+    </>
+  );
+
+  return (
+    <>
+    {/* ── POPUP ESPANSO ── */}
+    {popupOpen && (
+      <div onClick={() => setPopupOpen(false)}
+        style={{position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.55)",
+          display:"flex", alignItems:"center", justifyContent:"center", padding:20}}>
+        <div onClick={e => e.stopPropagation()}
+          style={{background:t.bg, border:`2px solid ${modeColor}66`, borderRadius:16,
+            padding:24, width:"min(680px,95vw)", maxHeight:"85vh",
+            display:"flex", flexDirection:"column", gap:0,
+            boxShadow:"0 8px 48px rgba(0,0,0,0.5)", position:"relative", overflow:"hidden"}}>
+          <div style={{position:"absolute", inset:0, opacity:0.04, background:`radial-gradient(ellipse at top,${modeColor},transparent 60%)`, pointerEvents:"none"}}/>
+          <PanelContent compact={false}/>
+        </div>
+      </div>
+    )}
+
+    {/* ── CARD COMPATTA (cliccabile) ── */}
+    <div role="button" tabIndex={0}
+      onClick={() => setPopupOpen(true)}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setPopupOpen(true); }}
+      title="Clicca per espandere"
+      style={{background:t.surface, border:`2px solid ${modeColor}66`, borderRadius:12, padding:14, display:"flex", flexDirection:"column", flex:1, minHeight:180, position:"relative", overflow:"hidden", boxShadow:t.cardShadow, cursor:"pointer"}}>
+      <div style={{position:"absolute", inset:0, opacity:0.03, background:`radial-gradient(ellipse at top,${modeColor},transparent 60%)`, pointerEvents:"none"}}/>
+      <PanelContent compact={true}/>
     </div>
+    </>
   );
 }

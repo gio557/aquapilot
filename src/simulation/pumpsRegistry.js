@@ -42,6 +42,31 @@ export function resolveLinks(links, registry) {
   }).filter(Boolean);
 }
 
+// Derive the full-scale reference values (dosageMax) the dashboard uses to turn
+// command percentages into absolute engineering units. Single source of truth:
+// the pump registry. If the relevant pump is removed the reference falls to 0 and
+// the dashboard simply omits the absolute value next to the percentage.
+//   blower (kW)        ← potenza soffianti installate
+//   coagulant/naoh/h2so4 (L/h) ← portata pompa dosatrice (m³/h → ×1000)
+//   sludgeRecycle (m³/h) ← portata pompa di ricircolo fanghi (RAS)
+export function deriveDosageMax(registry) {
+  const inv = registry?.inverter  || [];
+  const dos = registry?.dosatrici || [];
+  const nameHas = (re) => (p) => re.test(p.name || "");
+  const sumKw  = (pred) => inv.filter(pred).reduce((a, p) => a + (p.power_kw || 0), 0);
+  const sumM3h = (pred) => inv.filter(pred).reduce((a, p) => a + (p.flow_m3h || 0), 0);
+  const sumLh  = (productId) =>
+    dos.filter(p => p.productId === productId).reduce((a, p) => a + (p.flow_m3h || 0), 0) * 1000;
+  const r1 = (x) => Math.round(x * 10) / 10;
+  return {
+    blower:        r1(sumKw(nameHas(/soffiant/i))),
+    coagulant:     r1(sumLh("coagulante")),
+    naoh:          r1(sumLh("naoh")),
+    h2so4:         r1(sumLh("h2so4")),
+    sludgeRecycle: r1(sumM3h(nameHas(/\bRAS\b|ricircolo fanghi/i))),
+  };
+}
+
 // Find which stage (if any) a registry pump is currently linked to.
 export function linkedStage(registryId, stageConfigs, stages) {
   for (let i = 0; i < stageConfigs.length; i++) {

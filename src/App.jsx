@@ -12,7 +12,7 @@ import { useSimulation } from "./hooks/useSimulation";
 import { requestOsmosiCIP } from "./simulation/commands";
 import { savePumpHours, pumpKey, pumpMaintH } from "./simulation/pumpHours";
 import { loadConsumabili, saveConsumabili } from "./simulation/consumabili";
-import { loadPumpsRegistry, savePumpsRegistry, resolveLinks } from "./simulation/pumpsRegistry";
+import { loadPumpsRegistry, savePumpsRegistry, resolveLinks, deriveDosageMax } from "./simulation/pumpsRegistry";
 import MaintenancePopup from "./components/ui/MaintenancePopup";
 import ConsumabiliPopup from "./components/ui/ConsumabiliPopup";
 import GreenEcoLogo from "./components/GreenEcoLogo";
@@ -282,6 +282,11 @@ export default function App() {
     stageConfig.map(sc => ({ ...sc, pumps: resolveLinks(sc.pumps, pumpsRegistry) })),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [JSON.stringify(stageConfig), JSON.stringify(pumpsRegistry)]);
+
+  // Riferimenti di fondo scala (kW / L/h / m³/h) derivati dal registro pompe:
+  // unica fonte di verità per la conversione % → valori assoluti in dashboard.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const derivedDosageMax = useMemo(() => deriveDosageMax(pumpsRegistry), [JSON.stringify(pumpsRegistry)]);
 
   const maintAlerts = (() => {
     const out = [];
@@ -764,8 +769,7 @@ export default function App() {
       {/* ── PAGES ── */}
       {page === "configurazione" ? (
         <ConfigurazionePage t={t} config={stageConfig} onChange={setStageConfig}
-          dosageMax={sim.dosageMax}
-          onDosageMax={upd => setSim(prev => ({ ...prev, dosageMax: { ...prev.dosageMax, ...(typeof upd === "function" ? upd(prev.dosageMax) : upd) } }))}
+          dosageMax={derivedDosageMax}
           stages={stages} stageTypes={STAGE_TYPES}
           onAddStage={handleAddStage} onRemoveStage={handleRemoveStage}
           norms={norms} setNorms={setNorms} normativaSets={NORMATIVA_SETS}
@@ -1059,7 +1063,7 @@ export default function App() {
             <div style={{...card, padding:"16px 18px", flex:"1 1 240px", minWidth:0}}>
               <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:700, letterSpacing:2, color:t.textSec, marginBottom:14}}>▸ IMPIANTO</div>
               {(() => {
-                const dm = sim.dosageMax || {};
+                const dm = derivedDosageMax || {};
                 const abs = (pct, max, unit, dec=0) =>
                   max ? ` · ${((pct/100)*max).toFixed(dec)} ${unit}` : "";
                 return [

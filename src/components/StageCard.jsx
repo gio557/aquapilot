@@ -116,7 +116,7 @@ function OsmosiCIPControl({ state, onStartCIP, t }) {
         overflow:"hidden", transition:"background 0.6s, border-color 0.6s"}}>
         <div style={{display:"flex", alignItems:"center", gap:8, minWidth:0, flex:1}}>
           <span style={{fontSize:16, lineHeight:1, flexShrink:0}}>{ph.icon}</span>
-          <span style={{fontFamily:"'Orbitron',sans-serif", fontSize:11, fontWeight:900, color, letterSpacing:1, transition:"color 0.6s", whiteSpace:"normal", wordBreak:"break-word", minWidth:0}}>{ph.label}</span>
+          <span style={{fontFamily:"'Orbitron',sans-serif", fontSize:11, fontWeight:900, color, letterSpacing:1, transition:"color 0.6s", whiteSpace:"normal", minWidth:0, lineHeight:1.3}}>{ph.label}</span>
         </div>
         {inCIP
           ? <span style={{fontSize:9, padding:"2px 8px", borderRadius:3, background:`${t.orange}22`,

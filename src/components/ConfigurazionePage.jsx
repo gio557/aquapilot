@@ -1316,57 +1316,82 @@ export default function ConfigurazionePage({ t, config, onChange, dosageMax, sta
       )}
 
       {/* ── PORTATE MASSIME INSTALLATE (sola lettura, derivate dal registro pompe) ── */}
-      {dosageMax && (
-        <div style={{marginTop:28, background:t.surface, border:`1px solid ${t.border}`,
-          borderRadius:10, overflow:"hidden"}}>
-          <div style={{padding:"14px 18px", background:t.surface2, borderBottom:`1px solid ${t.border}`,
-            display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-            <div>
-              <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:16,
-                color:t.text, letterSpacing:1}}>⚗️ PORTATE MASSIME INSTALLATE</div>
-              <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>
-                Derivate automaticamente dal registro pompe — riferimento di fondo scala per le percentuali.
-                Per modificarle, agisci sulle pompe a inverter e dosatrici qui sopra.
-              </div>
+      {(pumpsRegistry.inverter.length > 0 || pumpsRegistry.dosatrici.length > 0) && (() => {
+        const ValBox = ({ val, unit }) => (
+          <div style={{display:"flex", alignItems:"center", gap:8}}>
+            <div style={{minWidth:90, padding:"5px 10px", borderRadius:6, fontSize:14,
+              fontFamily:"'Share Tech Mono',monospace", textAlign:"right",
+              border:`1px solid ${t.border}`, background:t.surface3, color: val ? t.text : t.textMuted}}>
+              {val || "—"}
+            </div>
+            <span style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", fontWeight:600}}>{unit}</span>
+          </div>
+        );
+        const Section = ({ title, color, children }) => (
+          <div style={{marginBottom:20}}>
+            <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:11, letterSpacing:1.5,
+              color, marginBottom:12, paddingBottom:6, borderBottom:`1px solid ${t.border}`}}>
+              {title}
+            </div>
+            <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:12}}>
+              {children}
             </div>
           </div>
-          <div style={{padding:"20px 24px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:20}}>
-            {[
-              { key:"blower",        label:"Soffianti",            unit:"kW",  desc:"Potenza soffianti installate" },
-              { key:"coagulant",     label:"Coagulante",           unit:"L/h", desc:"Portata pompa dosatrice coagulante" },
-              { key:"naoh",          label:"NaOH (alcalinizzante)", unit:"L/h", desc:"Portata pompa dosatrice NaOH" },
-              { key:"h2so4",         label:"H₂SO₄ (acidificante)", unit:"L/h", desc:"Portata pompa dosatrice H₂SO₄" },
-              { key:"sludgeRecycle", label:"Ricircolo fanghi (RAS)",unit:"m³/h",desc:"Portata pompa di ricircolo fanghi" },
-            ].map(({ key, label, unit, desc }) => {
-              const val = dosageMax[key] ?? 0;
-              const missing = !val;
-              return (
-                <div key={key}>
-                  <div style={{fontSize:14, fontFamily:"'Rajdhani',sans-serif", fontWeight:600,
-                    color:t.text, marginBottom:2}}>{label}</div>
-                  <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
-                    marginBottom:8}}>{desc}</div>
-                  <div style={{display:"flex", alignItems:"center", gap:10}}>
-                    <div style={{minWidth:100, padding:"7px 10px", borderRadius:6, fontSize:15,
-                      fontFamily:"'Share Tech Mono',monospace", textAlign:"right",
-                      border:`1px solid ${t.border}`, background:t.surface3,
-                      color: missing ? t.textMuted : t.text}}>
-                      {missing ? "—" : val}
-                    </div>
-                    <span style={{fontSize:14, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif",
-                      fontWeight:600}}>{unit}</span>
-                    {missing && (
-                      <span style={{fontSize:11.5, color:t.orange, fontFamily:"'Rajdhani',sans-serif"}}>
-                        nessuna pompa collegata
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+        );
+        const PumpRow = ({ name, primary, secondary }) => (
+          <div style={{background:t.surface2, border:`1px solid ${t.border}`, borderRadius:8, padding:"10px 14px"}}>
+            <div style={{fontSize:13, fontFamily:"'Rajdhani',sans-serif", fontWeight:700,
+              color:t.text, marginBottom:8, lineHeight:1.3}}>{name}</div>
+            <div style={{display:"flex", flexWrap:"wrap", gap:10}}>
+              {primary  && <ValBox val={primary.val}  unit={primary.unit}/>}
+              {secondary && <ValBox val={secondary.val} unit={secondary.unit}/>}
+            </div>
           </div>
-        </div>
-      )}
+        );
+        const r1 = (x) => x ? (Math.round(x * 10) / 10) : 0;
+        const inverterSoffianti = pumpsRegistry.inverter.filter(p => /soffiant/i.test(p.name));
+        const inverterPompe     = pumpsRegistry.inverter.filter(p => !/soffiant/i.test(p.name));
+        return (
+          <div style={{marginTop:28, background:t.surface, border:`1px solid ${t.border}`, borderRadius:10, overflow:"hidden"}}>
+            <div style={{padding:"14px 18px", background:t.surface2, borderBottom:`1px solid ${t.border}`}}>
+              <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:16, color:t.text, letterSpacing:1}}>
+                ⚗️ PORTATE MASSIME INSTALLATE
+              </div>
+              <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:2}}>
+                Fondo scala di ogni componente — riferimento per le percentuali di comando. Sola lettura: per modificare agisci sul registro pompe.
+              </div>
+            </div>
+            <div style={{padding:"20px 24px"}}>
+              {inverterSoffianti.length > 0 && (
+                <Section title="SOFFIANTI" color={t.accent}>
+                  {inverterSoffianti.map(p => (
+                    <PumpRow key={p.id} name={p.name}
+                      primary={{ val: r1(p.power_kw) || null, unit:"kW" }}
+                      secondary={p.flow_m3h ? { val: r1(p.flow_m3h), unit:"m³/h" } : null}/>
+                  ))}
+                </Section>
+              )}
+              {inverterPompe.length > 0 && (
+                <Section title="POMPE A INVERTER" color={t.purple}>
+                  {inverterPompe.map(p => (
+                    <PumpRow key={p.id} name={p.name}
+                      primary={p.flow_m3h ? { val: r1(p.flow_m3h), unit:"m³/h" } : null}
+                      secondary={p.power_kw ? { val: r1(p.power_kw), unit:"kW" } : null}/>
+                  ))}
+                </Section>
+              )}
+              {pumpsRegistry.dosatrici.length > 0 && (
+                <Section title="POMPE DOSATRICI" color={t.green}>
+                  {pumpsRegistry.dosatrici.map(p => (
+                    <PumpRow key={p.id} name={p.name}
+                      primary={{ val: r1(p.flow_m3h * 1000) || null, unit:"L/h" }}/>
+                  ))}
+                </Section>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

@@ -49,65 +49,7 @@ export default function NormativaPage({ t, ac, onAC, norms, setNorms, normativaS
   return (
     <div style={{padding:"20px 24px 40px"}}>
 
-      {/* ── CONTROLLO AUTOMATICO ── */}
-      <div style={{marginBottom:28}}>
-        <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:18, fontWeight:900, color:t.accent, letterSpacing:2, marginBottom:6}}>CONTROLLO AUTOMATICO IMPIANTO</div>
-        <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", marginBottom:18}}>Gestione delle funzioni di auto-correzione per ciascuno stadio del processo</div>
-
-        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", background:ac.enabled?t.greenDim:t.surface2, border:`2px solid ${ac.enabled?t.green:t.border}`, borderRadius:12, marginBottom:16, transition:"all 0.3s"}}>
-          <div>
-            <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, color:ac.enabled?t.green:t.text}}>
-              {ac.enabled ? "● Sistema Auto-Correzione ATTIVO" : "○ Sistema Auto-Correzione DISATTIVATO"}
-            </div>
-            <div style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", marginTop:3}}>
-              {ac.enabled ? "L'impianto corregge autonomamente le anomalie di processo" : "Controllo completamente manuale — tutti gli automatismi disabilitati"}
-            </div>
-          </div>
-          <button onClick={() => onAC(p => ({...p, autoCorrect:{...p.autoCorrect, enabled:!p.autoCorrect.enabled}}))}
-            style={{padding:"9px 22px", borderRadius:8, cursor:"pointer", fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, border:"none", background:ac.enabled?t.green:t.surface3, color:ac.enabled?"#fff":t.textSec, transition:"all 0.3s", minWidth:100}}>
-            {ac.enabled ? "DISABILITA" : "ABILITA"}
-          </button>
-        </div>
-
-        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:10}}>
-          {Object.entries(ac).filter(([k]) => k !== "enabled").map(([key, fn]) => {
-            const meta = AC_LABELS[key] || {};
-            const isOn = ac.enabled && fn.on;
-            return (
-              <div key={key} style={{padding:"14px 16px", background:t.surface, border:`1px solid ${isOn?t.accent+"66":t.border}`, borderRadius:10, opacity:ac.enabled?1:0.5, transition:"all 0.3s"}}>
-                <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10}}>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:5}}>
-                      <span style={{fontSize:14}}>{meta.icon}</span>
-                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, color:isOn?t.accent:t.text}}>{fn.label}</span>
-                    </div>
-                    <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:5, lineHeight:1.4}}>{fn.desc}</div>
-                    <div style={{fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:t.textMuted}}>Stadio: {meta.stadio}</div>
-                  </div>
-                  <button onClick={() => { if (!ac.enabled) return; onAC(p => ({...p, autoCorrect:{...p.autoCorrect, [key]:{...p.autoCorrect[key], on:!p.autoCorrect[key].on}}})); }}
-                    disabled={!ac.enabled}
-                    style={{flexShrink:0, padding:"6px 16px", borderRadius:6, cursor:ac.enabled?"pointer":"not-allowed", fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, border:`1px solid ${isOn?t.accent:t.border}`, background:isOn?`${t.accent}22`:t.surface2, color:isOn?t.accent:t.textSec, transition:"all 0.2s"}}>
-                    {fn.on ? "ON" : "OFF"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {!ac.enabled && (
-          <div style={{marginTop:14, padding:"12px 18px", background:t.orangeDim, border:`1px solid ${t.orange}44`, borderRadius:8, display:"flex", gap:12, alignItems:"center"}}>
-            <span style={{fontSize:20}}>⚠️</span>
-            <div style={{fontSize:14, color:t.orange, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>
-              <strong>Modalità manuale attiva.</strong> L'operatore è responsabile del monitoraggio e della correzione di tutte le anomalie di processo.
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div style={{borderTop:`2px solid ${t.border}`, marginBottom:24}}/>
-
-      {/* ── NORMATIVA ── */}
+      {/* ── NORMATIVA & TARGET ── */}
       <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12}}>
         <div>
           <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:18, fontWeight:900, color:t.accent, letterSpacing:2, marginBottom:6}}>NORMATIVA & TARGET</div>
@@ -171,6 +113,65 @@ export default function NormativaPage({ t, ac, onAC, norms, setNorms, normativaS
           )}
         </div>
       ))}
+
+      <div style={{borderTop:`2px solid ${t.border}`, margin:"28px 0 24px"}}/>
+
+      {/* ── CONTROLLO AUTOMATICO ── */}
+      <div style={{marginBottom:28}}>
+        <div style={{fontFamily:"'Orbitron',sans-serif", fontSize:18, fontWeight:900, color:t.accent, letterSpacing:2, marginBottom:6}}>CONTROLLO AUTOMATICO IMPIANTO</div>
+        <div style={{fontSize:15, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", marginBottom:18}}>Gestione delle funzioni di auto-correzione per ciascuno stadio del processo</div>
+
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", background:ac.enabled?t.greenDim:t.surface2, border:`2px solid ${ac.enabled?t.green:t.border}`, borderRadius:12, marginBottom:16, transition:"all 0.3s"}}>
+          <div>
+            <div style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, color:ac.enabled?t.green:t.text}}>
+              {ac.enabled ? "● Sistema Auto-Correzione ATTIVO" : "○ Sistema Auto-Correzione DISATTIVATO"}
+            </div>
+            <div style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", marginTop:3}}>
+              {ac.enabled ? "L'impianto corregge autonomamente le anomalie di processo" : "Controllo completamente manuale — tutti gli automatismi disabilitati"}
+            </div>
+          </div>
+          <button onClick={() => onAC(p => ({...p, autoCorrect:{...p.autoCorrect, enabled:!p.autoCorrect.enabled}}))}
+            style={{padding:"9px 22px", borderRadius:8, cursor:"pointer", fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:14, border:"none", background:ac.enabled?t.green:t.surface3, color:ac.enabled?"#fff":t.textSec, transition:"all 0.3s", minWidth:100}}>
+            {ac.enabled ? "DISABILITA" : "ABILITA"}
+          </button>
+        </div>
+
+        <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:10}}>
+          {Object.entries(ac).filter(([k]) => k !== "enabled").map(([key, fn]) => {
+            const meta = AC_LABELS[key] || {};
+            const isOn = ac.enabled && fn.on;
+            return (
+              <div key={key} style={{padding:"14px 16px", background:t.surface, border:`1px solid ${isOn?t.accent+"66":t.border}`, borderRadius:10, opacity:ac.enabled?1:0.5, transition:"all 0.3s"}}>
+                <div style={{display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex", alignItems:"center", gap:6, marginBottom:5}}>
+                      <span style={{fontSize:14}}>{meta.icon}</span>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:15, color:isOn?t.accent:t.text}}>{fn.label}</span>
+                    </div>
+                    <div style={{fontSize:13, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginBottom:5, lineHeight:1.4}}>{fn.desc}</div>
+                    <div style={{fontSize:12, fontFamily:"'Share Tech Mono',monospace", color:t.textMuted}}>Stadio: {meta.stadio}</div>
+                  </div>
+                  <button onClick={() => { if (!ac.enabled) return; onAC(p => ({...p, autoCorrect:{...p.autoCorrect, [key]:{...p.autoCorrect[key], on:!p.autoCorrect[key].on}}})); }}
+                    disabled={!ac.enabled}
+                    style={{flexShrink:0, padding:"6px 16px", borderRadius:6, cursor:ac.enabled?"pointer":"not-allowed", fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, border:`1px solid ${isOn?t.accent:t.border}`, background:isOn?`${t.accent}22`:t.surface2, color:isOn?t.accent:t.textSec, transition:"all 0.2s"}}>
+                    {fn.on ? "ON" : "OFF"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {!ac.enabled && (
+          <div style={{marginTop:14, padding:"12px 18px", background:t.orangeDim, border:`1px solid ${t.orange}44`, borderRadius:8, display:"flex", gap:12, alignItems:"center"}}>
+            <span style={{fontSize:20}}>⚠️</span>
+            <div style={{fontSize:14, color:t.orange, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>
+              <strong>Modalità manuale attiva.</strong> L'operatore è responsabile del monitoraggio e della correzione di tutte le anomalie di processo.
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

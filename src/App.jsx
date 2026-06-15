@@ -670,8 +670,8 @@ export default function App() {
         <div style={{display:"flex", alignItems:"center", gap: bp === "sm" ? 8 : 14, justifyContent:"center"}}>
           <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:900,
             fontSize: bp === "sm" ? 22 : 34,
-            color:t.accent, letterSpacing: bp === "sm" ? 2 : 4, whiteSpace:"nowrap", lineHeight:1}}>
-            AQUA<span style={{color:t.textSec}}>PILOT</span>
+            letterSpacing: bp === "sm" ? 2 : 4, whiteSpace:"nowrap", lineHeight:1}}>
+            <span style={{color:"#0096FF"}}>AQUA</span><span style={{color:t.textSec}}>PILOT</span>
           </div>
           {bp !== "sm" && bp !== "md" && (
             <div style={{display:"flex", alignItems:"center", gap:6}}>

@@ -405,6 +405,9 @@ button:disabled {
 .login {
   max-width: 460px;
   margin: 0 auto;
+  min-height: 100%;
+  /* Sfondo bianco per fondersi con il logo aziendale. */
+  background: #fff;
   /* La schermata di accesso non ha header: abbassiamo il logo sotto l'isola. */
   padding: calc(var(--sat) + 32px) calc(20px + var(--sar)) 48px calc(20px + var(--sal));
 }

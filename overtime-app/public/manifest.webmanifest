@@ -1,0 +1,20 @@
+{
+  "name": "Gestione Straordinari",
+  "short_name": "Straordinari",
+  "description": "Richieste di ore straordinarie per dipendenti e manager",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d3b66",
+  "theme_color": "#0d3b66",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

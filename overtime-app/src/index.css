@@ -414,6 +414,13 @@ button:disabled {
   margin-bottom: 24px;
 }
 
+.login-logo {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  margin-bottom: 4px;
+}
+
 .login-brand h1 {
   font-size: 24px;
   margin: 12px 0 2px;

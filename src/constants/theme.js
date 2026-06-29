@@ -19,3 +19,19 @@ export const LIGHT = {
   yellow:"#6A4800", purple:"#551199", chartGrid:"#B0C8DE",
   cardShadow:"0 3px 14px rgba(0,40,100,0.18)",
 };
+
+// Tema "Martes": dark neutro quasi nero con accento lime, ispirato ai dashboard
+// SaaS moderni. I colori di stato (verde/arancio/rosso) restano nettamente
+// distinti dall'accento lime per non compromettere la leggibilità degli allarmi.
+export const MARTES = {
+  bg:"#0A0B0D", surface:"#141518", surface2:"#1B1D22", surface3:"#23262C",
+  border:"#2D3138", text:"#F2F3F5", textSec:"#9CA1AB", textMuted:"#5C616B",
+  accent:"#C5F82A", accentDim:"rgba(197,248,42,0.12)",
+  green:"#34D399", greenDim:"rgba(52,211,153,0.12)",
+  orange:"#FF8A3D", orangeDim:"rgba(255,138,61,0.12)",
+  red:"#FF4D5E", redDim:"rgba(255,77,94,0.12)",
+  yellow:"#FBBF24", purple:"#A78BFA", chartGrid:"#20232A",
+  cardShadow:"0 4px 22px rgba(0,0,0,0.6)",
+};
+
+export const THEMES = { light: LIGHT, dark: DARK, martes: MARTES };

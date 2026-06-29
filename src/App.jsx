@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useBreakpoint } from "./hooks/useWindowSize";
-import { DARK, LIGHT } from "./constants/theme";
+import { LIGHT, THEMES } from "./constants/theme";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, DEFAULT_PUMPS_REGISTRY, makeDefaultStageConfig, PUMP_CATALOG, makeStagePumps } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
@@ -39,14 +39,15 @@ const TREND_KEYS = [
 ];
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(false);
-  const t = darkMode ? DARK : LIGHT;
+  // Tema selezionabile a 3 stati: light → dark → martes → (ciclo).
+  const [themeId, setThemeId] = useState("light");
+  const t = THEMES[themeId] || LIGHT;
   const bp = useBreakpoint(); // "sm" | "md" | "lg" | "xl"
 
   const { sim, setSim } = useSimulation();
 
   // Mirror sim state to the Control Room tab and accept its control commands.
-  useControlBroadcast(sim, setSim, darkMode);
+  useControlBroadcast(sim, setSim, themeId);
 
   // Smoothed display values — EMA with alpha=0.10 so numbers drift gradually
   const ALPHA = 0.10;
@@ -720,11 +721,12 @@ export default function App() {
             🎛️ {bp !== "sm" && "CONTROL ROOM"} <span style={{fontSize:11, opacity:0.7}}>↗</span>
           </button>
 
-          <button onClick={() => setDarkMode(p => !p)}
+          <button onClick={() => setThemeId(p => p === "light" ? "dark" : p === "dark" ? "martes" : "light")}
+            title={`Tema: ${themeId === "light" ? "Chiaro" : themeId === "dark" ? "Scuro" : "Martes"} — clicca per cambiare`}
             style={{padding:"6px 12px", borderRadius:7, cursor:"pointer",
               fontFamily:"'Share Tech Mono',monospace", fontSize:16,
               border:`1px solid ${t.border}`, background:t.surface2, color:t.textSec}}>
-            {darkMode ? "☀" : "🌙"}
+            {themeId === "light" ? "🌙" : themeId === "dark" ? "🟢" : "☀"}
           </button>
         </div>
       </header>

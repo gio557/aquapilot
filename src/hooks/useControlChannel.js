@@ -6,7 +6,7 @@ import { applyCommand } from "../simulation/commands";
  *
  * The main AquaPilot tab owns the simulation engine loop; the Control Room can
  * run in a separate browser tab. They talk over a BroadcastChannel:
- *   - main → CR:  { kind:"state", sim, darkMode }   (on every sim change)
+ *   - main → CR:  { kind:"state", sim, themeId }   (on every sim change)
  *   - CR → main:  { kind:"request" }                (on mount, ask for state)
  *   - CR → main:  { kind:"control", patch }         (control-field changes)
  *   - CR → main:  { kind:"command", cmd }           (one-shot operator commands)
@@ -24,12 +24,12 @@ const CONTROL_FIELDS = [
 ];
 
 // Used by the MAIN tab: broadcasts state and applies incoming control patches.
-export function useControlBroadcast(sim, setSim, darkMode) {
+export function useControlBroadcast(sim, setSim, themeId) {
   const chRef  = useRef(null);
   const simRef = useRef(sim);
-  const dmRef  = useRef(darkMode);
+  const tmRef  = useRef(themeId);
   simRef.current = sim;
-  dmRef.current  = darkMode;
+  tmRef.current  = themeId;
 
   useEffect(() => {
     const ch = new BroadcastChannel(CHANNEL);
@@ -38,7 +38,7 @@ export function useControlBroadcast(sim, setSim, darkMode) {
       const msg = e.data;
       if (!msg) return;
       if (msg.kind === "request") {
-        ch.postMessage({ kind: "state", sim: simRef.current, darkMode: dmRef.current });
+        ch.postMessage({ kind: "state", sim: simRef.current, themeId: tmRef.current });
       } else if (msg.kind === "control" && msg.patch) {
         setSim(prev => {
           const next = { ...prev };
@@ -53,16 +53,16 @@ export function useControlBroadcast(sim, setSim, darkMode) {
   }, [setSim]);
 
   useEffect(() => {
-    chRef.current?.postMessage({ kind: "state", sim, darkMode });
-  }, [sim, darkMode]);
+    chRef.current?.postMessage({ kind: "state", sim, themeId });
+  }, [sim, themeId]);
 }
 
 // Used by the CONTROL ROOM tab: mirrors state and sends control patches.
-// Returns { sim, darkMode, onSim, connected } — onSim mimics setSim's API
+// Returns { sim, themeId, onSim, connected } — onSim mimics setSim's API
 // (accepts an updater fn or a partial object) for drop-in reuse of UI logic.
 export function useControlMirror() {
   const [sim, setSim] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [themeId, setThemeId] = useState("light");
   const [connected, setConnected] = useState(false);
   const chRef  = useRef(null);
   const simRef = useRef(null);
@@ -75,7 +75,7 @@ export function useControlMirror() {
       if (msg?.kind === "state") {
         simRef.current = msg.sim;
         setSim(msg.sim);
-        setDarkMode(!!msg.darkMode);
+        setThemeId(msg.themeId || "light");
         setConnected(true);
       }
     };
@@ -105,5 +105,5 @@ export function useControlMirror() {
     chRef.current?.postMessage({ kind: "command", cmd });
   }, []);
 
-  return { sim, darkMode, onSim, sendCommand, connected };
+  return { sim, themeId, onSim, sendCommand, connected };
 }

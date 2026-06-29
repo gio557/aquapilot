@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { DARK, LIGHT } from "../constants/theme";
+import { LIGHT, THEMES } from "../constants/theme";
 import { useControlMirror } from "../hooks/useControlChannel";
 import SimSlider from "./ui/SimSlider";
 import Tag from "./ui/Tag";
@@ -30,8 +30,8 @@ const subHd = (t) => ({ fontSize:10, color:t.textMuted, fontFamily:"'Share Tech 
   letterSpacing:1.5, textTransform:"uppercase", margin:"6px 0 10px" });
 
 export default function ControlRoomPage() {
-  const { sim, darkMode, onSim, sendCommand, connected } = useControlMirror();
-  const t = darkMode ? DARK : LIGHT;
+  const { sim, themeId, onSim, sendCommand, connected } = useControlMirror();
+  const t = THEMES[themeId] || LIGHT;
 
   useEffect(() => {
     document.title = "AquaPilot - Control Room";

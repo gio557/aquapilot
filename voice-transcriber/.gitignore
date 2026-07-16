@@ -1,0 +1,17 @@
+# ambiente virtuale
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# file audio e trascrizioni (non versionare roba personale)
+*.mp3
+*.wav
+*.m4a
+*.ogg
+*.flac
+*.txt
+!requirements.txt
+
+# cache dei modelli
+.cache/

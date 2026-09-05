@@ -1,71 +1,127 @@
+import { QUALITY_LIMITS } from "../constants/limits";
+
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-export function applyAutoCorrect(s, out, O2, MLSS) {
+export function applyAutoCorrect(s, out, O2, MLSS, stageIndexMap) {
+  const bioIdx = stageIndexMap?.bio >= 0 ? stageIndexMap.bio : 2;
+  const sedIdx = stageIndexMap?.sed >= 0 ? stageIndexMap.sed : 3;
+  const disIdx = stageIndexMap?.dis >= 0 ? stageIndexMap.dis : 4;
   const ac = s.autoCorrect;
   if (!ac || !ac.enabled) return { changes: {}, actions: {} };
+  const LIM = s.limits || QUALITY_LIMITS;
   const ch = {};
   const actions = {};
+  const g = s.adaptiveGains || {};
+  const gBlower    = g.blower        ?? 1;
+  const gCoagulant = g.coagulant     ?? 1;
+  const gRas       = g.sludgeRecycle ?? 1;
+  const gPH        = g.pH            ?? 1;
 
   // ── SOFFIANTI — controllo O2 e qualità biologica ─────────────
   if (ac.blower && ac.blower.on) {
-    const O2sp_nh4 = Math.max(0, Math.min(1, (out.NH4  - 5.0) / 7.0)) * 2.8;
-    const O2sp_cod = Math.max(0, Math.min(1, (out.COD  - 80)  / 80))  * 1.2;
-    const O2sp_bod = Math.max(0, Math.min(1, (out.BOD5 - 20)  / 20))  * 1.0;
-    const O2sp = Math.min(7.0, 3.5 + O2sp_nh4 + O2sp_cod + O2sp_bod);
+    // O2 demand is referenced to the *regulatory* limits, not arbitrary
+    // setpoints. Each term ramps from an anchor (below the warn limit, so the
+    // controller reacts with margin to spare) up to full demand near the
+    // critical limit. The previous gentle terms produced a steady-state offset:
+    // the setpoint was satisfied at ~4 mg/L while NH4/BOD5 stayed over limit, so
+    // the blower stopped climbing and the exceedance never cleared.
+    // Proportional demand: gentle ramps referenced to the warn limits keep
+    // normal operation energy-efficient (effluent under limit → low O2 target).
+    const ramp = (v, lo, hi, gain) => clamp((v - lo) / (hi - lo), 0, 1) * gain;
+    const O2sp_nh4 = ramp(out.NH4,  LIM.NH4.warn  - 3,  LIM.NH4.warn  + 2,  4.5);
+    const O2sp_bod = ramp(out.BOD5, LIM.BOD5.warn - 8,  LIM.BOD5.warn + 5,  2.5);
+    const O2sp_cod = ramp(out.COD,  LIM.COD.warn  - 35, LIM.COD.warn + 20,  1.5);
+    // Integral action: a proportional-only setpoint leaves a steady-state offset
+    // (effluent parks just over limit while O2 sits at a "satisfied" target). We
+    // integrate the worst error against a target inside the *green* zone — held
+    // ~8% below each pre-alarm threshold — so correction doesn't stop at "just
+    // under the regulatory limit" (PRE band) but pushes parameters fully into
+    // the green. The setpoint keeps climbing until the blower maxes out:
+    // clearing recoverable breaches and, when even 100% can't recover, exposing
+    // a true "at capacity" condition for diagnostics. The error goes negative
+    // once effluent is comfortably under target, so the integral bleeds smoothly
+    // (no limit-cycle) and clean influent relaxes the blower for energy savings.
+    const greenTgt = 0.92;
+    const err = Math.max(
+      (out.NH4  - LIM.NH4.pre  * greenTgt) / LIM.NH4.warn,
+      (out.BOD5 - LIM.BOD5.pre * greenTgt) / LIM.BOD5.warn,
+      (out.COD  - LIM.COD.pre  * greenTgt) / LIM.COD.warn);
+    // Low integral gain + gentle proportional inner loop, rate-limited: the O2
+    // process has a long lag, so aggressive gains caused integral-windup hunting
+    // (blower swinging 57↔92% in a slow limit-cycle). Softer gains track the
+    // slow effluent dynamics smoothly without oscillating.
+    // Minimum setpoint is 2.5 (not 2.0 = warn) so there is always a margin above
+    // the regulatory floor. With sp=2.0 and O2=1.92 the error rounds to 0 and the
+    // blower never responds; sp=2.5 guarantees delta≥1 whenever O2≤2.33.
+    // Anti-windup (conditional integration): the blower has a hard 20–100% range.
+    // Integrating a positive error while the blower is already pinned at 100% (or a
+    // negative error while pinned at 20%) just inflates acO2I with no actuator
+    // effect, so when the load later drops the integral has to bleed off before the
+    // blower can come down — a recovery lag that is exactly the kind of "inertia"
+    // the controller is supposed to respect, not create. Freeze the integral in the
+    // saturating direction; let it relax in the other.
+    const atMax = s.blower >= 100;
+    const atMin = s.blower <= 20;
+    const integrate = !((atMax && err > 0) || (atMin && err < 0));
+    const O2I = integrate ? clamp((s.acO2I ?? 0) + err * 0.12, 0, 6) : (s.acO2I ?? 0);
+    ch.acO2I = O2I;
+    const O2sp = clamp(2.5 + O2sp_nh4 + O2sp_cod + O2sp_bod + O2I, 2.5, 8.0);
     const errO2 = O2sp - O2;
-    const Kp = 6;
-    const delta = clamp(Math.round(errO2 * Kp), -8, 15);
+    const Kp = 3 * gBlower;
+    const delta = clamp(Math.round(errO2 * Kp), -4, 6);
     const newBlower = clamp(s.blower + delta, 20, 100);
 
     if (Math.abs(delta) >= 1) {
       ch.blower = newBlower;
       if (O2 < 1.5) {
-        actions[2] = { text: `URGENTE Soffianti: ${s.blower}→${newBlower}% — O2 critico ${O2.toFixed(1)} mg/L (set ${O2sp})`, sev: "ALTO" };
+        actions[bioIdx] = { text: `URGENTE Soffianti: ${s.blower}→${newBlower}% — O2 critico ${O2.toFixed(1)} mg/L (set ${O2sp})`, sev: "ALTO" };
       } else if (delta > 0) {
-        const reason = out.NH4 > 8 ? `NH4 ${out.NH4.toFixed(1)} mg/L — set O2>${O2sp.toFixed(1)}` : out.BOD5 > 25 ? `BOD5 ${out.BOD5.toFixed(1)} mg/L` : out.COD > 100 ? `COD ${out.COD.toFixed(1)} mg/L` : `O2 ${O2.toFixed(1)} mg/L → set ${O2sp.toFixed(1)}`;
-        actions[2] = { text: `Soffianti: ${s.blower}→${newBlower}% (+${delta}%) — ${reason}`, sev: "MEDIO" };
+        const reason = out.NH4 > LIM.NH4.warn ? `NH4 ${out.NH4.toFixed(1)} mg/L — set O2>${O2sp.toFixed(1)}` : out.BOD5 > LIM.BOD5.warn ? `BOD5 ${out.BOD5.toFixed(1)} mg/L` : out.COD > LIM.COD.pre ? `COD ${out.COD.toFixed(1)} mg/L` : `O2 ${O2.toFixed(1)} mg/L → set ${O2sp.toFixed(1)}`;
+        actions[bioIdx] = { text: `Soffianti: ${s.blower}→${newBlower}% (+${delta}%) — ${reason}`, sev: "MEDIO" };
       } else {
-        actions[2] = { text: `Ottimiz. energia: soffianti ${s.blower}→${newBlower}% — O2 ${O2.toFixed(1)} mg/L, margine ok`, sev: "OK" };
+        actions[bioIdx] = { text: `Ottimiz. energia: soffianti ${s.blower}→${newBlower}% — O2 ${O2.toFixed(1)} mg/L, margine ok`, sev: "OK" };
       }
     }
   }
 
   // ── COAGULANTE — controllo TSS sedimentazione ─────────────────
   if (ac.coagulant && ac.coagulant.on) {
-    const TSSsp = 20;
+    const TSSsp = (LIM.TSS.warn ?? 35) * 0.57;
     const errTSS = out.TSS - TSSsp;
-    const Kp = 1.8;
+    const Kp = 1.8 * gCoagulant;
     const delta = clamp(Math.round(errTSS * Kp), -5, 20);
     const newCoag = clamp(s.coagulant + delta, 15, 100);
 
     if (Math.abs(delta) >= 1) {
       ch.coagulant = newCoag;
-      if (out.TSS > 80) {
-        actions[3] = { text: `URGENTE Coagulante: ${s.coagulant}→${newCoag}% — TSS critico ${out.TSS.toFixed(1)} mg/L`, sev: "ALTO" };
+      if (out.TSS > (LIM.TSS.crit ?? 80)) {
+        actions[sedIdx] = { text: `URGENTE Coagulante: ${s.coagulant}→${newCoag}% — TSS critico ${out.TSS.toFixed(1)} mg/L`, sev: "ALTO" };
       } else if (delta > 0) {
-        actions[3] = { text: `Coagulante: ${s.coagulant}→${newCoag}% (+${delta}%) — TSS ${out.TSS.toFixed(1)} mg/L > set ${TSSsp}`, sev: "MEDIO" };
+        actions[sedIdx] = { text: `Coagulante: ${s.coagulant}→${newCoag}% (+${delta}%) — TSS ${out.TSS.toFixed(1)} mg/L > set ${TSSsp}`, sev: "MEDIO" };
       } else {
-        actions[3] = { text: `Risparmio coagulante: ${s.coagulant}→${newCoag}% — TSS ${out.TSS.toFixed(1)} mg/L ottimale`, sev: "OK" };
+        actions[sedIdx] = { text: `Risparmio coagulante: ${s.coagulant}→${newCoag}% — TSS ${out.TSS.toFixed(1)} mg/L ottimale`, sev: "OK" };
       }
     }
   }
 
   // ── RICIRCOLO FANGHI — controllo MLSS biologico ───────────────
   if (ac.sludgeRecycle && ac.sludgeRecycle.on) {
-    const MLSSsp = 3200;
+    const MLSSsp = s.MLSSsp ?? 3200;
     const errMLSS = MLSS - MLSSsp;
-    const Kp = 0.008;
+    const Kp = 0.008 * gRas;
     const delta = clamp(Math.round(errMLSS * Kp), -6, 6);
     const newRAS = clamp(s.sludgeRecycle - delta, 20, 100);
-    const prev = actions[2];
+    const prev = actions[bioIdx];
 
     if (Math.abs(delta) >= 1) {
       ch.sludgeRecycle = newRAS;
       const rasMsg = `RAS: ${s.sludgeRecycle}→${newRAS}% — MLSS ${Math.round(MLSS)} mg/L (set ${MLSSsp})`;
       if (prev) {
-        actions[2] = { ...prev, text: prev.text + ` | ${rasMsg}` };
+        actions[bioIdx] = { ...prev, text: prev.text + ` | ${rasMsg}` };
       } else {
-        actions[2] = { text: rasMsg, sev: Math.abs(errMLSS) > 1500 ? "MEDIO" : "OK" };
+        // A correction is being applied here, so don't report OK for a sizeable
+        // deviation; 600 mg/L roughly matches the band where delta saturates.
+        actions[bioIdx] = { text: rasMsg, sev: Math.abs(errMLSS) > 600 ? "MEDIO" : "OK" };
       }
     }
   }
@@ -74,26 +130,36 @@ export function applyAutoCorrect(s, out, O2, MLSS) {
   if (ac.pH && ac.pH.on) {
     const pHsp = 7.2;
     const errpH = pHsp - out.pH;
-    const Kp = 12;
-    const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 25);
+    const Kp = 3 * gPH;
+    const delta = clamp(Math.round(Math.abs(errpH) * Kp), 0, 5);
+    // Severity follows regulatory compliance, not the distance from the 7.2
+    // process optimum: re-centring a pH that is still inside the legal band is an
+    // optimisation (OK/green), not a warning. Otherwise the action card flags an
+    // "errore" (orange) while QUALITÀ USCITA correctly reads pH OK. Only a pH
+    // outside the band is MEDIO (warn band) or ALTO (critical band).
+    const pHsev = (out.pH < LIM.pH.low_c || out.pH > LIM.pH.high_c) ? "ALTO"
+                : (out.pH < LIM.pH.low_w || out.pH > LIM.pH.high_w) ? "MEDIO" : "OK";
 
-    if (Math.abs(errpH) > 0.15 && delta >= 1) {
+    // Gate: actuate when pH is off by more than the 0.20 dead-band. The previous
+    // `delta >= 2` gate needed |err| ≳ 0.5 to fire, so the 0.20–0.5 band did
+    // nothing at all — dosing could strand a stale NaOH/H2SO4 value with pH parked
+    // just outside the dead-band. `delta >= 1` (|err| ≳ 0.17 at unit gain) makes
+    // the actuation region contiguous with the bleed-off region below.
+    if (Math.abs(errpH) > 0.20 && delta >= 1) {
       if (errpH > 0) {
         ch.naoh   = clamp(s.naoh + delta, 0, 100);
         ch.h2so4  = 0;
-        const sev = out.pH < 5.5 ? "ALTO" : "MEDIO";
-        actions[4] = { text: `NaOH: ${s.naoh}→${ch.naoh}% (+${delta}%) — pH ${out.pH.toFixed(2)} < ${pHsp} (err ${errpH.toFixed(2)})`, sev };
+        actions[disIdx] = { text: `NaOH: ${s.naoh}→${ch.naoh}% (+${delta}%) — pH ${out.pH.toFixed(2)} ${pHsev === "OK" ? "(ottimiz. verso" : "<"} ${pHsp}${pHsev === "OK" ? ")" : ""} (err ${errpH.toFixed(2)})`, sev: pHsev };
       } else {
         ch.h2so4  = clamp(s.h2so4 + delta, 0, 100);
         ch.naoh   = 0;
-        const sev = out.pH > 9.5 ? "ALTO" : "MEDIO";
-        actions[4] = { text: `H2SO4: ${s.h2so4}→${ch.h2so4}% (+${delta}%) — pH ${out.pH.toFixed(2)} > ${pHsp} (err ${(-errpH).toFixed(2)})`, sev };
+        actions[disIdx] = { text: `H2SO4: ${s.h2so4}→${ch.h2so4}% (+${delta}%) — pH ${out.pH.toFixed(2)} ${pHsev === "OK" ? "(ottimiz. verso" : ">"} ${pHsp}${pHsev === "OK" ? ")" : ""} (err ${(-errpH).toFixed(2)})`, sev: pHsev };
       }
-    } else if (Math.abs(errpH) <= 0.15) {
-      if (s.naoh > 0)  { ch.naoh  = Math.max(0, s.naoh  - 3); }
-      if (s.h2so4 > 0) { ch.h2so4 = Math.max(0, s.h2so4 - 3); }
+    } else if (Math.abs(errpH) <= 0.20) {
+      if (s.naoh > 0)  { ch.naoh  = Math.max(0, s.naoh  - 2); }
+      if (s.h2so4 > 0) { ch.h2so4 = Math.max(0, s.h2so4 - 2); }
       if (s.naoh > 0 || s.h2so4 > 0)
-        actions[4] = { text: `pH normalizzato (${out.pH.toFixed(2)}) — riduzione dosaggi in corso`, sev: "OK" };
+        actions[disIdx] = { text: `pH normalizzato (${out.pH.toFixed(2)}) — riduzione dosaggi in corso`, sev: "OK" };
     }
   }
 

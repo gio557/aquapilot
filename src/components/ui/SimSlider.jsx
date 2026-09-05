@@ -7,7 +7,7 @@ export default function SimSlider({ label, value, min, max, step=1, unit, onChan
 
   const commit = () => {
     const n = parseFloat(draft);
-    if (!isNaN(n)) onChange(Math.max(min, Math.min(max, step < 1 ? Math.round(n/step)*step : Math.round(n/step)*step)));
+    if (!isNaN(n)) onChange(Math.max(min, Math.min(max, Math.round(n/step)*step)));
     else setDraft(String(value));
     setEditing(false);
   };

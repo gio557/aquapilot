@@ -786,11 +786,11 @@ export default function App() {
       ) : page === "storica" ? (
         <StoricaPage t={t} qualitySources={qualitySources} showMarkers={showMarkers} onShowMarkers={setShowMarkers} limits={qualityLimits} />
       ) : (
-        <main style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12,
+        <main className="fair-dash" style={{padding:"12px 16px", display:"flex", flexDirection:"column", gap:12,
           maxWidth: bp === "xl" ? 2200 : "100%", margin:"0 auto", width:"100%"}}>
 
           {/* ── STAGES ROW ── */}
-          <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+          <div className="fair-stages" style={{display:"flex", gap:8, flexWrap:"wrap"}}>
             {stages.map((s, i) => (
               <StageCard key={s.id} stage={s} index={i}
                 stageOutput={sim.stageOutputs?.[i]} action={sim.stageActions?.[i]}
@@ -806,7 +806,7 @@ export default function App() {
           </div>
 
           {/* ── MAIN ROW: trend | right panel ── */}
-          <div style={{display:"grid",
+          <div className="fair-mainrow" style={{display:"grid",
             gridTemplateColumns: bp === "sm" ? "1fr 300px" : bp === "xl" ? "1fr 420px" : "1fr 380px",
             gap:12, minHeight:300}}>
 

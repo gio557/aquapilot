@@ -1,13 +1,15 @@
 /* AquaPilot — stili MODALITÀ FIERA (scoped sotto html[data-fair]).
    Non hanno effetto sulla versione standard dell'app. */
 
-html[data-fair] { --fair-zoom: 1.22; }
+html[data-fair] { --fair-zoom: 1; }
 
-/* Ingrandimento globale per lettura a distanza su ledwall. Gli StageCard usano
-   flex-wrap, quindi il contenuto rifluisce senza overflow orizzontale. */
-html[data-fair] #root {
-  zoom: var(--fair-zoom);
+/* Lo schermo del ledwall è fisso (formato ~2:1): niente scroll, niente taglio.
+   La dashboard viene fatta "riempire" esattamente il viewport. */
+html[data-fair], html[data-fair] body, html[data-fair] #root {
+  height: 100%;
+  overflow: hidden;
 }
+html[data-fair] #root { zoom: var(--fair-zoom); }
 
 /* Sfondo con vignettatura più profonda: fa risaltare le card luminose sul muro
    di LED e riduce il "lavaggio" dei neri a distanza. */
@@ -17,8 +19,36 @@ html[data-fair] body {
     #020810;
 }
 
-/* Glow di stato leggermente più marcato: i bordi colorati delle card e dei
-   badge restano leggibili anche da lontano. */
-html[data-fair] [data-fair-glow] {
-  filter: saturate(1.08);
+/* ── Dashboard fit-to-screen per ledwall 2:1 ───────────────────────────────
+   Il ledwall è largo (≈2:1) mentre la dashboard completa è quasi quadrata
+   (molto alta). In fiera mostriamo quindi la fascia "hero" — i 6 stadi + il
+   grande grafico Trend con la Qualità uscita live — e nascondiamo i pannelli
+   operativi di dettaglio in fondo (consumi, storico allarmi, impianto, portata,
+   fanghi, connettività), che restano comunque nella versione standard.
+   Gli override usano !important perché gli stili base sono inline. */
+html[data-fair] .fair-dash {
+  height: calc(100vh - 76px) !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  padding: 16px 22px !important;
+  gap: 16px !important;
 }
+html[data-fair] .fair-stages { flex: 0 0 auto; }
+
+/* Nasconde i pannelli di dettaglio (3° figlio) e il footer (4° figlio). */
+html[data-fair] .fair-dash > div:nth-child(3),
+html[data-fair] .fair-dash > div:nth-child(4) { display: none !important; }
+
+/* La riga Trend|Qualità si espande a riempire tutta l'altezza residua; la
+   singola riga di griglia vale minmax(0,1fr) così il grafico (flex:1 interno)
+   può crescere davvero invece di collassare. */
+html[data-fair] .fair-mainrow {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: auto !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+html[data-fair] .fair-mainrow > * { min-height: 0; overflow: hidden; }
+
+/* Glow di stato leggermente più marcato per la lettura a distanza. */
+html[data-fair] [data-fair-glow] { filter: saturate(1.08); }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Gauge from "./Gauge";
 import MechanicalWidget from "./MechanicalWidget";
 import { dataSourceTag, resolveSource } from "../constants/dataSource";
+import { FAIR } from "../fairMode";
 
 const HOLD_MS = 2200;
 
@@ -259,6 +260,13 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
 
   // Smooth the nervous numeric readouts (EFF %, gauge value, ΔH, motor current)
   const effSm = useSmoothed(eff);
+  // EFF% is "higher is better". In the standard build its colour follows the
+  // stage status (sc), which can show a healthy efficiency in red when the stage
+  // status is driven by something unrelated. In FAIR mode we colour it by the
+  // efficiency value itself so the number always reads coherently from a distance.
+  const effColor = FAIR
+    ? (!Number.isFinite(effSm) ? t.textMuted : effSm >= 90 ? t.green : effSm >= 75 ? t.yellow : t.red)
+    : sc;
   const valSm = useSmoothed(stageOutput?.value);
   const dhSm  = useSmoothed(grigliaturaState?.delta_h, 0.2);
   const grISm = useSmoothed(grigliaturaState?.corrente_motore, 0.2);
@@ -340,7 +348,7 @@ export default function StageCard({ stage, index, t, action, autoEnabled, stageO
           <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:700, fontSize:12, color:t.text, letterSpacing:1}}>{stage.name}</div>
           <div style={{fontSize:11, color:t.textSec, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{stage.sub}</div>
         </div>
-        <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:sc, fontWeight:700, textAlign:"right"}}>
+        <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:effColor, fontWeight:700, textAlign:"right"}}>
           {Number.isFinite(effSm) ? `${Math.round(effSm)}%` : "—"}<div style={{fontSize:9, color:t.textMuted}}>EFF</div>
         </div>
       </div>

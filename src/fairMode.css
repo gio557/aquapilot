@@ -1,0 +1,24 @@
+/* AquaPilot — stili MODALITÀ FIERA (scoped sotto html[data-fair]).
+   Non hanno effetto sulla versione standard dell'app. */
+
+html[data-fair] { --fair-zoom: 1.22; }
+
+/* Ingrandimento globale per lettura a distanza su ledwall. Gli StageCard usano
+   flex-wrap, quindi il contenuto rifluisce senza overflow orizzontale. */
+html[data-fair] #root {
+  zoom: var(--fair-zoom);
+}
+
+/* Sfondo con vignettatura più profonda: fa risaltare le card luminose sul muro
+   di LED e riduce il "lavaggio" dei neri a distanza. */
+html[data-fair] body {
+  background:
+    radial-gradient(1400px 900px at 50% 120%, rgba(0,207,255,0.10), transparent 60%),
+    #020810;
+}
+
+/* Glow di stato leggermente più marcato: i bordi colorati delle card e dei
+   badge restano leggibili anche da lontano. */
+html[data-fair] [data-fair-glow] {
+  filter: saturate(1.08);
+}

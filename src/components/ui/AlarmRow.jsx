@@ -11,7 +11,7 @@ export default function AlarmRow({ alarm, t }) {
           {alarm.auto && <Tag color={t.textMuted}>AUTO</Tag>}
           <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace"}}>{alarm.time}</span>
         </div>
-        <div style={{fontSize:9, color:t.text, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>{alarm.msg}</div>
+        <div style={{fontSize:12, color:t.text, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.4}}>{alarm.msg}</div>
         <div style={{fontSize:12, color:t.textMuted, marginTop:2, fontFamily:"'Rajdhani',sans-serif"}}>Causa: {alarm.causa}</div>
       </div>
     </div>

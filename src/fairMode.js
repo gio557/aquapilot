@@ -14,11 +14,15 @@
 //    senza toccare il comportamento della versione standard.
 
 const PARAMS = new URLSearchParams(window.location.search);
+export const FULL = PARAMS.get("full") === "1"; // mostra la dashboard COMPLETA (per il PIP sul ledwall)
 export const FAIR = PARAMS.get("fair") === "1" || PARAMS.get("show") === "1";
 
 export function initFairMode() {
   if (!FAIR) return;
   const html = document.documentElement;
+  // In modalità FULL teniamo la dashboard completa (nessun layout "fit-to-screen"
+  // né pannelli nascosti): serve solo il fix EFF via il flag FAIR nei componenti.
+  if (FULL) return;
   html.setAttribute("data-fair", "1");
   // Il grado di ingrandimento può essere affinato alla risoluzione reale del
   // ledwall tramite ?fairzoom=N (es. ?fair=1&fairzoom=1.35).

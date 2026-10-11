@@ -78,7 +78,12 @@ export const SHOWREEL_DURATION = 192; // secondi totali (per la registrazione)
 // Avvia lo showreel. `handlers = { setSim, setThemeId, setCaption }`.
 // Ritorna una funzione di cleanup che annulla i timer.
 export function startShowreel({ setSim, setThemeId, setCaption }) {
-  document.documentElement.setAttribute("data-show", "1");
+  // Il data-show attiva (via CSS) la fascia riservata alla didascalia, ma solo
+  // quando è attivo il layout fiera. In modalità FULL (dashboard completa per il
+  // PIP) non lo impostiamo, così la dashboard non viene ridimensionata.
+  if (document.documentElement.hasAttribute("data-fair")) {
+    document.documentElement.setAttribute("data-show", "1");
+  }
   // Forza tema scuro e simulazione attiva con auto-correzione.
   setThemeId?.("dark");
   setSim?.(p => ({ ...p, running: true,

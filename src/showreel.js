@@ -33,46 +33,48 @@ function timedEvent(type, seconds) {
 const C = { ok:"#00E599", cyan:"#00CFFF", warn:"#FF9422", bad:"#FF3B5C", violet:"#BB66FF", blue:"#7FB2FF" };
 
 // ── TIMELINE ────────────────────────────────────────────────────────────────
-// Ogni passo: { at: secondi, caption:{icon,title,desc,color}, event?, cmd?, clear? }
+// Ogni passo: { at: secondi, focus: 0..1, caption:{icon,title,desc,color}, event?, cmd?, clear? }
 // `event` = [tipo, durataSecondi]; `clear` svuota gli eventi attivi.
+// `focus` = area su cui fermare la "telecamera" del ledwall (0 = stadi in alto,
+//           ~0.45 = trend/qualità/AI, 1 = pannelli in fondo).
 export const TIMELINE = [
-  { at: 1,  caption: { icon:"🟢", color:C.ok,
+  { at: 1,  focus: 0.0, caption: { icon:"🟢", color:C.ok,
       title:"Impianto in esercizio — tutti i parametri nella norma",
       desc:"Depurazione di reflui industriali · 6 stadi monitorati in tempo reale · auto-correzione adattiva attiva." } },
 
-  { at: 24, event:["industrial", 30], caption: { icon:"🏭", color:C.warn,
+  { at: 24, focus: 0.45, event:["industrial", 30], caption: { icon:"🏭", color:C.warn,
       title:"Scenario: scarico industriale non autorizzato",
       desc:"Picco di carico organico (COD/BOD₅ ×2,6) e pH in calo. Il controllo aumenta aerazione e dosaggio reagenti." } },
-  { at: 48, clear:true, caption: { icon:"✓", color:C.ok,
+  { at: 48, focus: 0.0, clear:true, caption: { icon:"✓", color:C.ok,
       title:"Auto-correzione: valori riportati nei limiti",
       desc:"Soffianti e dosaggio NaOH hanno recuperato O₂ e pH. Effluente di nuovo conforme ai limiti di legge." } },
 
-  { at: 60, event:["blower_fail", 28], caption: { icon:"💨", color:C.bad,
+  { at: 60, focus: 0.12, event:["blower_fail", 28], caption: { icon:"💨", color:C.bad,
       title:"Guasto: avaria gruppo soffianti",
       desc:"Aerazione insufficiente: O₂ nel biologico in calo, NH₄/BOD₅ in salita. L'attuatore satura." } },
-  { at: 82, clear:true, caption: { icon:"🧠", color:C.cyan,
+  { at: 82, focus: 0.45, clear:true, caption: { icon:"🧠", color:C.cyan,
       title:"Diagnostica a probabile-causa",
       desc:"Soffianti al 100% ma qualità fuori limite → il sistema segnala 'probabile guasto soffianti' e l'azione correttiva." } },
 
-  { at: 96, event:["rain", 28], caption: { icon:"🌧️", color:C.cyan,
+  { at: 96, focus: 1.0, event:["rain", 28], caption: { icon:"🌧️", color:C.cyan,
       title:"Scenario: pioggia intensa",
       desc:"Portata in ingresso ×2,2 e forte diluizione del carico: il sistema gestisce l'onda idraulica." } },
-  { at: 120, clear:true, caption: { icon:"✓", color:C.ok,
+  { at: 120, focus: 0.0, clear:true, caption: { icon:"✓", color:C.ok,
       title:"Transitorio idraulico assorbito",
       desc:"Portata e qualità rientrano. Nessun superamento dei limiti allo scarico." } },
 
-  { at: 132, event:["coag_empty", 28], caption: { icon:"🧪", color:C.warn,
+  { at: 132, focus: 0.0, event:["coag_empty", 28], caption: { icon:"🧪", color:C.warn,
       title:"Guasto: serbatoio coagulante esaurito",
       desc:"Con più solidi in ingresso il TSS sale: dosaggio al 100% ma non correggibile → diagnostica di esaurimento." } },
-  { at: 156, clear:true, caption: { icon:"✓", color:C.ok,
+  { at: 156, focus: 0.0, clear:true, caption: { icon:"✓", color:C.ok,
       title:"Ripristino coagulante — TSS rientrato",
       desc:"Sostituito il reagente, la sedimentazione torna efficiente e il TSS rientra nel target." } },
 
-  { at: 166, cmd:"cip-osmosi", caption: { icon:"🫧", color:C.violet,
+  { at: 166, focus: 0.0, cmd:"cip-osmosi", caption: { icon:"🫧", color:C.violet,
       title:"Osmosi inversa: lavaggio CIP membrane",
       desc:"Ciclo di pulizia chimica automatico (flussaggio → alcalino → acido → risciacquo) per ripristinare il flusso." } },
 
-  { at: 184, caption: { icon:"💧", color:C.cyan,
+  { at: 184, focus: 0.45, caption: { icon:"💧", color:C.cyan,
       title:"AquaPilot — controllo e auto-correzione in tempo reale",
       desc:"GreenEco Wastewater · ingegneria del trattamento acque reflue industriali." } },
 ];
@@ -102,7 +104,7 @@ export function startShowreel({ setSim, setThemeId, setCaption }) {
       if (ev) setSim?.(p => ({ ...p, events: [...(p.events || []).filter(e => e.type !== type), ev] }));
     }
     if (step.cmd) setSim?.(p => applyCommand(p, step.cmd));
-    if (step.caption) setCaption?.(step.caption);
+    if (step.caption) setCaption?.({ ...step.caption, focus: step.focus });
   }, step.at * 1000));
 
   return () => timers.forEach(clearTimeout);

@@ -88,8 +88,9 @@ export function startShowreel({ setSim, setThemeId, setCaption }) {
   if (document.documentElement.hasAttribute("data-fair")) {
     document.documentElement.setAttribute("data-show", "1");
   }
-  // Forza tema scuro e simulazione attiva con auto-correzione.
-  setThemeId?.("dark");
+  // Tema: di default scuro (per il ledwall); ?theme=light lo forza chiaro.
+  const theme = PARAMS.get("theme") === "light" ? "light" : "dark";
+  setThemeId?.(theme);
   setSim?.(p => ({ ...p, running: true,
     autoCorrect: { ...(p.autoCorrect || {}), enabled: true } }));
 

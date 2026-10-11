@@ -14,6 +14,10 @@ import { applyCommand } from "./simulation/commands";
 
 const PARAMS = new URLSearchParams(window.location.search);
 export const SHOW = PARAMS.get("show") === "1";
+// EMBED: l'app è dentro il contenitore "ledwall" (iframe/PIP). In questo caso
+// NON disegna la propria didascalia, ma la comunica al contenitore via
+// postMessage, che la mostra come overlay del video, graficamente staccato.
+export const EMBED = PARAMS.get("embed") === "1";
 
 const TPS = 2; // tick al secondo (engine: interval 500 ms)
 

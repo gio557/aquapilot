@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useBreakpoint } from "./hooks/useWindowSize";
 import { LIGHT, THEMES } from "./constants/theme";
-import { SHOW, startShowreel } from "./showreel";
+import { SHOW, EMBED, startShowreel } from "./showreel";
 import { FULL } from "./fairMode";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, DEFAULT_PUMPS_REGISTRY, makeDefaultStageConfig, PUMP_CATALOG, makeStagePumps } from "./constants/stageConfig";
@@ -56,7 +56,13 @@ export default function App() {
   const [showCaption, setShowCaption] = useState(null);
   useEffect(() => {
     if (!SHOW) return;
-    return startShowreel({ setSim, setThemeId, setCaption: setShowCaption });
+    // In modalità embed la didascalia viene inviata al contenitore (ledwall),
+    // che la mostra come overlay del video staccato dall'interfaccia.
+    const emit = (cap) => {
+      setShowCaption(cap);
+      if (EMBED) { try { window.parent?.postMessage({ type: "aqua-caption", caption: cap }, "*"); } catch { /* cross-origin */ } }
+    };
+    return startShowreel({ setSim, setThemeId, setCaption: emit });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1308,8 +1314,9 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* ── SHOWREEL caption (lower-third per ledwall) ── */}
-      {SHOW && showCaption && (
+      {/* ── SHOWREEL caption (lower-third per ledwall) — nascosta in embed: la
+          mostra il contenitore ledwall come overlay staccato ── */}
+      {SHOW && showCaption && !EMBED && (
         <div className="showreel-caption" style={{
           position: FULL ? "relative" : "fixed", left:0, right:0, bottom:0, height:92, zIndex:200,
           display:"flex", alignItems:"center", gap:22, padding:"0 40px",

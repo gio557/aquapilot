@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useBreakpoint } from "./hooks/useWindowSize";
 import { LIGHT, THEMES } from "./constants/theme";
+import { SHOW, startShowreel } from "./showreel";
 import { STAGE_META, STAGE_TYPES, TIME_RANGES } from "./constants/stages";
 import { DEFAULT_STAGE_CONFIG, DEFAULT_PUMPS_REGISTRY, makeDefaultStageConfig, PUMP_CATALOG, makeStagePumps } from "./constants/stageConfig";
 import { STAGE_TREND_DEFS, stageAvailableMetrics } from "./constants/stageTrend";
@@ -48,6 +49,15 @@ export default function App() {
 
   // Mirror sim state to the Control Room tab and accept its control commands.
   useControlBroadcast(sim, setSim, themeId);
+
+  // Showreel (?show=1): riproduce una sequenza scriptata di scenari per il
+  // ledwall/fiera. Non attivo nella versione standard.
+  const [showCaption, setShowCaption] = useState(null);
+  useEffect(() => {
+    if (!SHOW) return;
+    return startShowreel({ setSim, setThemeId, setCaption: setShowCaption });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Smoothed display values — EMA with alpha=0.10 so numbers drift gradually
   const ALPHA = 0.10;
@@ -1294,6 +1304,27 @@ export default function App() {
                 HO PRESO VISIONE
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── SHOWREEL caption (lower-third per ledwall) ── */}
+      {SHOW && showCaption && (
+        <div className="showreel-caption" style={{
+          position:"fixed", left:0, right:0, bottom:0, height:92, zIndex:200,
+          display:"flex", alignItems:"center", gap:22, padding:"0 40px",
+          background:"linear-gradient(0deg, rgba(2,8,16,0.97), rgba(2,8,16,0.86))",
+          borderTop:`2px solid ${showCaption.color}`,
+          boxShadow:`0 -10px 40px rgba(0,0,0,0.5)`}}>
+          <div style={{fontSize:42, lineHeight:1, filter:`drop-shadow(0 0 10px ${showCaption.color}aa)`}}>{showCaption.icon}</div>
+          <div style={{minWidth:0}}>
+            <div style={{fontFamily:"'Orbitron',sans-serif", fontWeight:700, fontSize:25, color:"#EAF6FF",
+              letterSpacing:0.3, lineHeight:1.1}}>{showCaption.title}</div>
+            <div style={{fontFamily:"'Rajdhani',sans-serif", fontSize:19, color:"#9CC3E0", marginTop:4, lineHeight:1.25}}>{showCaption.desc}</div>
+          </div>
+          <div style={{marginLeft:"auto", flexShrink:0, display:"flex", alignItems:"center", gap:10}}>
+            <span style={{width:11, height:11, borderRadius:"50%", background:showCaption.color,
+              boxShadow:`0 0 12px ${showCaption.color}`, animation:"blink 1.4s infinite"}}/>
+            <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:16, letterSpacing:2, color:showCaption.color}}>LIVE DEMO</span>
           </div>
         </div>
       )}

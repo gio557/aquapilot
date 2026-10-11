@@ -50,5 +50,9 @@ html[data-fair] .fair-mainrow {
 }
 html[data-fair] .fair-mainrow > * { min-height: 0; overflow: hidden; }
 
+/* ── Showreel: riserva la fascia inferiore (92px) per la didascalia lower-third
+   così non copre il contenuto della dashboard. */
+html[data-show] .fair-dash { height: calc(100vh - 76px - 92px) !important; }
+
 /* Glow di stato leggermente più marcato per la lettura a distanza. */
 html[data-fair] [data-fair-glow] { filter: saturate(1.08); }

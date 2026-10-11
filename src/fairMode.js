@@ -1,0 +1,33 @@
+// AquaPilot — Modalità FIERA (ledwall 4×2 m, formato 2:1, visione a distanza)
+//
+// Attivazione NON invasiva: la versione normale dell'app non cambia. La modalità
+// fiera si abilita con `?fair=1` ed è implicata anche dallo Showreel (`?show=1`,
+// vedi showreel.js), che riusa lo stesso layout ottimizzato per il ledwall.
+//   es. https://gio557.github.io/aquapilot/?fair=1
+//       https://gio557.github.io/aquapilot/?show=1
+//
+// Cosa fa:
+//  - marca <html data-fair="1"> così i fix grafici scoped in fairMode.css si
+//    applicano SOLO in questa modalità (ingrandimento per lettura a distanza,
+//    layout dashboard a tutta altezza, contrasto e glow rinforzati);
+//  - il flag FAIR è letto dai componenti per i fix di coerenza (es. colore EFF)
+//    senza toccare il comportamento della versione standard.
+
+const PARAMS = new URLSearchParams(window.location.search);
+export const FULL = PARAMS.get("full") === "1"; // mostra la dashboard COMPLETA (per il PIP sul ledwall)
+export const FAIR = PARAMS.get("fair") === "1" || PARAMS.get("show") === "1";
+
+export function initFairMode() {
+  if (!FAIR) return;
+  const html = document.documentElement;
+  // In modalità FULL teniamo la dashboard completa (nessun layout "fit-to-screen"
+  // né pannelli nascosti): serve solo il fix EFF via il flag FAIR nei componenti.
+  if (FULL) return;
+  html.setAttribute("data-fair", "1");
+  // Il grado di ingrandimento può essere affinato alla risoluzione reale del
+  // ledwall tramite ?fairzoom=N (es. ?fair=1&fairzoom=1.35).
+  const z = parseFloat(PARAMS.get("fairzoom"));
+  if (Number.isFinite(z) && z > 0.5 && z < 3) {
+    html.style.setProperty("--fair-zoom", String(z));
+  }
+}

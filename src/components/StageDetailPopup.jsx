@@ -1,29 +1,153 @@
 import { useState, useRef, useEffect } from "react";
 import Tag from "./ui/Tag";
+import { PARAM_SENSOR_MAP } from "../constants/stageConfig";
+import { dataSourceTag, resolveSource } from "../constants/dataSource";
 
 const HOLD_MS = 2200;
+const ALPHA = 0.10;
 
-function ParamRow({ label, value, unit, note, t }) {
+function useSmoothedParams(params) {
+  const [smooth, setSmooth] = useState(params);
+  useEffect(() => {
+    if (!params) return;
+    setSmooth(prev => {
+      if (!prev || prev.length !== params.length) return params;
+      return params.map((p, i) => {
+        const pv = prev[i];
+        if (typeof p.value !== "number" || typeof pv?.value !== "number") return p;
+        return { ...p, value: pv.value + ALPHA * (p.value - pv.value) };
+      });
+    });
+  }, [params]);
+  return smooth;
+}
+
+function useSmoothedOutput(stageOutput) {
+  const [smooth, setSmooth] = useState(stageOutput);
+  useEffect(() => {
+    if (!stageOutput) return;
+    setSmooth(prev => {
+      if (!prev || typeof prev.value !== "number") return stageOutput;
+      return { ...stageOutput, value: prev.value + ALPHA * (stageOutput.value - prev.value) };
+    });
+  }, [stageOutput]);
+  return smooth;
+}
+
+function useSmoothedControls(controls) {
+  const [smooth, setSmooth] = useState(controls);
+  useEffect(() => {
+    if (!controls) return;
+    setSmooth(prev => {
+      if (!prev || prev.length !== controls.length) return controls;
+      return controls.map((c, i) => {
+        const pc = prev[i];
+        if (typeof c.value !== "number" || typeof pc?.value !== "number") return c;
+        return { ...c, value: pc.value + ALPHA * (c.value - pc.value) };
+      });
+    });
+  }, [controls]);
+  return smooth;
+}
+
+function SourceTag({ label, unit, sensorId, sourceCfg, t }) {
+  const tag = dataSourceTag(resolveSource(sourceCfg, { sensorId, label, unit }));
+  const isSensor = tag.kind === "sensor";
+  const color = isSensor ? t.accent : t.textMuted;
+  return (
+    <span title={tag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, color, textTransform:"uppercase"}}>
+      <span style={{fontSize:9}}>{tag.icon}</span>{tag.word}
+    </span>
+  );
+}
+
+function ParamRow({ label, value, unit, note, stageName, sourceCfg, t }) {
   const isNum = typeof value === "number";
+  const display = isNum
+    ? (Math.abs(value) < 10 ? (Math.round(value * 100) / 100).toFixed(2) : Math.round(value * 10) / 10)
+    : value;
+  const sensorId = PARAM_SENSOR_MAP[stageName]?.[label];
   return (
     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 0", borderBottom:`1px solid ${t.border}`}}>
-      <div>
-        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
+      <div style={{display:"flex", flexDirection:"column"}}>
+        <div style={{display:"flex", alignItems:"center", gap:8}}>
+          <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:15, color:t.text}}>{label}</span>
+          <SourceTag label={label} unit={unit} sensorId={sensorId} sourceCfg={sourceCfg} t={t}/>
+        </div>
         {note && <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif", marginTop:1}}>{note}</div>}
       </div>
       <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:t.accent, fontWeight:700}}>
-        {isNum ? value : value}
+        {display}
         {unit && <span style={{fontSize:14, color:t.textMuted, marginLeft:3}}>{unit}</span>}
       </span>
     </div>
   );
 }
 
-export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, t, onClose }) {
-  if (!stageDetail) return null;
+const CIP_PHASE_LABEL = {
+  ESERCIZIO:    "In esercizio",
+  FLUSSAGGIO:   "Flussaggio",
+  LAV_ALCALINO: "Lavaggio alcalino",
+  LAV_ACIDO:    "Lavaggio acido",
+  RISCIACQUO:   "Risciacquo",
+};
 
+function CIPPanel({ state, onStartCIP, t }) {
+  const inCIP   = state.fase !== "ESERCIZIO";
+  const color   = inCIP ? t.orange : t.green;
+  const foulPct = Math.round((state.fouling ?? 0) * 100);
+  const cipDue  = !inCIP && (state.allarmi?.length > 0);
+  return (
+    <div style={{padding:"12px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${color}44`, borderLeft:`3px solid ${color}`}}>
+      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
+        <div style={{fontSize:11, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>
+          LAVAGGIO CHIMICO CIP
+        </div>
+        {inCIP
+          ? <span style={{fontSize:10, padding:"3px 10px", borderRadius:4, background:`${t.orange}22`,
+              color:t.orange, border:`1px solid ${t.orange}66`, fontFamily:"'Share Tech Mono',monospace", fontWeight:700}}>
+              {CIP_PHASE_LABEL[state.fase] ?? state.fase} · {Math.round(state.timer_fase ?? 0)} s
+            </span>
+          : <button onClick={onStartCIP}
+              style={{fontSize:12, padding:"5px 14px", borderRadius:6, cursor:"pointer",
+                background:`${t.accent}22`, color:t.accent, border:`1px solid ${t.accent}66`,
+                fontFamily:"'Rajdhani',sans-serif", fontWeight:700}}>
+              🧪 Avvia CIP
+            </button>
+        }
+      </div>
+      <div style={{display:"flex", gap:14, flexWrap:"wrap"}}>
+        {[
+          {l:"Stato",        v: inCIP ? (CIP_PHASE_LABEL[state.fase] ?? state.fase) : "In esercizio"},
+          {l:"Sporcamento",  v:`${foulPct}%`},
+          {l:"ΔP membrana",  v:`${(+state.dp).toFixed(2)} bar`},
+          {l:"Flusso norm.", v:`${(+state.flux_norm).toFixed(0)}%`},
+          {l:"Cicli CIP",    v:`${state.cip_count ?? 0}`},
+        ].map(x => (
+          <div key={x.l}>
+            <span style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.l}: </span>
+            <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:12, color:t.accent, fontWeight:700}}>{x.v}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize:12, color:cipDue ? t.orange : t.textMuted, fontFamily:"'Rajdhani',sans-serif", lineHeight:1.5, marginTop:8}}>
+        {inCIP
+          ? "Lavaggio in corso — produzione permeato sospesa fino al ripristino. Le membrane spiralate non si contro-lavano: la pulizia è esclusivamente chimica."
+          : cipDue
+            ? "⚠ Soglie superate: lavaggio CIP raccomandato. Avvio automatico in attesa o disattivato — è possibile avviarlo manualmente."
+            : "Membrana in esercizio regolare. Il CIP può essere avviato manualmente in qualsiasi momento."}
+      </div>
+    </div>
+  );
+}
+
+export default function StageDetailPopup({ stage, index, stageOutput, stageDetail, action, autoEnabled, stageConfig, qualitySources, osmosiState, onOsmosiCIP, t, onClose }) {
   const [stableAction, setStableAction] = useState(action);
   const pendingPopup = useRef(null);
+
+  const smoothOutput   = useSmoothedOutput(stageOutput);
+  const smoothParams   = useSmoothedParams(stageDetail?.params);
+  const smoothControls = useSmoothedControls(stageDetail?.controls);
 
   useEffect(() => {
     const nextText = action ? action.text : null;
@@ -36,13 +160,15 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
     if (pendingPopup.current) clearTimeout(pendingPopup.current.timer);
     const timer = setTimeout(() => { setStableAction(action); pendingPopup.current = null; }, HOLD_MS);
     pendingPopup.current = { text: nextText, timer };
-  });
+    return () => { if (pendingPopup.current) { clearTimeout(pendingPopup.current.timer); pendingPopup.current = null; } };
+  }, [action]);
 
-  const sc = stage.status==="ok" ? t.green : stage.status==="warn" ? t.orange : t.red;
-  const hib = stageOutput?.higherIsBetter;
-  const rawPct = stageOutput && !hib ? Math.round(stageOutput.value / stageOutput.target * 100) : 0;
-  const score = stageOutput
-    ? hib ? Math.max(0, Math.min(100, Math.round(stageOutput.value / stageOutput.target * 100))) : Math.min(100, rawPct)
+  if (!stageDetail) return null;
+
+  const hib = smoothOutput?.higherIsBetter;
+  const rawPct = smoothOutput && !hib ? Math.round(smoothOutput.value / smoothOutput.target * 100) : 0;
+  const score = smoothOutput
+    ? hib ? Math.max(0, Math.min(100, Math.round(smoothOutput.value / smoothOutput.target * 100))) : Math.min(100, rawPct)
     : 0;
   const scoreColor = hib
     ? score >= 90 ? t.green : score >= 65 ? t.orange : t.red
@@ -71,25 +197,28 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
             <button onClick={onClose} style={{background:t.surface2, border:`1px solid ${t.border}`, color:t.text, width:28, height:28, borderRadius:6, cursor:"pointer", fontSize:12, lineHeight:1, flexShrink:0}}>✕</button>
           </div>
 
-          {stageOutput && (
+          {smoothOutput && (
             <div style={{marginTop:12, padding:"10px 14px", background:t.surface2, borderRadius:8, display:"flex", alignItems:"center", gap:16}}>
               <div style={{textAlign:"center", minWidth:64}}>
                 <div style={{fontFamily:"'Share Tech Mono',monospace", fontSize:22, fontWeight:700, color:scoreColor}}>
-                  {hib ? Math.round(stageOutput.value)+"%" : rawPct+"%"}
+                  {hib ? Math.round(smoothOutput.value)+"%" : rawPct+"%"}
                 </div>
                 <div style={{fontSize:14, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{hib?"RENDIMENTO":"% DEL LIMITE"}</div>
               </div>
               <div style={{flex:1}}>
                 <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
-                  <span style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{stageOutput.label}</span>
+                  <span style={{display:"inline-flex", alignItems:"center", gap:6}}>
+                    <span style={{fontSize:13, color:t.textSec, fontFamily:"'Rajdhani',sans-serif"}}>{smoothOutput.label}</span>
+                    <SourceTag label={smoothOutput.label} unit={smoothOutput.unit} sensorId={stageConfig?.referenceSensor} sourceCfg={qualitySources} t={t}/>
+                  </span>
                   <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:13, color:scoreColor}}>
                     {hib
-                      ? `${Math.round(stageOutput.value)}% su ${stageOutput.target}% target`
-                      : `${stageOutput.value} / ${stageOutput.target} ${stageOutput.unit} (${rawPct}% del limite)`}
+                      ? `${Math.round(smoothOutput.value)}% su ${smoothOutput.target}% target`
+                      : `${smoothOutput.value?.toFixed(1)} / ${smoothOutput.target} ${smoothOutput.unit} (${rawPct}% del limite)`}
                   </span>
                 </div>
                 <div style={{height:6, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
-                  <div style={{height:"100%", width:`${Math.min(100,score)}%`, background:scoreColor, borderRadius:3, transition:"width 0.5s ease"}}/>
+                  <div style={{height:"100%", width:`${Math.min(100,score)}%`, background:scoreColor, borderRadius:3, transition:"width 0.8s ease"}}/>
                 </div>
               </div>
             </div>
@@ -123,23 +252,78 @@ export default function StageDetailPopup({ stage, index, stageOutput, stageDetai
             </div>
           </div>
 
+          {osmosiState && <CIPPanel state={osmosiState} onStartCIP={onOsmosiCIP} t={t}/>}
+
           <div>
-            <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>PARAMETRI DI PROCESSO</div>
-            {stageDetail.params.map((p, i) => <ParamRow key={i} {...p} t={t}/>)}
+            <div style={{marginBottom:8}}>
+              <span style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1}}>PARAMETRI DI PROCESSO</span>
+            </div>
+            {(smoothParams || stageDetail.params).map((p, i) => {
+              const sensorId = PARAM_SENSOR_MAP[stage?.name]?.[p.label];
+              if (sensorId != null && stageConfig?.sensors?.[sensorId]?.enabled !== true) return null;
+              return <ParamRow key={i} {...p} stageName={stage?.name} sourceCfg={qualitySources} t={t}/>;
+            })}
           </div>
+
+          {/* ── POMPE INSTALLATE ── */}
+          {stageConfig?.pumps?.length > 0 && (
+            <div>
+              <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>POMPE INSTALLATE</div>
+              <div style={{display:"flex", flexDirection:"column", gap:6}}>
+                {stageConfig.pumps.map((pump) => (
+                  <div key={pump.id} style={{padding:"8px 12px", borderRadius:7,
+                    background: pump.enabled ? t.surface2 : `${t.surface2}66`,
+                    border:`1px solid ${pump.enabled ? t.accent+"44" : t.border}`,
+                    opacity: pump.enabled ? 1 : 0.5}}>
+                    <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                      <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:700, fontSize:13, color: pump.enabled ? t.text : t.textMuted}}>
+                        {pump.name}
+                      </span>
+                      <div style={{display:"flex", gap:6}}>
+                        {pump.vfd && <span style={{fontSize:9, padding:"1px 6px", borderRadius:3, background:`${t.accent}18`, color:t.accent, fontFamily:"'Share Tech Mono',monospace", border:`1px solid ${t.accent}44`}}>INVERTER</span>}
+                        <span style={{fontSize:9, padding:"1px 6px", borderRadius:3,
+                          background: pump.enabled ? `${t.green}18` : `${t.red}18`,
+                          color: pump.enabled ? t.green : t.red,
+                          fontFamily:"'Share Tech Mono',monospace",
+                          border:`1px solid ${pump.enabled ? t.green : t.red}44`}}>
+                          {pump.enabled ? "ATTIVA" : "DISATTIVATA"}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{display:"flex", gap:12, flexWrap:"wrap"}}>
+                      {[
+                        pump.flow_m3h > 0 && {l:"Portata", v:`${pump.flow_m3h} m³/h`},
+                      ].filter(Boolean).map(x => (
+                        <div key={x.l}>
+                          <span style={{fontSize:10, color:t.textMuted, fontFamily:"'Rajdhani',sans-serif"}}>{x.l}: </span>
+                          <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:11, color:t.accent}}>{x.v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {stageDetail.controls.length > 0 && (
             <div>
               <div style={{fontSize:12, color:t.textMuted, fontFamily:"'Share Tech Mono',monospace", letterSpacing:1, marginBottom:8}}>CONTROLLI ATTIVI</div>
               <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-                {stageDetail.controls.map((c, i) => {
-                  const pct = c.value;
+                {(smoothControls || stageDetail.controls).map((c, i) => {
+                  const pct = typeof c.value === "number" ? Math.round(c.value * 10) / 10 : c.value;
                   const barColor = pct > 80 ? t.red : pct > 60 ? t.orange : t.green;
+                  const cmdTag = dataSourceTag("command");
                   return (
                     <div key={i} style={{flex:"1 1 140px", padding:"10px 14px", background:t.surface2, borderRadius:8, border:`1px solid ${t.border}`}}>
                       <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
-                        <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14, color:t.text}}>{c.label}</span>
-                        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barColor, fontWeight:700}}>{pct}{c.unit}</span>
+                        <span style={{display:"inline-flex", alignItems:"center", gap:6, flexWrap:"wrap"}}>
+                          <span style={{fontFamily:"'Rajdhani',sans-serif", fontWeight:600, fontSize:14, color:t.text}}>{c.label}</span>
+                          <span title={cmdTag.note} style={{display:"inline-flex", alignItems:"center", gap:3, fontSize:9, fontFamily:"'Share Tech Mono',monospace", letterSpacing:0.5, textTransform:"uppercase", color:t.textMuted}}>
+                            <span style={{fontSize:9}}>{cmdTag.icon}</span>{cmdTag.word}
+                          </span>
+                        </span>
+                        <span style={{fontFamily:"'Share Tech Mono',monospace", fontSize:14, color:barColor, fontWeight:700}}>{Number.isInteger(pct) ? pct : pct.toFixed(1)}{c.unit}</span>
                       </div>
                       <div style={{height:5, background:t.surface3, borderRadius:3, overflow:"hidden"}}>
                         <div style={{height:"100%", width:`${pct}%`, background:barColor, borderRadius:3, transition:"width 0.4s ease"}}/>
